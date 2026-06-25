@@ -10,3 +10,4 @@ projects:
   schemas: "schemas"
   prompting-press-python: "packages/python"
   prompting-press-typescript: "packages/typescript"
+  ci: "ci"                         # US4 CI gate tasks (T028, T030a)

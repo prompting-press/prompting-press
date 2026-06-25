@@ -105,11 +105,11 @@ change propagates to all 3.
 **Independent Test**: clean tree passes both; adding `pyo3` to the kernel fails the FFI gate; a stale
 generated file fails the freshness gate; each failure names the invariant + location.
 
-- [ ] T028 [US4] Add the FFI-isolation CI gate: a check (moon task + `.github/workflows/`) that runs `cargo tree -p <crate> -i pyo3`/`napi` and fails if found, citing Principle II / C-02 with the offending crate. **Drive it from an explicit, reviewable covered-crate list** (currently `prompting-press-core`, `prompting-press`) so a future FFI-free crate cannot silently escape the gate (critique E2 / CHK006). (depends on US1; research D3) (FR-018, FR-020)
-- [ ] T029 [US4] Add the codegen-freshness CI gate: regenerate via `:codegen`, then `datamodel-codegen --check` (Python) + `git add -N . && git diff --exit-code` (TS/Rust), failing on any drift incl. partial regeneration, with a clear message. (depends on US3; research D2) (FR-019, FR-020)
-- [ ] T030 [US4] Add the schema + fixtures checks (T016, T019) to the CI workflow so the schema contract is gated too.
-- [ ] T030a [P] [US4] Add a floating-version lint (CI): reject `^`/`~`/`"latest"`/`"*"` in the codegen toolchain manifests; also pin `mise.toml`'s `jq` (currently `"latest"`) (security SEC-003).
-- [ ] T031 [US4] Verify gate behavior in a scratch branch: add `pyo3` to `prompting-press-core` → FFI gate fails; hand-edit a generated shape → freshness gate fails; revert → both green. (depends on T028, T029) — satisfies SC-004, SC-005.
+- [X] T028 [US4] Add the FFI-isolation CI gate: a check (moon task + `.github/workflows/`) that runs `cargo tree -p <crate> -i pyo3`/`napi` and fails if found, citing Principle II / C-02 with the offending crate. **Drive it from an explicit, reviewable covered-crate list** (currently `prompting-press-core`, `prompting-press`) so a future FFI-free crate cannot silently escape the gate (critique E2 / CHK006). (depends on US1; research D3) (FR-018, FR-020)
+- [X] T029 [US4] Add the codegen-freshness CI gate: regenerate via `:codegen`, then `datamodel-codegen --check` (Python) + `git add -N . && git diff --exit-code` (TS/Rust), failing on any drift incl. partial regeneration, with a clear message. (depends on US3; research D2) (FR-019, FR-020)
+- [X] T030 [US4] Add the schema + fixtures checks (T016, T019) to the CI workflow so the schema contract is gated too.
+- [X] T030a [P] [US4] Add a floating-version lint (CI): reject `^`/`~`/`"latest"`/`"*"` in the codegen toolchain manifests; also pin `mise.toml`'s `jq` (currently `"latest"`) (security SEC-003).
+- [X] T031 [US4] Verify gate behavior in a scratch branch: add `pyo3` to `prompting-press-core` → FFI gate fails; hand-edit a generated shape → freshness gate fails; revert → both green. (depends on T028, T029) — satisfies SC-004, SC-005.
 
 **Checkpoint**: the constitution's structural invariants are mechanically enforced.
 
