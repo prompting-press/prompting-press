@@ -53,7 +53,7 @@ direction (kernel ← consumer ← bindings; kernel FFI-free), Go reserved-only.
 - [ ] T010 [P] [US1] Create `packages/typescript/` published-package skeleton (package.json + napi-rs CLI config pointing at `prompting-press-node`; no logic) (FR-004). **Verify the `napi-rs` CLI is available** before relying on it (critique E3 / CHK026).
 - [ ] T011 [P] [US1] Create `packages/go/` reserved placeholder (a marker README only; **no** `go.mod`, no toolchain), excluded from the workspace and build (FR-005).
 - [ ] T012 [US1] Add the 4 crates to the root `Cargo.toml` workspace members; confirm `packages/go` is NOT a member. (depends on T005–T008)
-- [ ] T013 [US1] Wire moon projects/tasks for the active members (`:build`, `:test`) excluding `packages/go` from project globs; one orchestrated build/test command (FR-006). (depends on T012)
+- [ ] T013 [US1] Wire moon projects/tasks for the active members (`:build`, `:test`); one orchestrated build/test command (FR-006). **Replace the bootstrap `.moon/workspace.yml` globs** (`apps/*`…`packages/*`…`tools/*` — which don't match `crates/*` and would sweep in `packages/go`) with explicit/enumerated membership: include `crates/*`, exclude `packages/go`, so no crate falls outside the gates by glob accident (security SEC-005). (depends on T012)
 - [ ] T014 [US1] Verify the layout: `moon run :build` builds all 4 stub crates; `cargo tree -p prompting-press-core` and `-p prompting-press` show no `pyo3`/`napi` (manual confirmation of the invariant US4 will then automate). (depends on T013) — satisfies SC-001, acceptance US1.
 
 **Checkpoint**: buildable polyglot workspace; dependency direction correct; Go reserved. **MVP increment.**
@@ -84,8 +84,8 @@ direction (kernel ← consumer ← bindings; kernel FFI-free), Go reserved-only.
 **Independent Test**: `moon run :codegen` produces 3 shapes; re-running yields zero diff; a schema field
 change propagates to all 3.
 
-- [ ] T020 [P] [US3] Pin Python codegen: add `datamodel-code-generator` 0.65.1 to the Python tool deps with determinism flags (`--disable-timestamp`, `--formatters builtin`, version-header off) — research D1.
-- [ ] T021 [P] [US3] Pin TS codegen: add `json-schema-to-typescript` 15.0.4 + pinned Prettier to `packages/typescript` dev deps, `--bannerComment ''` — research D1.
+- [ ] T020 [P] [US3] Pin Python codegen: add `datamodel-code-generator` 0.65.1 to the Python tool deps with determinism flags (`--disable-timestamp`, `--formatters builtin`, version-header off) — research D1. **Hash-pin** the codegen toolchain (`requirements.txt --hash=` + `--require-hashes`, or a committed `uv.lock`) and install hashed in CI — not a bare version string (security SEC-001/002).
+- [ ] T021 [P] [US3] Pin TS codegen: add `json-schema-to-typescript` 15.0.4 + pinned Prettier to `packages/typescript` dev deps, `--bannerComment ''` — research D1. **Commit the lockfile** (`package-lock.json`/`pnpm-lock.yaml`, which carries integrity hashes) and install with `npm ci`/`--frozen-lockfile` in CI (security SEC-001/002).
 - [ ] T022 [P] [US3] Pin Rust codegen: `cargo-typify` 0.7.0 installed `--locked`, CLI mode (not the macro); rustfmt pinned via the T002 toolchain — research D1. **Verify on a sample** that typify's `const`/string-enum/serde-derive output is as expected (research residual unknown) before wiring.
 - [ ] T023 [US3] Generate the Python Pydantic v2 shape from `schemas/jsonschema/prompt-definition.schema.json` into a marked-generated, segregated path under `packages/python/` (e.g. `.../generated/prompt_definition.py`). (depends on T015, T020) (FR-014/016)
 - [ ] T024 [US3] Generate the TS type shape into a marked-generated path under `packages/typescript/` (e.g. `.../generated/prompt-definition.ts`). (depends on T015, T021) (FR-014/016)
@@ -108,6 +108,7 @@ generated file fails the freshness gate; each failure names the invariant + loca
 - [ ] T028 [US4] Add the FFI-isolation CI gate: a check (moon task + `.github/workflows/`) that runs `cargo tree -p <crate> -i pyo3`/`napi` and fails if found, citing Principle II / C-02 with the offending crate. **Drive it from an explicit, reviewable covered-crate list** (currently `prompting-press-core`, `prompting-press`) so a future FFI-free crate cannot silently escape the gate (critique E2 / CHK006). (depends on US1; research D3) (FR-018, FR-020)
 - [ ] T029 [US4] Add the codegen-freshness CI gate: regenerate via `:codegen`, then `datamodel-codegen --check` (Python) + `git add -N . && git diff --exit-code` (TS/Rust), failing on any drift incl. partial regeneration, with a clear message. (depends on US3; research D2) (FR-019, FR-020)
 - [ ] T030 [US4] Add the schema + fixtures checks (T016, T019) to the CI workflow so the schema contract is gated too.
+- [ ] T030a [P] [US4] Add a floating-version lint (CI): reject `^`/`~`/`"latest"`/`"*"` in the codegen toolchain manifests; also pin `mise.toml`'s `jq` (currently `"latest"`) (security SEC-003).
 - [ ] T031 [US4] Verify gate behavior in a scratch branch: add `pyo3` to `prompting-press-core` → FFI gate fails; hand-edit a generated shape → freshness gate fails; revert → both green. (depends on T028, T029) — satisfies SC-004, SC-005.
 
 **Checkpoint**: the constitution's structural invariants are mechanically enforced.
