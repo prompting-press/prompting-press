@@ -338,3 +338,9 @@ regenerating) and observe the freshness check fail.
   wires them to the new layout rather than introducing new orchestration technology.
 - **Registry-name reservation (crates.io / PyPI / npm) is out of scope for this spec** — it belongs to
   the v1 release spec (007); 001 only establishes local crate/package names.
+- **All three language shapes (Python/TS/Rust) are generated in 001, not just Python** (decision on
+  critique finding X1, 2026-06-25). Although the TS/Rust *bindings* don't exist until specs 004/005,
+  generating all three now is the faithful demonstration of C-07 ("one schema, N languages") and C-01
+  (structural parity — the project's differentiator), and gives the codegen-freshness gate real
+  cross-language coverage from day one, de-risking the pipeline before three binding specs depend on
+  it. The generated TS/Rust shapes land in skeleton packages with no consumer yet — accepted.

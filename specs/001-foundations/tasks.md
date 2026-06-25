@@ -49,8 +49,8 @@ direction (kernel ← consumer ← bindings; kernel FFI-free), Go reserved-only.
 - [ ] T006 [US1] Create `crates/prompting-press/` stub crate depending on `prompting-press-core`; **no** FFI deps; this is the Rust consumer/public surface (FR-002). (depends on T005)
 - [ ] T007 [P] [US1] Create `crates/prompting-press-py/` stub crate: `crate-type = ["cdylib"]`, depends on core/consumer + `pyo3` — the only crate that may dep `pyo3` (FR-003).
 - [ ] T008 [P] [US1] Create `crates/prompting-press-node/` stub crate: `crate-type = ["cdylib"]`, depends on core/consumer + `napi`/`napi-derive` — the only crate that may dep `napi` (FR-003).
-- [ ] T009 [P] [US1] Create `packages/python/` published-package skeleton (pyproject.toml + maturin config pointing at `prompting-press-py`; no logic) (FR-004).
-- [ ] T010 [P] [US1] Create `packages/typescript/` published-package skeleton (package.json + napi-rs CLI config pointing at `prompting-press-node`; no logic) (FR-004).
+- [ ] T009 [P] [US1] Create `packages/python/` published-package skeleton (pyproject.toml + maturin config pointing at `prompting-press-py`; no logic) (FR-004). **Verify `maturin` is available** before relying on it (critique E3 / CHK026).
+- [ ] T010 [P] [US1] Create `packages/typescript/` published-package skeleton (package.json + napi-rs CLI config pointing at `prompting-press-node`; no logic) (FR-004). **Verify the `napi-rs` CLI is available** before relying on it (critique E3 / CHK026).
 - [ ] T011 [P] [US1] Create `packages/go/` reserved placeholder (a marker README only; **no** `go.mod`, no toolchain), excluded from the workspace and build (FR-005).
 - [ ] T012 [US1] Add the 4 crates to the root `Cargo.toml` workspace members; confirm `packages/go` is NOT a member. (depends on T005–T008)
 - [ ] T013 [US1] Wire moon projects/tasks for the active members (`:build`, `:test`) excluding `packages/go` from project globs; one orchestrated build/test command (FR-006). (depends on T012)
@@ -89,8 +89,8 @@ change propagates to all 3.
 - [ ] T022 [P] [US3] Pin Rust codegen: `cargo-typify` 0.7.0 installed `--locked`, CLI mode (not the macro); rustfmt pinned via the T002 toolchain — research D1. **Verify on a sample** that typify's `const`/string-enum/serde-derive output is as expected (research residual unknown) before wiring.
 - [ ] T023 [US3] Generate the Python Pydantic v2 shape from `schemas/jsonschema/prompt-definition.schema.json` into a marked-generated, segregated path under `packages/python/` (e.g. `.../generated/prompt_definition.py`). (depends on T015, T020) (FR-014/016)
 - [ ] T024 [US3] Generate the TS type shape into a marked-generated path under `packages/typescript/` (e.g. `.../generated/prompt-definition.ts`). (depends on T015, T021) (FR-014/016)
-- [ ] T025 [US3] Generate the Rust serde struct into a marked-generated path (e.g. `crates/prompting-press/src/generated/prompt_definition.rs`); confirm `metadata`/`meta`→`serde_json::Value`, sealed objects→`deny_unknown_fields`. (depends on T015, T022) (FR-014/016)
-- [ ] T026 [US3] Add a single `moon run :codegen` task orchestrating T023–T025; commit the generated artifacts. (depends on T023–T025) (FR-017)
+- [ ] T025 [US3] Generate the Rust serde struct into a marked-generated `generated/` module (e.g. `crates/prompting-press/src/generated/prompt_definition.rs`) that `lib.rs` re-exports but never hand-edits (critique E1); confirm `metadata`/`meta`→`serde_json::Value`, sealed objects→`deny_unknown_fields`. (depends on T015, T022) (FR-014/016)
+- [ ] T026 [US3] Add a single `moon run :codegen` task orchestrating T023–T025; **wire the moon task graph so `:codegen` runs before `:build`** (the consumer crate won't compile until its generated module exists — critique E1); commit the generated artifacts. (depends on T023–T025) (FR-017)
 - [ ] T027 [US3] Verify determinism: run `:codegen` twice, assert `git diff --exit-code` clean; edit one schema field, regenerate, confirm all 3 shapes change. (depends on T026) — satisfies SC-003.
 
 **Checkpoint**: one schema → three deterministic, committed shapes.
@@ -105,7 +105,7 @@ change propagates to all 3.
 **Independent Test**: clean tree passes both; adding `pyo3` to the kernel fails the FFI gate; a stale
 generated file fails the freshness gate; each failure names the invariant + location.
 
-- [ ] T028 [US4] Add the FFI-isolation CI gate: a check (moon task + `.github/workflows/`) that runs `cargo tree -p prompting-press-core -i pyo3`/`napi` (and for `prompting-press`) and fails if found, citing Principle II / C-02 with the offending crate. (depends on US1; research D3) (FR-018, FR-020)
+- [ ] T028 [US4] Add the FFI-isolation CI gate: a check (moon task + `.github/workflows/`) that runs `cargo tree -p <crate> -i pyo3`/`napi` and fails if found, citing Principle II / C-02 with the offending crate. **Drive it from an explicit, reviewable covered-crate list** (currently `prompting-press-core`, `prompting-press`) so a future FFI-free crate cannot silently escape the gate (critique E2 / CHK006). (depends on US1; research D3) (FR-018, FR-020)
 - [ ] T029 [US4] Add the codegen-freshness CI gate: regenerate via `:codegen`, then `datamodel-codegen --check` (Python) + `git add -N . && git diff --exit-code` (TS/Rust), failing on any drift incl. partial regeneration, with a clear message. (depends on US3; research D2) (FR-019, FR-020)
 - [ ] T030 [US4] Add the schema + fixtures checks (T016, T019) to the CI workflow so the schema contract is gated too.
 - [ ] T031 [US4] Verify gate behavior in a scratch branch: add `pyo3` to `prompting-press-core` → FFI gate fails; hand-edit a generated shape → freshness gate fails; revert → both green. (depends on T028, T029) — satisfies SC-004, SC-005.
