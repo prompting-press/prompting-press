@@ -710,6 +710,81 @@
       },
       "registered_skills": [],
       "installed_at": "2026-06-25T09:24:36.211549+00:00"
+    },
+    "memory-md": {
+      "version": "0.9.7",
+      "source": "local",
+      "manifest_hash": "sha256:1a109acdbaf20e1e0967bc37fb1fc904558a223713800fa8137c924c0ccad007",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "agy": [
+          "speckit.memory-md.init",
+          "speckit.memory-md.specify",
+          "speckit.memory-md.plan-with-memory",
+          "speckit.memory-md.capture",
+          "speckit.memory-md.capture-from-diff",
+          "speckit.memory-md.audit",
+          "speckit.memory-md.repair-index",
+          "speckit.memory-md.log-finding",
+          "speckit.memory-md.token-report",
+          "speckit.memory-md.prepare-context",
+          "speckit.memory-md.index-docs",
+          "speckit.memory-md.init-project",
+          "speckit.memory-md.share-lesson",
+          "speckit.memory-md.sync-shared"
+        ],
+        "claude": [
+          "speckit.memory-md.init",
+          "speckit.memory-md.specify",
+          "speckit.memory-md.plan-with-memory",
+          "speckit.memory-md.capture",
+          "speckit.memory-md.capture-from-diff",
+          "speckit.memory-md.audit",
+          "speckit.memory-md.repair-index",
+          "speckit.memory-md.log-finding",
+          "speckit.memory-md.token-report",
+          "speckit.memory-md.prepare-context",
+          "speckit.memory-md.index-docs",
+          "speckit.memory-md.init-project",
+          "speckit.memory-md.share-lesson",
+          "speckit.memory-md.sync-shared"
+        ],
+        "codex": [
+          "speckit.memory-md.init",
+          "speckit.memory-md.specify",
+          "speckit.memory-md.plan-with-memory",
+          "speckit.memory-md.capture",
+          "speckit.memory-md.capture-from-diff",
+          "speckit.memory-md.audit",
+          "speckit.memory-md.repair-index",
+          "speckit.memory-md.log-finding",
+          "speckit.memory-md.token-report",
+          "speckit.memory-md.prepare-context",
+          "speckit.memory-md.index-docs",
+          "speckit.memory-md.init-project",
+          "speckit.memory-md.share-lesson",
+          "speckit.memory-md.sync-shared"
+        ],
+        "zed": [
+          "speckit.memory-md.init",
+          "speckit.memory-md.specify",
+          "speckit.memory-md.plan-with-memory",
+          "speckit.memory-md.capture",
+          "speckit.memory-md.capture-from-diff",
+          "speckit.memory-md.audit",
+          "speckit.memory-md.repair-index",
+          "speckit.memory-md.log-finding",
+          "speckit.memory-md.token-report",
+          "speckit.memory-md.prepare-context",
+          "speckit.memory-md.index-docs",
+          "speckit.memory-md.init-project",
+          "speckit.memory-md.share-lesson",
+          "speckit.memory-md.sync-shared"
+        ]
+      },
+      "registered_skills": [],
+      "installed_at": "2026-06-25T10:19:37.099106+00:00"
     }
   }
 }
