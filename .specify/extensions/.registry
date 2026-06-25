@@ -675,6 +675,41 @@
       },
       "registered_skills": [],
       "installed_at": "2026-06-25T06:00:33.394593+00:00"
+    },
+    "roadmap": {
+      "version": "0.1.0",
+      "source": "local",
+      "manifest_hash": "sha256:d8b5c9d56e9d044e9cd5820ad829386ab50ee4e2f112ceb4bb53c7f0cf53651d",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "agy": [
+          "speckit.roadmap.write",
+          "speckit.roadmap.brief",
+          "speckit.roadmap.debrief",
+          "speckit.roadmap.sync"
+        ],
+        "claude": [
+          "speckit.roadmap.write",
+          "speckit.roadmap.brief",
+          "speckit.roadmap.debrief",
+          "speckit.roadmap.sync"
+        ],
+        "codex": [
+          "speckit.roadmap.write",
+          "speckit.roadmap.brief",
+          "speckit.roadmap.debrief",
+          "speckit.roadmap.sync"
+        ],
+        "zed": [
+          "speckit.roadmap.write",
+          "speckit.roadmap.brief",
+          "speckit.roadmap.debrief",
+          "speckit.roadmap.sync"
+        ]
+      },
+      "registered_skills": [],
+      "installed_at": "2026-06-25T09:24:36.211549+00:00"
     }
   }
 }

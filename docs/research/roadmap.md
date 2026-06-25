@@ -1,6 +1,11 @@
 # Roadmap: Prompting Press
 
-**Status**: planning artifact (2026-06-25), derived from `feature-scope.md` and the constitution
+> **Governance artifact of record is `.specify/memory/roadmap.md`** (the SpecKit
+> `roadmap` extension ledger — specs 001–007, decisions C-01…C-09, Deferred/Never lists,
+> versioned). This document is the human-readable phase-by-phase narrative behind that
+> ledger; when they diverge, the ledger wins.
+
+**Status**: planning narrative (2026-06-25), derived from `feature-scope.md` and the constitution
 (`.specify/memory/constitution.md`). Phased plan, not a spec. v1 scope is firm; later phases are
 directional and gated on real demand (R1 — generality is earned, not anticipated).
 
