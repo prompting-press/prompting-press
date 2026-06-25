@@ -28,10 +28,10 @@ gates attach to US1 (FFI) and US3 (freshness). Cross-story `[P]` is therefore ra
 
 **Purpose**: Root-level scaffolding every later phase needs. No crate logic yet.
 
-- [ ] T001 Create the root Cargo virtual workspace manifest `Cargo.toml` with `[workspace]` `members = ["crates/*"]`, `resolver = "2"`, and `[workspace.package]`/`[workspace.dependencies]` shared-metadata stanzas (no members exist yet — added in US1).
-- [ ] T002 [P] Add `rust-toolchain.toml` pinning an explicit stable channel (not floating `stable`) — required for `cargo-typify`/rustfmt codegen determinism (research D1/D4).
-- [ ] T003 [P] Update `.gitignore` for the new layout: ensure Rust `target/`, Python build/`.venv`, Node `node_modules/`, and generated-artifact build dirs are handled (the committed generated shapes are NOT ignored — they're tracked + freshness-gated).
-- [ ] T004 Remove the bootstrap's flat `packages/{python,typescript,go,rust}` skeleton (FR-007), leaving no orphaned duplicate; record the removal so the reorg is auditable.
+- [X] T001 Create the root Cargo virtual workspace manifest `Cargo.toml` with `[workspace]` `members = ["crates/*"]`, `resolver = "2"`, and `[workspace.package]`/`[workspace.dependencies]` shared-metadata stanzas (no members exist yet — added in US1).
+- [X] T002 [P] Add `rust-toolchain.toml` pinning an explicit stable channel (not floating `stable`) — required for `cargo-typify`/rustfmt codegen determinism (research D1/D4).
+- [X] T003 [P] Update `.gitignore` for the new layout: ensure Rust `target/`, Python build/`.venv`, Node `node_modules/`, and generated-artifact build dirs are handled (the committed generated shapes are NOT ignored — they're tracked + freshness-gated).
+- [X] T004 Remove the bootstrap's flat `packages/{python,typescript,go,rust}` skeleton (FR-007), leaving no orphaned duplicate; record the removal so the reorg is auditable.
 
 **Checkpoint**: empty workspace manifest + pinned toolchain ready.
 
