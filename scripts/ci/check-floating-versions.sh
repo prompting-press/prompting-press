@@ -18,6 +18,17 @@
 #   - Lockfiles (pnpm-lock.yaml, uv.lock) are intentionally EXCLUDED.
 #   - The check is for literal `^`, `~`, `"latest"`, and `"*"` as version values
 #     (e.g. `"^1.0.0"`, `~1`, `= "latest"`, version = "*").
+#
+# COMMENT STRIPPING (prevents false positives):
+#   TOML files (.toml) carry explanatory comments that legitimately reference the
+#   forbidden patterns (e.g. "# no floating "latest"/"^"/"~"/"*" per SEC-003").
+#   These comments are stripped before scanning. JSON has no comment syntax.
+#
+# PORTABILITY NOTE:
+#   Uses grep -E (ERE), not grep -P (PCRE). -P is unreliable on BSD/ugrep
+#   environments when invoked from a non-interactive bash script context.
+#   All required patterns are expressible as ERE; -E works on GNU grep (CI)
+#   and ugrep (macOS local) alike.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -51,7 +62,37 @@ FAILED=()
 for manifest in "${MANIFESTS[@]}"; do
   [[ -f "${manifest}" ]] || continue
 
-  # Pattern: lines containing a floating version specifier.
+  # Strip comments before scanning to avoid false positives from inline
+  # documentation that references the forbidden patterns (SEC-003 explanations,
+  # etc.). TOML comment syntax: '#' to end-of-line. JSON has no comments.
+  #
+  # The sed expression removes:
+  #   - Full-line comments      (^#...)
+  #   - Trailing inline comments (value  # comment)
+  # It is safe here because no version value in any in-scope manifest contains
+  # a literal '#' character.
+  case "${manifest}" in
+    *.toml)
+      scan_content="$(sed -E 's/(^|[[:space:]])#.*$//' "${manifest}")"
+      ;;
+    *)
+      scan_content="$(cat "${manifest}")"
+      ;;
+  esac
+
+  # Write to a temp file so grep reads from a file descriptor, not a pipeline.
+  # This sidesteps a portability trap: `printf '%s\n' "$var" | grep -E ...`
+  # can behave differently from `grep -E ... <(printf '%s\n' "$var")` under
+  # some bash+ugrep combinations (grep -P in particular exits 1 silently in
+  # the pipeline context on macOS/ugrep even when a match exists). Writing to
+  # a temp file and grepping the file is unambiguous on all targets.
+  tmp_scan="$(mktemp)"
+  # shellcheck disable=SC2064
+  trap "rm -f '${tmp_scan}'" EXIT
+  printf '%s\n' "${scan_content}" > "${tmp_scan}"
+
+  # --- Pattern checks (grep -E, portable ERE) ---
+  #
   # Patterns to detect:
   #   "^..."     — npm caret range in JSON
   #   "~..."     — npm tilde range in JSON
@@ -62,26 +103,30 @@ for manifest in "${MANIFESTS[@]}"; do
   #   = "^"...   — caret in TOML (e.g. version = "^1.0")
   #
   # Explicitly NOT flagged:
-  #   >=x,<y     — bounded range (acceptable per SEC-003 comment in pyproject.toml)
-  #   ">=..."    — floor bound only, but present in pyproject build-system requires
-  #
-  # We use grep with -P (PCRE) for precise matching.
-  if grep -Pn '"[\^~][^"]*"' "${manifest}" 2>/dev/null; then
-    FAILED+=("${manifest}: caret or tilde range in JSON string")
+  #   >=x,<y     — bounded range (acceptable per SEC-003; maturin in pyproject.toml)
+  #   ">=..."    — floor bound only (also acceptable)
+
+  if grep -En '"[\^~][^"]*"' "${tmp_scan}" 2>/dev/null; then
+    FAILED+=("${manifest}: caret or tilde range in JSON/TOML string")
   fi
-  if grep -Pn '"latest"' "${manifest}" 2>/dev/null; then
+  if grep -En '"latest"' "${tmp_scan}" 2>/dev/null; then
     FAILED+=("${manifest}: literal 'latest' version")
   fi
-  if grep -Pn '"[*]"' "${manifest}" 2>/dev/null; then
+  if grep -En '"[*]"' "${tmp_scan}" 2>/dev/null; then
     FAILED+=("${manifest}: wildcard '*' version in JSON")
   fi
-  # TOML: version = "*"  or  version = "~x"  or  version = "^x"
-  if grep -Pn '=\s*"[*]"' "${manifest}" 2>/dev/null; then
+  # TOML: version = "*"
+  if grep -En '=\s*"[*]"' "${tmp_scan}" 2>/dev/null; then
     FAILED+=("${manifest}: wildcard '*' version in TOML")
   fi
-  if grep -Pn '=\s*"[\^~][^"]*"' "${manifest}" 2>/dev/null; then
-    FAILED+=("${manifest}: caret or tilde range in TOML string")
+  # TOML: version = "^x" or version = "~x"
+  # (also caught by the first pattern for JSON, but explicit for TOML context)
+  if grep -En '=\s*"[\^~][^"]*"' "${tmp_scan}" 2>/dev/null; then
+    FAILED+=("${manifest}: caret or tilde range in TOML assignment")
   fi
+
+  rm -f "${tmp_scan}"
+  trap - EXIT
 done
 
 if [[ ${#FAILED[@]} -gt 0 ]]; then
