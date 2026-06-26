@@ -1,0 +1,6 @@
+{
+  "name": "excluded-extends",
+  "role": "user",
+  "body": "{% extends \"base\" %}{{ shown }}",
+  "variables": {}
+}

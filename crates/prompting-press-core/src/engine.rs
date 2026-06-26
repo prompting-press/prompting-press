@@ -228,21 +228,40 @@ pub(crate) fn map_minijinja_error(err: minijinja::Error) -> KernelError {
 }
 
 /// Best-effort heuristic distinguishing an excluded-feature parse failure from an
-/// ordinary syntax error (research D4). With `macros`/`multi_template` disabled, the
-/// excluded tags surface as unknown statements; MiniJinja's message names the offending
+/// ordinary syntax error (research D4). With `macros`/`multi_template` disabled, each
+/// excluded tag surfaces as an **unknown statement** and MiniJinja names the offending
 /// keyword. This only refines the error *label* — both branches are loud parse-time
-/// errors, so a miss is benign (it falls back to `Parse`).
+/// errors, so a miss is benign (it falls back to [`KernelError::Parse`]).
+///
+/// **Matching contract (verified against MiniJinja 2.21.0):** with `macros` /
+/// `multi_template` off, `add_template` fails with a `SyntaxError` whose detail is
+/// `"unknown statement <keyword>"` — the keyword is **bare**, not quoted/backticked
+/// (verified empirically: `unknown statement include`, `… from`, `… macro`, `… block`,
+/// etc.). The heuristic therefore matches the exact phrase `unknown statement <kw>` for
+/// each of the six disabled-tag keywords. This is deliberately tight in two directions:
+///
+/// - It will **not** fire on an ordinary syntax error (an unclosed `{{`, a bad filter,
+///   etc.), because those do not emit the `unknown statement` phrase — so a real syntax
+///   error is correctly labelled [`KernelError::Parse`], never mislabelled as excluded.
+/// - It keys off the `unknown statement` phrase, not a loose substring like `"block"`
+///   (which could otherwise appear in an unrelated message), so it does not over-match.
+///
+/// A genuinely unknown tag that is *not* one of the six (e.g. `{% frobnicate %}`) also
+/// emits `unknown statement frobnicate`, but `frobnicate` is not in the keyword set, so
+/// it correctly falls through to [`KernelError::Parse`].
 fn looks_like_excluded_feature(detail: &str) -> bool {
-    const EXCLUDED_KEYWORDS: [&str; 6] = ["include", "import", "from", "extends", "macro", "block"];
+    /// The six v1-excluded tag keywords (FR-002), as MiniJinja names them in an
+    /// `unknown statement <kw>` detail when `macros`/`multi_template` are disabled.
+    const EXCLUDED_KEYWORDS: [&str; 6] = ["include", "extends", "import", "from", "macro", "block"];
     let lowered = detail.to_ascii_lowercase();
     EXCLUDED_KEYWORDS
         .iter()
-        .any(|kw| lowered.contains(&format!("'{kw}'")) || lowered.contains(&format!("`{kw}`")))
+        .any(|kw| lowered.contains(&format!("unknown statement {kw}")))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::build_environment;
+    use super::{build_environment, looks_like_excluded_feature};
 
     #[test]
     fn builds_with_strict_undefined() {
@@ -252,5 +271,37 @@ mod tests {
             minijinja::UndefinedBehavior::Strict,
             "kernel environment must be strict-undefined (FR-001a)",
         );
+    }
+
+    /// The heuristic matches MiniJinja 2.21.0's actual `unknown statement <kw>` detail for
+    /// each of the six disabled-tag keywords (verified empirically against the engine).
+    #[test]
+    fn excluded_feature_detail_is_recognised() {
+        for kw in ["include", "extends", "import", "from", "macro", "block"] {
+            let detail = format!("syntax error: unknown statement {kw} (in kernel:1)");
+            assert!(
+                looks_like_excluded_feature(&detail),
+                "must recognise the excluded keyword `{kw}` in `{detail}`",
+            );
+        }
+    }
+
+    /// Tightness: an ordinary syntax error (no `unknown statement <kw>` phrase) must NOT be
+    /// mislabelled as an excluded feature — it falls back to `Parse`. Guards against the
+    /// refined matcher over-firing.
+    #[test]
+    fn ordinary_syntax_error_detail_is_not_excluded() {
+        for detail in [
+            "syntax error: unexpected end of input (in kernel:1)",
+            "syntax error: unexpected `}` (in kernel:1)",
+            // An unknown tag that is NOT one of the six excluded keywords: still a parse
+            // error, but not an excluded feature.
+            "syntax error: unknown statement frobnicate (in kernel:1)",
+        ] {
+            assert!(
+                !looks_like_excluded_feature(detail),
+                "must NOT mislabel `{detail}` as an excluded feature",
+            );
+        }
     }
 }

@@ -1,0 +1,95 @@
+# deny.toml — cargo-deny configuration for Prompting Press
+# T036 / SEC-001: dependency-advisory security gate.
+#
+# PRIMARY PURPOSE: catch known CVEs in workspace dependencies before they land.
+# License and bans sections are kept deliberately permissive so the advisory gate
+# does not turn into a license-policy fight on day one. Tighten them deliberately
+# when you have a policy, not before.
+#
+# ROADMAP-Q3 NOTE (minijinja bump obligation):
+#   Whenever minijinja is bumped in Cargo.toml, the bumping author MUST re-confirm
+#   that Template::undeclared_variables (nested=false) remains a stable, public API
+#   in the new release. This is the "re-confirm MiniJinja stable-API on each bump"
+#   obligation recorded in the roadmap Open Question Q3. The advisory gate owner
+#   also owns this re-check. Procedure:
+#     1. Run `cargo deny check advisories` — must be green after the bump.
+#     2. Check the minijinja CHANGELOG for any deprecation of undeclared_variables.
+#     3. Run `mise exec -- moon run ci:check-advisories` locally before pushing.
+
+[graph]
+# Only scan workspace crates and their transitive deps.
+targets = []
+
+# ---------------------------------------------------------------------------
+# [advisories] — PRIMARY GATE (SEC-001)
+#
+# cargo-deny v2 schema: vulnerability/unsound/notice/severity-threshold fields
+# are REMOVED. All CVE-tagged advisories in the RustSec DB are denied by default
+# unless explicitly listed in `ignore`. Use `ignore` (with a written reason) to
+# suppress a specific advisory after a deliberate security review.
+#
+# `unmaintained` and `unsound` now take a scope value, not a lint level:
+#   "all"        — flag all matching crates (workspace + transitive)
+#   "workspace"  — flag only workspace-member crates
+#   "transitive" — flag only transitive deps
+#   "none"       — do not flag
+#
+# `yanked` still takes a lint level: "deny" | "warn" | "allow"
+# ---------------------------------------------------------------------------
+[advisories]
+version = 2
+
+# Flag unmaintained crates across the full dep graph. "all" = workspace + transitive.
+# This is a warning posture on day one; flip to a hard deny by adding the advisory
+# ID to a `deny` list once the dep tree has been triaged.
+unmaintained = "all"
+
+# Flag unsound crates (declared unsound by the crate's own authors) across full graph.
+unsound = "all"
+
+# Deny yanked crate versions — a yanked version signals a known-broken release.
+yanked = "deny"
+
+# Advisories to suppress — add an entry here only after a documented security review.
+# Example:
+#   ignore = [{ id = "RUSTSEC-2023-XXXX", reason = "not reachable via our usage" }]
+ignore = []
+
+# ---------------------------------------------------------------------------
+# [licenses] — PERMISSIVE (not a policy gate in v1)
+# ---------------------------------------------------------------------------
+# TODO(post-v1): tighten allow-list to the licenses your legal team approves.
+# For now, accept common permissive licenses to unblock the advisory gate.
+[licenses]
+version = 2
+allow = [
+  "MIT",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Unicode-3.0",
+  "Unicode-DFS-2016",
+  "CC0-1.0",
+  "Zlib",
+  "OpenSSL",
+]
+confidence-threshold = 0.8
+
+# ---------------------------------------------------------------------------
+# [bans] — PERMISSIVE (not a policy gate in v1)
+# ---------------------------------------------------------------------------
+# TODO(post-v1): add specific crates to deny if security policy requires it.
+[bans]
+# Warn on multiple versions of the same crate rather than failing.
+multiple-versions = "warn"
+deny = []
+
+# ---------------------------------------------------------------------------
+# [sources] — only crates.io in v1
+# ---------------------------------------------------------------------------
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

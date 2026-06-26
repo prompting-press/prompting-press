@@ -1,0 +1,6 @@
+{
+  "name": "excluded-include",
+  "role": "user",
+  "body": "{% include \"x\" %}{{ shown }}",
+  "variables": {}
+}

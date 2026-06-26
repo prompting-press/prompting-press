@@ -87,6 +87,12 @@ jobs:
       - name: 'T029: Codegen freshness'
         run: mise exec -- moon run schemas:codegen-check
 
+      # T036 — Advisory scan: known CVEs in workspace deps (SEC-001)
+      # cargo-deny reads Cargo.lock + deny.toml; does NOT require cargo build.
+      # Gate owner also re-confirms minijinja undeclared_variables API on each bump (roadmap Q3).
+      - name: 'T036: Advisory scan'
+        run: mise exec -- moon run ci:check-advisories
+
   # ---------------------------------------------------------------------------
   # build — OS-sensitive: exercises FFI link paths per platform
   # ---------------------------------------------------------------------------

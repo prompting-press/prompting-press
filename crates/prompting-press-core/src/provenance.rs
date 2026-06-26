@@ -39,6 +39,13 @@ const FIELDS_PLACEHOLDER: &str = "{fields}";
 /// (FR-022, SC-005). [`template`](Self::template) overrides the
 /// [`DEFAULT_GUARD_TEMPLATE`]; `None` ⇒ the default.
 ///
+/// **This is NOT a sanitizer (critique X1 / SEC-002).** Enabling the guard only produces a
+/// separate, advisory instruction string that *names* the untrusted/external fields. It
+/// never inspects, escapes, strips, or rewrites a bound value, and the rendered body is
+/// byte-identical whether the guard is on or off (FR-025, SC-005). The untrusted/external
+/// values still flow into the rendered `text` unchanged; the guard is a suggestion to the
+/// downstream model, never a runtime filter.
+///
 /// ## Override-template contract (FR-024, analysis F5)
 ///
 /// The (default or override) template is expanded by a **plain string replacement** of the
@@ -61,6 +68,13 @@ pub struct GuardConfig {
 /// Derived from `def.variables[*].provenance`. `trusted` is the complement and is **not**
 /// stored. Both sets are [`BTreeSet`]s, so iteration is sorted and the derived guard text
 /// is deterministic across runs and languages (Principle I / C-01).
+///
+/// **These tags are declarative metadata, NOT runtime enforcement (critique X1 / SEC-002).**
+/// This view only *reports* which fields a definition declared as untrusted/external. The
+/// kernel never gates, blocks, sanitizes, or alters rendering based on a field's
+/// provenance — a template interpolating an `untrusted` field renders exactly as one
+/// interpolating a `trusted` field. Acting on the tag (an opt-in guard, a consumer-side
+/// lint) is the caller's choice; the kernel itself enforces nothing.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProvenanceView {
     /// Field names declared with `provenance: "untrusted"`.

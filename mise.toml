@@ -24,6 +24,9 @@ jq = "1.8.1"
 
 # --- Codegen toolchain (research D1) ---
 "cargo:cargo-typify" = { version = "0.7.0", locked = true }  # Rust JSON-Schema -> serde structs (T022/T025); --locked pins transitive deps to cargo-typify's shipped Cargo.lock
+
+# --- Security toolchain (T036 / SEC-001) ---
+"cargo:cargo-deny" = { version = "0.19.9", locked = true }   # Advisory/license/bans scan; drives ci:check-advisories gate
 # datamodel-code-generator is managed via uv (packages/python/uv.lock, dependency-group codegen) — not pipx.
 # maturin is declared as a build-system requires in packages/python/pyproject.toml (>=1.14,<2.0);
 # the wheel build (spec 004/007) will resolve it via uv/build-system at that time.

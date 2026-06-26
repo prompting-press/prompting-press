@@ -1,0 +1,6 @@
+{
+  "name": "excluded-macro",
+  "role": "user",
+  "body": "{% macro f() %}{% endmacro %}{{ shown }}",
+  "variables": {}
+}
