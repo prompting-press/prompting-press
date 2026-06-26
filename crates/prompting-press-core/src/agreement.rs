@@ -52,7 +52,7 @@ use crate::generated::prompt_definition::PromptDefinition;
 /// The per-variant agreement-analysis output (data-model §Agreement; FR-016..FR-019).
 ///
 /// `required_roots` is a [`BTreeSet`] so the output is **sorted and deterministic**
-/// (constitution C-01 / structural parity): the same template always yields the same
+/// (roadmap decision C-01 / structural parity): the same template always yields the same
 /// ordered set, byte-identically across languages once the binding crates surface it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Agreement {

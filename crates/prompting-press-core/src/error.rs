@@ -2,7 +2,7 @@
 //!
 //! The kernel returns its **native** [`KernelError`]. It deliberately does NOT
 //! normalize errors to the common `[{field, code, message}]` shape — that is the
-//! consumer's job at each binding boundary (constitution C-06 / Principle VI).
+//! consumer's job at each binding boundary (roadmap decision C-06 (Principle VI)).
 //! Native error types MUST NOT leak across FFI, but that normalization lives in the
 //! consumer (spec 003), never here.
 //!
@@ -15,7 +15,7 @@
 ///
 /// Each variant maps to a functional requirement in the spec-002 contract; see the
 /// per-variant docs. The consumer normalizes these into the common structured shape.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum KernelError {
     /// A render / source / analysis call named a variant that does not exist on the
     /// definition (and is not the reserved `"default"`). [FR-009]
@@ -94,6 +94,59 @@ mod tests {
             name: "article".to_string(),
         };
         assert_eq!(e.to_string(), "undefined variable at render: `article`");
+
+        // S-3: Display for the remaining three variants — each must be non-empty and
+        // carry its key detail string.
+        let e = KernelError::ExcludedFeature {
+            detail: "unknown statement include".to_string(),
+        };
+        let s = e.to_string();
+        assert!(!s.is_empty());
+        assert!(
+            s.contains("unknown statement include"),
+            "ExcludedFeature Display must surface its detail, got: {s:?}"
+        );
+
+        let e = KernelError::Parse {
+            detail: "unexpected end of input".to_string(),
+        };
+        let s = e.to_string();
+        assert!(!s.is_empty());
+        assert!(
+            s.contains("unexpected end of input"),
+            "Parse Display must surface its detail, got: {s:?}"
+        );
+
+        let e = KernelError::Render {
+            detail: "number is not iterable".to_string(),
+        };
+        let s = e.to_string();
+        assert!(!s.is_empty());
+        assert!(
+            s.contains("number is not iterable"),
+            "Render Display must surface its detail, got: {s:?}"
+        );
+    }
+
+    /// The new `PartialEq, Eq` derive (TY-3) lets tests assert variants structurally.
+    #[test]
+    fn equality_is_structural() {
+        assert_eq!(
+            KernelError::UnknownVariant {
+                requested: "x".to_string(),
+            },
+            KernelError::UnknownVariant {
+                requested: "x".to_string(),
+            },
+        );
+        assert_ne!(
+            KernelError::UnknownVariant {
+                requested: "x".to_string(),
+            },
+            KernelError::UnknownVariant {
+                requested: "y".to_string(),
+            },
+        );
     }
 
     #[test]

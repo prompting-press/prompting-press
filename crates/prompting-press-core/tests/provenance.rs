@@ -160,3 +160,30 @@ fn v3_5_untrusted_value_passes_through_unchanged() {
     // The guard names the field; it must not have touched the body's value.
     assert!(guarded.guard.is_some(), "guard field must be present");
 }
+
+/// TS-I7 — an all-`trusted` prompt rendered with the guard ENABLED produces no guard
+/// field: the untrusted∪external union is empty, so there is nothing to name. The render
+/// must succeed (no panic) and carry `guard == None`. [FR-022]
+#[test]
+fn ts_i7_all_trusted_enabled_guard_produces_no_field() {
+    // `hello` declares a single `trusted` field (`name`).
+    let def = load_def_fixture("hello");
+    let values = minijinja::Value::from_serialize(serde_json::json!({ "name": "Ada" }));
+
+    let result = render(
+        &def,
+        None,
+        values,
+        &GuardConfig {
+            enabled: true,
+            template: None,
+        },
+    )
+    .expect("guard-enabled render over an all-trusted prompt must succeed");
+
+    assert_eq!(
+        result.guard, None,
+        "an empty untrusted/external union must yield no guard field, even when enabled"
+    );
+    assert_eq!(result.text, "Hello Ada");
+}

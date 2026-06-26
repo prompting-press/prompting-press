@@ -7,7 +7,7 @@
 mod common;
 
 use common::{load_def_fixture, load_prompt_definition};
-use prompting_press_core::{render, GuardConfig};
+use prompting_press_core::{get_source, render, GuardConfig};
 
 /// A disabled guard config — US1 never opts into guard expansion (US3 owns that).
 fn no_guard() -> GuardConfig {
@@ -91,4 +91,109 @@ fn v1_6_conditional_and_loop_render() {
 
     assert_eq!(result.text, "Items:\n- alpha\n- beta\n- gamma");
     assert_eq!(result.variant, "default");
+}
+
+/// TS-C2 — the reserved `Some("default")` resolves to the root body, exactly like `None`
+/// (it is NOT an unknown variant). Both `render` and `get_source` honour the reserved name.
+/// [FR-011]
+#[test]
+fn reserved_default_variant_resolves_to_root_body() {
+    let def = load_def_fixture("hello");
+
+    // render(Some("default")) == render(None): same root body, variant "default".
+    let explicit = render(
+        &def,
+        Some("default"),
+        minijinja::Value::from_serialize(serde_json::json!({ "name": "Ada" })),
+        &GuardConfig::default(),
+    )
+    .expect("Some(\"default\") must resolve to the root body, not error");
+    assert_eq!(explicit.text, "Hello Ada");
+    assert_eq!(explicit.variant, "default");
+
+    let implicit = render(
+        &def,
+        None,
+        minijinja::Value::from_serialize(serde_json::json!({ "name": "Ada" })),
+        &GuardConfig::default(),
+    )
+    .expect("None must resolve to the root body");
+    assert_eq!(
+        explicit, implicit,
+        "Some(\"default\") and None must produce the identical RenderResult"
+    );
+
+    // get_source(Some("default")) returns the root body string.
+    let src =
+        get_source(&def, Some("default")).expect("get_source(Some(\"default\")) must succeed");
+    assert_eq!(
+        src, "Hello {{ name }}",
+        "reserved default must yield the root body"
+    );
+    assert_eq!(
+        src,
+        get_source(&def, None).expect("get_source(None) must succeed"),
+        "get_source(Some(\"default\")) must equal get_source(None)"
+    );
+}
+
+/// TS-I1 — an empty `body` renders to the empty string with valid 64-char hex hashes.
+/// [spec Edge Cases]
+#[test]
+fn empty_body_renders_empty_with_valid_hashes() {
+    let def = load_def_fixture("empty-body");
+
+    let result = render(
+        &def,
+        None,
+        minijinja::Value::from_serialize(serde_json::json!({})),
+        &GuardConfig::default(),
+    )
+    .expect("an empty body must render successfully");
+
+    assert_eq!(result.text, "", "empty body renders to the empty string");
+    assert_eq!(result.variant, "default");
+    assert_eq!(
+        result.template_hash.len(),
+        64,
+        "template_hash is 64 hex chars"
+    );
+    assert_eq!(result.render_hash.len(), 64, "render_hash is 64 hex chars");
+    assert!(
+        result
+            .template_hash
+            .chars()
+            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()),
+        "template_hash is lowercase hex"
+    );
+    assert!(
+        result
+            .render_hash
+            .chars()
+            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()),
+        "render_hash is lowercase hex"
+    );
+}
+
+/// TS-I2 — a multibyte/non-ASCII template renders correctly; hashing is over the UTF-8
+/// bytes (deterministic 64-char hex). [spec Edge Cases]
+#[test]
+fn unicode_multibyte_body_renders_correctly() {
+    let def = load_def_fixture("unicode");
+
+    let result = render(
+        &def,
+        None,
+        minijinja::Value::from_serialize(serde_json::json!({ "name": "世界" })),
+        &GuardConfig::default(),
+    )
+    .expect("a unicode body must render successfully");
+
+    assert_eq!(result.text, "こんにちは 世界 🌟");
+    assert_eq!(result.variant, "default");
+    assert_eq!(
+        result.render_hash.len(),
+        64,
+        "render_hash over UTF-8 bytes is 64 hex chars"
+    );
 }

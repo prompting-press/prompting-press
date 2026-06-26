@@ -111,7 +111,7 @@ pub fn get_source<'a>(
 ///
 /// Plain data returned to the caller — no telemetry sink, no tracing coupling. There is
 /// deliberately **no** `vars_hash` field (FR-014).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RenderResult {
     /// The rendered body text (FR-001). The guard text is NEVER concatenated here.
     pub text: String,

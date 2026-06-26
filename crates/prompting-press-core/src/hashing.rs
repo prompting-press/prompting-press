@@ -6,7 +6,7 @@
 //! - `template_hash = SHA256(resolved variant source)` (FR-012), and
 //! - `render_hash   = SHA256(rendered output)` (FR-013).
 //!
-//! Hashing over the string — never over structured input — is exactly constitution C-05:
+//! Hashing over the string — never over structured input — is exactly roadmap decision C-05:
 //! there is **no** `vars_hash` (FR-014), which sidesteps the JSON-canonicalization problem
 //! entirely. `sha2` is pure-Rust and deterministic, so these hashes are byte-identical
 //! across languages by construction (constitution Principle I).

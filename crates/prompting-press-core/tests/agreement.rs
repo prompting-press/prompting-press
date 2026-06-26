@@ -17,7 +17,7 @@ mod common;
 
 use std::collections::BTreeSet;
 
-use common::load_def_fixture;
+use common::{load_def_fixture, load_prompt_definition};
 use prompting_press_core::{required_roots, KernelError};
 
 /// Convenience: build the expected `BTreeSet<String>` from string literals.
@@ -179,5 +179,42 @@ fn v4_3_excluded_feature_template_errors_never_empty_agreement() {
             KernelError::ExcludedFeature { .. } | KernelError::Parse { .. }
         ),
         "expected ExcludedFeature or Parse, got {err:?}",
+    );
+}
+
+/// TS-I5 — per-variant analysis works for a NAMED arm, not just the reserved `default`.
+///
+/// `required_roots(&def, Some("concise"))` analyses the `concise` arm
+/// (`"In one sentence, summarise: {{article}}"`) → roots `{article}`, with the reported
+/// `variant == "concise"`. Proves the analysis resolves and reports per-variant. [FR-016]
+#[test]
+fn ts_i5_named_variant_agreement_analyses_that_arm() {
+    let def = load_prompt_definition("multi-variant");
+
+    let agreement =
+        required_roots(&def, Some("concise")).expect("named-variant analysis must succeed");
+
+    assert_eq!(agreement.variant, "concise");
+    assert_eq!(
+        agreement.required_roots,
+        roots(["article"]),
+        "the concise arm references exactly the root `article`",
+    );
+}
+
+/// TS-I1 (agreement half) — a prompt with an empty `body` has an empty required-roots set
+/// (nothing referenced ⇒ nothing required), reported under the reserved `default` arm.
+/// [spec Edge Cases]
+#[test]
+fn ts_i1_empty_body_has_empty_required_roots() {
+    let def = load_def_fixture("empty-body");
+
+    let agreement = required_roots(&def, None).expect("analysis of an empty body must succeed");
+
+    assert_eq!(agreement.variant, "default");
+    assert!(
+        agreement.required_roots.is_empty(),
+        "an empty body references no roots, got {:?}",
+        agreement.required_roots,
     );
 }

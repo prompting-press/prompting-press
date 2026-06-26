@@ -97,7 +97,7 @@
 //! .expect("valid prompt definition");
 //!
 //! let values = minijinja::Value::from_serialize(serde_json::json!({ "name": "Ada" }));
-//! let no_guard = GuardConfig { enabled: false, template: None };
+//! let no_guard = GuardConfig::default(); // { enabled: false, template: None } — guard opt-out
 //!
 //! let result = render(&def, None, values, &no_guard).expect("render succeeds");
 //!
@@ -108,7 +108,7 @@
 //! ```
 
 /// Code-generated shape modules, emitted from the JSON Schema single source of truth
-/// by `cargo-typify` (FR-016 / constitution C-07). Marked-generated, segregated, and
+/// by `cargo-typify` (FR-016 / roadmap decision C-07). Marked-generated, segregated, and
 /// freshness-gated in CI; never hand-edited. Regenerate via
 /// `crates/prompting-press-core/scripts/codegen.sh`.
 pub mod generated;
@@ -119,7 +119,7 @@ pub use generated::prompt_definition;
 pub use generated::prompt_definition::PromptDefinition;
 
 /// Structured kernel error type (`KernelError`); the consumer normalizes it to the
-/// common `[{field, code, message}]` shape (constitution C-06 / Principle VI).
+/// common `[{field, code, message}]` shape (roadmap decision C-06 (Principle VI)).
 pub mod error;
 
 /// Engine construction + the render path and variant resolution: the canonical

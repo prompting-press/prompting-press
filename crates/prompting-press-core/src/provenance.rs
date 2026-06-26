@@ -54,7 +54,7 @@ const FIELDS_PLACEHOLDER: &str = "{fields}";
 /// template is not a prompt template and MUST NOT re-enter the engine — that would open a
 /// recursive-injection path through caller-controlled template text. If an override omits
 /// `{fields}`, the text is used verbatim (no error).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct GuardConfig {
     /// When `false`, no guard field is produced and the render is a plain render.
     pub enabled: bool,
