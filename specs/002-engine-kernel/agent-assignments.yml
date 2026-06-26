@@ -1,0 +1,140 @@
+# Agent Assignments
+# Feature: 002 — Engine kernel (prompting-press-core)
+# Generated: 2026-06-26
+# Command: /speckit.agent-assign.assign
+
+agents_scanned:
+  - name: "rust-pro"
+    source: "project"
+    description: "Master Rust — modern type system, production systems programming, latest ecosystem/crates."
+  - name: "coder"
+    source: "project"
+    description: "Implementation subagent for bounded code changes, tests, refactors, migrations (file/module-scoped, cross-cutting plumbing)."
+  - name: "speckit-implement-task"
+    source: "project"
+    description: "SpecKit-aware implementer for non-code/tightly-scoped tasks; also scopes substantial code work for a delegated coder."
+
+# Rationale: all-Rust kernel spec. Rust LOGIC authorship + tests + in-crate rustdoc → rust-pro.
+# Build/config/relocation/CI-gate plumbing and command-running verification tasks → coder
+# (file-mechanical, cross-language tooling, not Rust-logic). No frontend/API/db tasks exist.
+
+assignments:
+  # Phase 1 — Setup
+  T001:
+    agent: "coder"
+    reason: "Edit Cargo.toml deps (workspace pin + feature flags); config plumbing, not Rust logic."
+  T002:
+    agent: "coder"
+    reason: "Run cargo build + ci:check-ffi and record cargo tree; verification/command task."
+
+  # Phase 2 — Foundational (generated-shape relocation + scaffolding)
+  T003:
+    agent: "coder"
+    reason: "git mv of generated module + doc-comment path edit; mechanical file relocation."
+  T004:
+    agent: "coder"
+    reason: "git mv codegen.sh + repoint OUT/REPO_ROOT/header; shell-script path plumbing."
+  T005:
+    agent: "coder"
+    reason: "Move moon codegen task between projects + build deps; moon.yml config plumbing."
+  T006:
+    agent: "rust-pro"
+    reason: "Kernel lib.rs module wiring + re-exports of the generated shape; Rust module structure."
+  T007:
+    agent: "rust-pro"
+    reason: "Consumer lib.rs re-export edge re-pointed to the kernel; Rust module/visibility."
+  T008:
+    agent: "coder"
+    reason: "Edit schemas/moon.yml freshness-gate dep + input path; CI/config plumbing."
+  T009:
+    agent: "coder"
+    reason: "End-to-end relocation verification (build workspace + freshness gate) + README path edits."
+  T010:
+    agent: "rust-pro"
+    reason: "KernelError enum + Error/Display impls; Rust type design (data-model §KernelError)."
+  T011:
+    agent: "rust-pro"
+    reason: "Environment builder (Strict undefined, feature config); MiniJinja Rust integration."
+  T012:
+    agent: "rust-pro"
+    reason: "Rust test fixtures dir + loader helper (self-referential-grep-safe); test scaffolding."
+
+  # Phase 3 — US1 render + provenance
+  T013:
+    agent: "rust-pro"
+    reason: "Rust variant-resolution + render tests (render.rs)."
+  T014:
+    agent: "rust-pro"
+    reason: "Rust determinism + hashing tests (hashing.rs)."
+  T015:
+    agent: "rust-pro"
+    reason: "Rust error-path tests (render_errors.rs)."
+  T016:
+    agent: "rust-pro"
+    reason: "resolve_variant logic in engine.rs; core Rust kernel logic."
+  T017:
+    agent: "rust-pro"
+    reason: "get_source impl; Rust kernel logic."
+  T018:
+    agent: "rust-pro"
+    reason: "sha256_hex via sha2; Rust hashing module."
+  T019:
+    agent: "rust-pro"
+    reason: "RenderResult + render() incl. MiniJinja render + error mapping; central kernel logic."
+  T020:
+    agent: "coder"
+    reason: "Run cargo test for US1 suites + clippy/fmt; verification/command task."
+
+  # Phase 4 — US2 agreement analysis
+  T021:
+    agent: "rust-pro"
+    reason: "Rust agreement-analysis tests (agreement.rs)."
+  T022:
+    agent: "rust-pro"
+    reason: "Rust analysis-purity test (agreement_purity.rs)."
+  T023:
+    agent: "rust-pro"
+    reason: "agreement.rs: Agreement + required_roots over undeclared_variables; headline Rust logic."
+  T024:
+    agent: "rust-pro"
+    reason: "Env-derived globals allowlist subtraction; MiniJinja Rust integration."
+  T025:
+    agent: "rust-pro"
+    reason: "Parse-error short-circuit (FR-016a) in agreement.rs; soundness-critical Rust logic."
+  T026:
+    agent: "coder"
+    reason: "Run cargo test for US2 suites; verification/command task."
+
+  # Phase 5 — US3 provenance + guard
+  T027:
+    agent: "rust-pro"
+    reason: "Rust provenance + guard tests (provenance.rs)."
+  T028:
+    agent: "rust-pro"
+    reason: "ProvenanceView + provenance_view(); Rust kernel logic."
+  T029:
+    agent: "rust-pro"
+    reason: "GuardConfig + build_guard_text + override-template contract; Rust logic."
+  T030:
+    agent: "rust-pro"
+    reason: "Wire guard into render(); Rust kernel logic."
+  T031:
+    agent: "coder"
+    reason: "Run cargo test for US3 suite; verification/command task."
+
+  # Phase 6 — Polish & cross-cutting
+  T032:
+    agent: "rust-pro"
+    reason: "Excluded-feature regression tests (excluded_features.rs); Rust tests + ErrorKind capture."
+  T033:
+    agent: "rust-pro"
+    reason: "Crate-level rustdoc incl. the 'does NOT enforce' invariant; in-crate Rust docs (doctest-valid)."
+  T034:
+    agent: "coder"
+    reason: "Full local gate suite (moon/cargo/clippy/fmt); verification/command task."
+  T035:
+    agent: "coder"
+    reason: "Walk quickstart end-to-end + SC↔test reconciliation; verification/audit task."
+  T036:
+    agent: "coder"
+    reason: "Add cargo-audit/deny advisory gate (moon/CI task, mise pin); CI/config plumbing."

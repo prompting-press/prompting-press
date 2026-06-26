@@ -1,0 +1,12 @@
+{
+  "name": "agreement-loop",
+  "role": "user",
+  "body": "{% for item in items %}{{ item }}{% endfor %}",
+  "variables": {
+    "items": {
+      "type": "array",
+      "provenance": "trusted",
+      "description": "The list iterated; `item` is a loop local, not a root."
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "agreement-excluded-include",
+  "role": "user",
+  "body": "{% include \"partial.txt\" %}{{ shown }}",
+  "variables": {}
+}

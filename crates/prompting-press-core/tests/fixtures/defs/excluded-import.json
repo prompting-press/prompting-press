@@ -1,0 +1,6 @@
+{
+  "name": "excluded-import",
+  "role": "user",
+  "body": "{% import \"m\" as m %}{{ shown }}",
+  "variables": {}
+}

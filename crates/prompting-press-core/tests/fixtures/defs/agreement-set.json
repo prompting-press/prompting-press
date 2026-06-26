@@ -1,0 +1,12 @@
+{
+  "name": "agreement-set",
+  "role": "user",
+  "body": "{% set x = 1 %}{{ x }}{{ y }}",
+  "variables": {
+    "y": {
+      "type": "string",
+      "provenance": "trusted",
+      "description": "An external root; `x` is a set target, not a root."
+    }
+  }
+}

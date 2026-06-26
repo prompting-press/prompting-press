@@ -1,0 +1,6 @@
+{
+  "name": "excluded-block",
+  "role": "user",
+  "body": "{% block b %}{% endblock %}{{ shown }}",
+  "variables": {}
+}

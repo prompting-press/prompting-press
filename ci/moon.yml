@@ -30,3 +30,10 @@ tasks:
     options:
       runFromWorkspaceRoot: true
       cache: false
+
+  check-advisories:
+    description: 'T036 — Scan workspace deps for known CVEs via cargo-deny + RustSec advisory DB (SEC-001). Gate owner also owns minijinja stable-API re-check on each bump (roadmap Q3).'
+    command: 'bash scripts/ci/check-advisories.sh'
+    options:
+      runFromWorkspaceRoot: true
+      cache: false

@@ -1,0 +1,6 @@
+{
+  "name": "malformed-syntax",
+  "role": "user",
+  "body": "Hello {{ name ",
+  "variables": {}
+}
