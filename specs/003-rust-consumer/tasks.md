@@ -129,12 +129,12 @@ text}>`. `Vec` + `append_*`, never `.chain()`.
 
 ### Tests for US4 ⚠️ (write first, expect fail)
 
-- [ ] T021 [P] [US4] Composition tests in `crates/prompting-press/tests/compose.rs`: V4.1 (N appended (name,vars) entries → resolve → exactly N `Message{role,text}` in append order, each rendered with its own validated vars — **SC-008**), V4.2 (one entry's vars fail validation → `Err(ConsumerError)` naming the entry/field; no partial-as-success), V4.3 (render a fragment, pass its text into a parent prompt as a declared variable — composition-by-value, no include), V4.4 (empty composition → `resolve()` returns `Ok(vec![])` — F7).
+- [X] T021 [P] [US4] Composition tests in `crates/prompting-press/tests/compose.rs`: V4.1 (N appended (name,vars) entries → resolve → exactly N `Message{role,text}` in append order, each rendered with its own validated vars — **SC-008**), V4.2 (one entry's vars fail validation → `Err(ConsumerError)` naming the entry/field; no partial-as-success), V4.3 (render a fragment, pass its text into a parent prompt as a declared variable — composition-by-value, no include), V4.4 (empty composition → `resolve()` returns `Ok(vec![])` — F7).
 
 ### Implementation for US4
 
-- [ ] T022 [US4] Create `crates/prompting-press/src/compose.rs`: `Message { role: String, text: String }`; `Composition` backed by an ordered `Vec` with `new()` + `append<V: Serialize + Validate>(&mut self, name, vars, variant) -> &mut Self` (NO `.chain()` — FR-013); `resolve(&self, reg: &Registry) -> Result<Vec<Message>, ConsumerError>` renders each entry in order (reusing `render::render`), `role` from the prompt's `role` metadata. One entry's failure → propagate the `ConsumerError`, no partial result.
-- [ ] T023 [US4] Run `mise exec -- cargo test -p prompting-press --test compose`; confirm T021 passes.
+- [X] T022 [US4] Create `crates/prompting-press/src/compose.rs`: `Message { role: String, text: String }`; `Composition` backed by an ordered `Vec` with `new()` + `append<V: Serialize + Validate>(&mut self, name, vars, variant) -> &mut Self` (NO `.chain()` — FR-013); `resolve(&self, reg: &Registry) -> Result<Vec<Message>, ConsumerError>` renders each entry in order (reusing `render::render`), `role` from the prompt's `role` metadata. One entry's failure → propagate the `ConsumerError`, no partial result.
+- [X] T023 [US4] Run `mise exec -- cargo test -p prompting-press --test compose`; confirm T021 passes.
 
 **Checkpoint**: all four stories functional.
 

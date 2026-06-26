@@ -9,9 +9,8 @@
 //!
 //! Spec-003 build-out is in progress: the dependency edge onto the kernel is real, and the
 //! normalized error surface ([`error`]), prompt [`registry`], the validate-then-render
-//! [`render`] path, and the agreement + provenance [`check`] lint are now in place. The
-//! `compose` module arrives in a later phase (its module declaration is added when the file
-//! is created).
+//! [`render`] path, the agreement + provenance [`check`] lint, and the multi-message
+//! [`compose`]ition builder are now in place.
 
 /// Re-export of the kernel, so consumers can reach core types through one entry point.
 pub use prompting_press_core as core;
@@ -43,6 +42,10 @@ pub mod render;
 /// undeclared-variable references and untrusted-input-without-guard prompts (FR-016..020).
 pub mod check;
 
+/// Multi-message composition: an explicit ordered `Vec` of `(prompt, vars, variant)` entries
+/// (`append_*`, never `.chain()`) resolving to `[{role, text}]` messages (FR-012/013).
+pub mod compose;
+
 pub use error::{ConsumerError, FieldError};
 pub use registry::Registry;
 
@@ -53,6 +56,10 @@ pub use render::{get_source, render};
 /// Re-export the lint entry point + its report types at the crate root so applications reach
 /// them as `prompting_press::check` / `prompting_press::{CheckReport, Finding, FindingKind}`.
 pub use check::{check, CheckReport, Finding, FindingKind};
+
+/// Re-export the composition types at the crate root so applications reach them as
+/// `prompting_press::{Composition, Message}`.
+pub use compose::{Composition, Message};
 
 /// Returns the underlying kernel version.
 ///
