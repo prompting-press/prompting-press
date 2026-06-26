@@ -37,8 +37,8 @@ shape relocation (research D6) and kernel scaffolding that blocks all stories.
 
 **Purpose**: Pin dependencies and confirm the FFI gate tolerates them before any code is written.
 
-- [ ] T001 Add kernel dependencies to `crates/prompting-press-core/Cargo.toml`: `minijinja = { version = "2.21", default-features = false, features = ["builtins", "deserialization", "serde", "std_collections", "adjacent_loop_items"] }` and `sha2` (workspace-pin `sha2` in root `Cargo.toml [workspace.dependencies]`, reference via `{ workspace = true }`). `macros`/`multi_template` deliberately OFF (FR-002 mechanism); `adjacent_loop_items` KEPT so loops have no gaps; `debug` off (research D1 + critique E1).
-- [ ] T002 Run `mise exec -- cargo build -p prompting-press-core` and `mise exec -- moon run ci:check-ffi` to confirm the new deps compile and pull no `pyo3`/`napi` (SC-007 / research D7). Record `cargo tree -p prompting-press-core -i pyo3` (expect "nothing depends on").
+- [X] T001 Add kernel dependencies to `crates/prompting-press-core/Cargo.toml`: `minijinja = { version = "2.21", default-features = false, features = ["builtins", "deserialization", "serde", "std_collections", "adjacent_loop_items"] }` and `sha2` (workspace-pin `sha2` in root `Cargo.toml [workspace.dependencies]`, reference via `{ workspace = true }`). `macros`/`multi_template` deliberately OFF (FR-002 mechanism); `adjacent_loop_items` KEPT so loops have no gaps; `debug` off (research D1 + critique E1).
+- [X] T002 Run `mise exec -- cargo build -p prompting-press-core` and `mise exec -- moon run ci:check-ffi` to confirm the new deps compile and pull no `pyo3`/`napi` (SC-007 / research D7). Record `cargo tree -p prompting-press-core -i pyo3` (expect "nothing depends on").
 
 ---
 
