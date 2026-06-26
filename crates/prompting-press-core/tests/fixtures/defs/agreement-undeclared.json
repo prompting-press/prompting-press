@@ -1,0 +1,6 @@
+{
+  "name": "agreement-undeclared",
+  "role": "user",
+  "body": "{{ foo }}",
+  "variables": {}
+}

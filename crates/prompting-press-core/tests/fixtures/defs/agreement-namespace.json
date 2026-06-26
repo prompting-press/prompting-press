@@ -1,0 +1,12 @@
+{
+  "name": "agreement-namespace",
+  "role": "user",
+  "body": "{% set ns = namespace(found=false) %}{{ ns.found }}{{ n }}",
+  "variables": {
+    "n": {
+      "type": "integer",
+      "provenance": "trusted",
+      "description": "An external root; `namespace` is an engine global (allowlisted out), `ns` is a set target."
+    }
+  }
+}

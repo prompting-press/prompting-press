@@ -1,0 +1,12 @@
+{
+  "name": "agreement-global",
+  "role": "user",
+  "body": "{% for i in range(3) %}{{ i }}{% endfor %}{{ n }}",
+  "variables": {
+    "n": {
+      "type": "integer",
+      "provenance": "trusted",
+      "description": "An external root; `range` is an engine global (allowlisted out), `i` is a loop local."
+    }
+  }
+}

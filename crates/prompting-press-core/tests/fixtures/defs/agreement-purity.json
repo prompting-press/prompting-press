@@ -1,0 +1,22 @@
+{
+  "name": "agreement-purity",
+  "role": "user",
+  "body": "{{ alpha }} and {{ beta.gamma }} {% for x in delta %}{{ x }}{% endfor %}",
+  "variables": {
+    "alpha": {
+      "type": "string",
+      "provenance": "trusted",
+      "description": "A root."
+    },
+    "beta": {
+      "type": "object",
+      "provenance": "untrusted",
+      "description": "A root with a nested field."
+    },
+    "delta": {
+      "type": "array",
+      "provenance": "external",
+      "description": "An iterated root."
+    }
+  }
+}

@@ -203,7 +203,11 @@ pub fn render(
 ///   MiniJinja raises this with no variable-name payload, so `name` is best-effort: the
 ///   error `detail` if present, else the error's `Display` (still informative).
 /// - anything else → [`KernelError::Render`].
-fn map_minijinja_error(err: minijinja::Error) -> KernelError {
+///
+/// `pub(crate)` so the agreement analysis ([`crate::agreement::required_roots`]) maps its
+/// parse / excluded-feature failures through the **same** logic as render — keeping the
+/// excluded-feature labelling consistent across operations (FR-016a, FR-028).
+pub(crate) fn map_minijinja_error(err: minijinja::Error) -> KernelError {
     match err.kind() {
         minijinja::ErrorKind::SyntaxError => {
             let detail = err.to_string();

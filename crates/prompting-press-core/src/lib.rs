@@ -36,6 +36,13 @@ pub mod engine;
 /// SHA-256 over the UTF-8 string content (research D8, FR-012/FR-013). No `vars_hash`.
 mod hashing;
 
+/// The sound agreement analysis (`required_roots`): the library's headline differentiator
+/// (constitution Principle IV / C-04). Reports, per resolved variant, the set of root
+/// variable names a template references via MiniJinja's stable `undeclared_variables(false)`
+/// minus an env-derived globals allowlist (research D2, FR-016..FR-020).
+pub mod agreement;
+
+pub use agreement::{required_roots, Agreement};
 pub use engine::{get_source, render, GuardConfig, RenderResult};
 pub use error::KernelError;
 

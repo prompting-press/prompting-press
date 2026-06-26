@@ -107,15 +107,15 @@ no-mutation, undeclared-detectable.
 
 ### Tests for User Story 2 ⚠️ (write first, expect fail)
 
-- [ ] T021 [P] [US2] Agreement-analysis tests in `crates/prompting-press-core/tests/agreement.rs`: V2.1 (`{greeting, user}` not `name`), V2.2 (loop local `item` excluded), V2.3 (`{% set x %}` target excluded), V2.4 (global `range`/`namespace` excluded), V2.6 (undeclared `foo` present). Assert sorted/deterministic output (SC-002, SC-003).
-- [ ] T022 [P] [US2] Purity test in `crates/prompting-press-core/tests/agreement_purity.rs`: V2.5 — clone def+values, run `required_roots`, assert inputs unchanged; assert analysis renders nothing (SC-006, FR-018).
+- [X] T021 [P] [US2] Agreement-analysis tests in `crates/prompting-press-core/tests/agreement.rs`: V2.1 (`{greeting, user}` not `name`), V2.2 (loop local `item` excluded), V2.3 (`{% set x %}` target excluded), V2.4 (global `range`/`namespace` excluded), V2.6 (undeclared `foo` present). Assert sorted/deterministic output (SC-002, SC-003).
+- [X] T022 [P] [US2] Purity test in `crates/prompting-press-core/tests/agreement_purity.rs`: V2.5 — clone def+values, run `required_roots`, assert inputs unchanged; assert analysis renders nothing (SC-006, FR-018).
 
 ### Implementation for User Story 2
 
-- [ ] T023 [US2] Create `crates/prompting-press-core/src/agreement.rs`: `Agreement { variant, required_roots: BTreeSet<String> }` and `required_roots(def, Option<&str>) -> Result<Agreement, KernelError>` — resolve variant (reuse T016), add template to env, call `Template::undeclared_variables(false)` (research D2).
-- [ ] T024 [US2] In `agreement.rs`, build the globals allowlist DYNAMICALLY from the kernel `Environment`'s registered globals (drift-proof, research D2) and subtract it from the undeclared set; collect into a sorted `BTreeSet`. Document filters/tests are never reported (no allowlist entry needed).
-- [ ] T025 [US2] In `agreement.rs`, guard the parse-error footgun (FR-016a): `undeclared_variables` returns empty on parse failure, so analysis MUST first ensure the template parses (add succeeds) and return `Err(Parse|ExcludedFeature)` otherwise — never an empty "requires nothing" success (research D2, FR-016a, FR-028). Covers V4.3.
-- [ ] T026 [US2] Run `mise exec -- cargo test -p prompting-press-core --test agreement --test agreement_purity`; confirm T021–T022 pass.
+- [X] T023 [US2] Create `crates/prompting-press-core/src/agreement.rs`: `Agreement { variant, required_roots: BTreeSet<String> }` and `required_roots(def, Option<&str>) -> Result<Agreement, KernelError>` — resolve variant (reuse T016), add template to env, call `Template::undeclared_variables(false)` (research D2).
+- [X] T024 [US2] In `agreement.rs`, build the globals allowlist DYNAMICALLY from the kernel `Environment`'s registered globals (drift-proof, research D2) and subtract it from the undeclared set; collect into a sorted `BTreeSet`. Document filters/tests are never reported (no allowlist entry needed).
+- [X] T025 [US2] In `agreement.rs`, guard the parse-error footgun (FR-016a): `undeclared_variables` returns empty on parse failure, so analysis MUST first ensure the template parses (add succeeds) and return `Err(Parse|ExcludedFeature)` otherwise — never an empty "requires nothing" success (research D2, FR-016a, FR-028). Covers V4.3.
+- [X] T026 [US2] Run `mise exec -- cargo test -p prompting-press-core --test agreement --test agreement_purity`; confirm T021–T022 pass.
 
 **Checkpoint**: US1 + US2 both work independently — render path and the headline agreement analysis.
 

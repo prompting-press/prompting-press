@@ -1,0 +1,17 @@
+{
+  "name": "agreement-nested",
+  "role": "user",
+  "body": "{{ greeting }}, {{ user.name }}",
+  "variables": {
+    "greeting": {
+      "type": "string",
+      "provenance": "trusted",
+      "description": "The greeting word."
+    },
+    "user": {
+      "type": "object",
+      "provenance": "trusted",
+      "description": "The user object whose name is interpolated."
+    }
+  }
+}
