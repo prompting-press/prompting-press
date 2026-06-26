@@ -86,12 +86,12 @@ representation, with identical downstream behavior.
 
 ### Tests for US2 ⚠️ (write first, expect fail)
 
-- [ ] T012 [P] [US2] Loader tests in `crates/prompting-press/tests/loader.rs`: V2.1 (load_yaml → PromptDefinition), V2.2 (load_json of the equivalent doc → representation identical to the YAML-loaded one — assert STRUCTURAL field-equality of the two parsed `PromptDefinition`s, e.g. via `PartialEq` or comparing re-serialized JSON, NOT a smoke check — **SC-003**, critique E3), V2.3 (insert constructed object on equal footing), V2.4 (malformed YAML/JSON or shape-violating data → `Err(ConsumerError)`, nothing partially loaded), V2.5 (YAML value `no`/`off` → parsed as a STRING not a bool — Norway-safe, research D2). Reuse the spec-001 schema fixtures (`schemas/jsonschema/fixtures/valid/*.json`) as JSON inputs + hand-write equivalent YAML.
+- [X] T012 [P] [US2] Loader tests in `crates/prompting-press/tests/loader.rs`: V2.1 (load_yaml → PromptDefinition), V2.2 (load_json of the equivalent doc → representation identical to the YAML-loaded one — assert STRUCTURAL field-equality of the two parsed `PromptDefinition`s, e.g. via `PartialEq` or comparing re-serialized JSON, NOT a smoke check — **SC-003**, critique E3), V2.3 (insert constructed object on equal footing), V2.4 (malformed YAML/JSON or shape-violating data → `Err(ConsumerError)`, nothing partially loaded), V2.5 (YAML value `no`/`off` → parsed as a STRING not a bool — Norway-safe, research D2). Reuse the spec-001 schema fixtures (`schemas/jsonschema/fixtures/valid/*.json`) as JSON inputs + hand-write equivalent YAML.
 
 ### Implementation for US2
 
-- [ ] T013 [US2] In `registry.rs`, add `load_json(&mut self, doc: &str) -> Result<&PromptDefinition, ConsumerError>` (serde_json::from_str → insert) and `load_yaml(&mut self, doc: &str) -> Result<&PromptDefinition, ConsumerError>` (serde_yaml_ng::from_str → insert). Map deserialize errors → `ConsumerError` (a `Load`/parse variant); on error insert NOTHING (FR-007). Both normalize into the same `PromptDefinition` (FR-005/006/008).
-- [ ] T014 [US2] Run `mise exec -- cargo test -p prompting-press --test loader`; confirm T012 passes (esp. SC-003 YAML/JSON parity + V2.5 Norway-safe).
+- [X] T013 [US2] In `registry.rs`, add `load_json(&mut self, doc: &str) -> Result<&PromptDefinition, ConsumerError>` (serde_json::from_str → insert) and `load_yaml(&mut self, doc: &str) -> Result<&PromptDefinition, ConsumerError>` (serde_yaml_ng::from_str → insert). Map deserialize errors → `ConsumerError` (a `Load`/parse variant); on error insert NOTHING (FR-007). Both normalize into the same `PromptDefinition` (FR-005/006/008).
+- [X] T014 [US2] Run `mise exec -- cargo test -p prompting-press --test loader`; confirm T012 passes (esp. SC-003 YAML/JSON parity + V2.5 Norway-safe).
 
 **Checkpoint**: US1 + US2 — render + dual-input loading.
 
