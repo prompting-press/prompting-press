@@ -258,6 +258,92 @@ fn each_variant_is_analyzed_independently() {
     }
 }
 
+/// CR-1 — a prompt declaring a variant literally named `"default"` (the kernel's reserved
+/// name for the root body) is flagged with exactly one `ReservedVariantName` finding, and the
+/// default arm is analyzed exactly ONCE (no duplicate `default`-arm analysis). The declared
+/// `variants["default"]` arm is unreachable (shadowed by the root body) and is never analyzed.
+#[test]
+fn reserved_default_variant_is_flagged_and_not_double_analyzed() {
+    let mut reg = Registry::new();
+    // The root body references only declared `topic`. The declared `variants["default"]` arm
+    // references an UNDECLARED `shadowed` var — but since that arm is unreachable, it must
+    // NOT be analyzed (so no `UndeclaredVariable { name: "shadowed" }` finding may appear).
+    reg.insert(def(serde_json::json!({
+        "name": "reserved",
+        "role": "user",
+        "body": "Tell me about {{ topic }}",
+        "variants": {
+            "default": { "body": "{{ shadowed }} -- unreachable arm" }
+        },
+        "variables": {
+            "topic": { "type": "string", "provenance": "trusted" }
+        }
+    })));
+
+    let report = check(&reg);
+    assert!(
+        !report.passed(),
+        "a reserved `default` variant must fail the check"
+    );
+
+    // Exactly one ReservedVariantName finding, naming the prompt + the reserved name.
+    let reserved: Vec<_> = report
+        .findings
+        .iter()
+        .filter(|f| matches!(&f.kind, FindingKind::ReservedVariantName { .. }))
+        .collect();
+    assert_eq!(
+        reserved.len(),
+        1,
+        "exactly one ReservedVariantName finding expected, got: {:?}",
+        report.findings
+    );
+    let finding = reserved[0];
+    assert_eq!(finding.prompt, "reserved", "finding must name the prompt");
+    assert_eq!(
+        finding.variant.as_deref(),
+        Some("default"),
+        "finding must name the reserved variant"
+    );
+    match &finding.kind {
+        FindingKind::ReservedVariantName { name } => {
+            assert_eq!(
+                name, "default",
+                "finding must name the reserved variant name"
+            );
+        }
+        other => panic!("expected ReservedVariantName, got {other:?}"),
+    }
+    assert!(
+        finding.detail.contains("unreachable") || finding.detail.contains("shadowed"),
+        "detail must explain the arm is unreachable/shadowed: {:?}",
+        finding.detail
+    );
+
+    // The default arm is analyzed EXACTLY ONCE: the root body declares only `topic`, so there
+    // is NO undeclared-variable finding. Critically, the unreachable `variants["default"]` arm
+    // (which references `shadowed`) must NOT have been analyzed.
+    let undeclared: Vec<_> = report
+        .findings
+        .iter()
+        .filter(|f| matches!(&f.kind, FindingKind::UndeclaredVariable { .. }))
+        .collect();
+    assert!(
+        undeclared.is_empty(),
+        "the unreachable declared `default` arm must NOT be analyzed (no undeclared-var \
+         finding from it), got: {:?}",
+        report.findings
+    );
+
+    // And no analysis-error noise: the report's only finding is the ReservedVariantName.
+    assert_eq!(
+        report.findings.len(),
+        1,
+        "the only finding must be the ReservedVariantName, got: {:?}",
+        report.findings
+    );
+}
+
 /// EMPTY registry → empty `CheckReport` (pass — F7), never a panic.
 #[test]
 fn empty_registry_passes() {

@@ -57,6 +57,25 @@
 //! This is the consumer's chosen, documented interpretation of C-09's "you declared untrusted
 //! inputs and set up no guard for them," given the kernel surface available in v1.
 //!
+//! ## The reserved `default` name (CR-1)
+//!
+//! `"default"` is the kernel's reserved name for the **root body**: variant resolution maps
+//! both `None` and `Some("default")` to `def.body`. A prompt may therefore declare a
+//! `variants` map that *also* contains a key `"default"` — but that declared arm is
+//! **unreachable**: the kernel never resolves to it (it always lands on the root body), so it
+//! is never rendered, hashed, or analyzed.
+//!
+//! [`check`](check()) handles this in two parts:
+//!
+//! 1. **Dedup (no double-analysis).** [`variants_to_check`] always analyzes the default arm
+//!    exactly once, via the root body. It **excludes** a `"default"` key from the named-variant
+//!    set so the root body is not analyzed twice (and so the unreachable declared arm is not
+//!    mistaken for an analyzable variant).
+//! 2. **Flag the dead arm.** A declared `variants["default"]` is reported as a
+//!    [`FindingKind::ReservedVariantName`] finding naming the prompt + the reserved name +
+//!    that its declared body is unreachable/shadowed by the root body. The arm's own body is
+//!    not analyzed (it is dead), but the prompt does not pass silently.
+//!
 //! ## Handling a `required_roots` error (T018)
 //!
 //! [`prompting_press_core::required_roots`] can return `Err` — a malformed template, or one
@@ -102,6 +121,8 @@ pub struct Finding {
 /// (FR-016/018). `AnalysisError` is the third, distinct kind used when the kernel cannot
 /// analyze a variant's template (see module docs, "Handling a `required_roots` error") — it
 /// keeps [`check`](check()) infallible while still failing the gate on an un-analyzable template.
+/// `ReservedVariantName` flags a prompt that declares a variant literally named `"default"`
+/// (see module docs, "The reserved `default` name").
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FindingKind {
     /// A template references `name`, but `name` is not in the prompt's declared `variables`
@@ -123,6 +144,16 @@ pub enum FindingKind {
         /// A stable, scrubbed reason code (e.g. `"parse"`, `"excluded_feature"`,
         /// `"unknown_variant"`).
         reason: String,
+    },
+    /// The prompt declares a variant literally named `"default"` — a name the kernel reserves
+    /// for the root body. Its declared body is therefore **unreachable**: the kernel's
+    /// variant resolution maps both `None` and `Some("default")` to the root body, so the
+    /// declared `variants["default"]` arm is shadowed and never rendered or analyzed. Flagged
+    /// so the dead arm surfaces loudly rather than passing silently (see module docs, "The
+    /// reserved `default` name").
+    ReservedVariantName {
+        /// The reserved variant name (always `"default"`).
+        name: String,
     },
 }
 
@@ -160,7 +191,9 @@ impl CheckReport {
 ///    the variant's referenced roots ([`required_roots`]) and subtract the prompt's declared
 ///    `variables` keys; each leftover root is an [`FindingKind::UndeclaredVariable`]. A kernel
 ///    analysis `Err` becomes an [`FindingKind::AnalysisError`] finding (keeping `check`
-///    infallible — F7).
+///    infallible — F7). A declared variant literally named `"default"` is flagged as a
+///    [`FindingKind::ReservedVariantName`] (its arm is unreachable — see module docs, "The
+///    reserved `default` name").
 /// 2. **Provenance** — ask the kernel for the prompt's untrusted/external fields
 ///    ([`provenance_view`]); if any are declared and no `"guard"` key is present in `meta` or
 ///    `metadata` (the `meta.guard` convention — module docs), each uncovered field is an
@@ -186,6 +219,25 @@ pub fn check(reg: &Registry) -> CheckReport {
 fn check_agreement(name: &str, def: &PromptDefinition, findings: &mut Vec<Finding>) {
     // The authoritative declared set (clarify Q1): the definition's own `variables` keys.
     let declared: BTreeSet<&str> = def.variables.keys().map(String::as_str).collect();
+
+    // CR-1: a variant literally named `"default"` is schema-reserved — the kernel resolves
+    // `Some("default")` to the root body, so the declared arm is unreachable/shadowed. Flag
+    // it (the arm itself is NOT analyzed; `variants_to_check` excludes it, and the root body
+    // is analyzed once below via the leading `DEFAULT_VARIANT`).
+    if def.variants.contains_key(DEFAULT_VARIANT) {
+        findings.push(Finding {
+            prompt: name.to_string(),
+            variant: Some(DEFAULT_VARIANT.to_string()),
+            kind: FindingKind::ReservedVariantName {
+                name: DEFAULT_VARIANT.to_string(),
+            },
+            detail: format!(
+                "variant `{DEFAULT_VARIANT}` uses the reserved name for the root body; its \
+                 declared body is unreachable (shadowed by the root body) and is never \
+                 rendered — rename it or move its body to the root",
+            ),
+        });
+    }
 
     for variant in variants_to_check(def) {
         // `None` ⇒ the default arm (root body), matching the kernel's resolution rule.
@@ -217,16 +269,15 @@ fn check_agreement(name: &str, def: &PromptDefinition, findings: &mut Vec<Findin
             // `check` infallible — F7) rather than silently passing it. The reason is a
             // scrubbed code, never the kernel's raw detail (which may carry bound-value text).
             Err(err) => {
+                let reason = analysis_error_reason(&err);
                 findings.push(Finding {
                     prompt: name.to_string(),
                     variant: Some(variant.clone()),
                     kind: FindingKind::AnalysisError {
-                        reason: analysis_error_reason(&err).to_string(),
+                        reason: reason.to_string(),
                     },
                     detail: format!(
-                        "template for variant `{variant}` could not be analyzed \
-                         ({})",
-                        analysis_error_reason(&err),
+                        "template for variant `{variant}` could not be analyzed ({reason})",
                     ),
                 });
             }
@@ -278,8 +329,20 @@ fn check_provenance(name: &str, def: &PromptDefinition, findings: &mut Vec<Findi
 /// reserved [`DEFAULT_VARIANT`] (root body) first, then each named variant **sorted**
 /// (`def.variants` is a `HashMap`, whose key order is non-deterministic — sorting via a
 /// `BTreeSet` makes the report reproducible).
+///
+/// The reserved name [`DEFAULT_VARIANT`] is **excluded** from the named set before extending
+/// (CR-1): the kernel maps both `None` and `Some("default")` to the root body, so a declared
+/// `variants["default"]` arm is unreachable. Including it here would analyze the root body
+/// **twice** (once via the leading `DEFAULT_VARIANT` push, once via the duplicate key) while
+/// the declared arm's body never gets analyzed at all. Removing it keeps the default arm
+/// analyzed exactly once (via the root-body path). The shadowed declared arm is reported
+/// separately by [`check_agreement`] as a [`FindingKind::ReservedVariantName`].
 fn variants_to_check(def: &PromptDefinition) -> Vec<String> {
-    let named: BTreeSet<&str> = def.variants.keys().map(String::as_str).collect();
+    let mut named: BTreeSet<&str> = def.variants.keys().map(String::as_str).collect();
+    // Exclude the reserved name (CR-1): `Some("default")` resolves to the root body, so a
+    // declared `variants["default"]` arm is unreachable; analyzing it would duplicate the
+    // root-body analysis. The default arm is always checked via the leading push below.
+    named.remove(DEFAULT_VARIANT);
     let mut out = Vec::with_capacity(named.len() + 1);
     out.push(DEFAULT_VARIANT.to_string());
     out.extend(named.into_iter().map(str::to_string));

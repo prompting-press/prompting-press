@@ -29,6 +29,17 @@ use prompting_press_core::KernelError;
 /// These strings are a compatibility surface: a consumer may match on them to react to a
 /// specific failure class. The set is intentionally small and closed — a new failure mode
 /// reuses an existing code or adds one here deliberately (it is never synthesized ad hoc).
+///
+/// ## Why `code` is a `String`, not a Rust enum (TY-1, deliberate)
+///
+/// [`FieldError::code`] is a `String` drawn from this closed const vocabulary **on purpose**,
+/// not a Rust enum. The `code` value crosses the PyO3 / napi FFI boundary as a **string** in
+/// the Python / TypeScript bindings: the `[{field, code, message}]` row is the cross-language
+/// error contract (constitution Principle VII / roadmap decision C-06), and a string `code` is
+/// what survives marshaling identically across all three bindings. A Rust-only enum would
+/// diverge the Rust binding's `FieldError` shape from the Python/TS bindings' shape, breaking
+/// that structural-parity contract. Consumers match on the documented const set (e.g.
+/// `row.code == code::UNKNOWN_VARIANT`) rather than on enum variants.
 pub mod code {
     /// A garde validation failure (the consumer synthesizes this; garde exposes no machine
     /// code — research D3). One row per reported path.
@@ -275,6 +286,40 @@ mod tests {
             }
             other => panic!("expected ConsumerError::Kernel, got {other:?}"),
         }
+    }
+
+    /// TS-3 / SEC-004 — `ExcludedFeature` maps to the stable `code::EXCLUDED_FEATURE` and the
+    /// raw `detail` (which names a template construct) is NOT copied into the message; a fixed,
+    /// templated message is emitted instead (defense in depth — module docs).
+    #[test]
+    fn excluded_feature_maps_to_stable_code_without_leaking_detail() {
+        const DETAIL: &str = "{% include 'secret-partial.txt' %} is not permitted";
+        let kernel = KernelError::ExcludedFeature {
+            detail: DETAIL.to_string(),
+        };
+        let normalized = ConsumerError::from(kernel);
+        match &normalized {
+            ConsumerError::Kernel(rows) => {
+                assert_eq!(rows.len(), 1);
+                assert_eq!(rows[0].field, "template");
+                assert_eq!(
+                    rows[0].code,
+                    code::EXCLUDED_FEATURE,
+                    "must map to excluded_feature"
+                );
+                assert!(
+                    !rows[0].message.contains(DETAIL),
+                    "the raw detail must not leak into the message: {:?}",
+                    rows[0].message
+                );
+            }
+            other => panic!("expected ConsumerError::Kernel, got {other:?}"),
+        }
+        // The Display string (what a log line derives from) must not carry the raw detail.
+        assert!(
+            !normalized.to_string().contains(DETAIL),
+            "Display leaked the raw detail: {normalized}"
+        );
     }
 
     /// `UndefinedVariable` names the offending variable in `field` and maps to the stable

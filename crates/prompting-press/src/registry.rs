@@ -13,6 +13,7 @@
 //! is no parallel shape (FR-008). The crate does no I/O — the caller hands in already-read
 //! text or a constructed object (C-03 / FR-024).
 
+use std::collections::btree_map::Entry;
 use std::collections::BTreeMap;
 
 use prompting_press_core::PromptDefinition;
@@ -116,17 +117,22 @@ impl Registry {
         Ok(self.insert_and_get(def))
     }
 
-    /// Insert `def` (keyed by its `name`) and return a reference to the just-inserted entry.
+    /// Insert `def` (keyed by its `name`, overwriting any existing entry) and return a
+    /// reference to the just-inserted entry.
     ///
-    /// Shared tail of the loaders. The re-`get` after `insert` sidesteps the borrow-checker
-    /// friction of returning a reference produced by a `&mut self` insert: we capture the
-    /// owned key, insert, then borrow it back immutably. The key is guaranteed present.
+    /// Shared tail of the loaders. Uses the [`Entry`] API to return the borrow **directly**
+    /// from the insert — no re-`get` and no `.expect()` (ER-1: no panic in `src`). An existing
+    /// entry under the same name is overwritten, matching [`insert`](Registry::insert)
+    /// semantics; either branch yields a `&PromptDefinition` to the stored value.
     fn insert_and_get(&mut self, def: PromptDefinition) -> &PromptDefinition {
         let key = def.name.to_string();
-        self.prompts.insert(key.clone(), def);
-        self.prompts
-            .get(&key)
-            .expect("just inserted under this key")
+        match self.prompts.entry(key) {
+            Entry::Occupied(mut e) => {
+                e.insert(def);
+                e.into_mut()
+            }
+            Entry::Vacant(e) => e.insert(def),
+        }
     }
 }
 

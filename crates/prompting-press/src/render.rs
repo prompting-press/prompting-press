@@ -52,6 +52,15 @@ use crate::{ConsumerError, Registry};
 /// `V::Context: Default` so the whole-struct [`Validate::validate`] convenience applies
 /// (one validation pass over the entire input set, FR-002).
 ///
+/// ## No context-carrying validation in v1 (TY-4, deliberate scope)
+///
+/// The `V::Context: Default` bound means this entry point only supports garde validation that
+/// needs **no** caller-supplied context: it calls the no-arg [`Validate::validate`], so
+/// context-carrying validators (`#[garde(context(Ctx))]` / `validate_with(&ctx)`) are
+/// intentionally **out of v1 scope** (scope discipline — one concrete path per concern). A
+/// future `render_with(..., ctx: &V::Context)` is the named seam to add if a real consumer
+/// needs it; it is deliberately **not** built for v1 (no speculative extension points).
+///
 /// # Errors
 /// - [`ConsumerError::UnknownPrompt`] — `name` is absent from `reg` (FR-008a). Returned
 ///   **before** validation; nothing is rendered.
@@ -84,6 +93,9 @@ where
 
     // 3. Bridge the validated struct to the kernel's value type (FR-003a). `vars: &V` and
     //    `&V: Serialize` (a reference to a Serialize type is Serialize), so no clone.
+    //    `from_serialize` is infallible (ER-2): a custom-`Serialize` failure — practically
+    //    unreachable for garde-validated std structs — would surface downstream as a
+    //    strict-undefined kernel error, never silently here.
     let values = minijinja::Value::from_serialize(vars);
 
     // 4. Delegate rendering to the kernel; normalize KernelError → ConsumerError::Kernel.

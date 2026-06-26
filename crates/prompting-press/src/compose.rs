@@ -130,6 +130,15 @@ impl Composition {
     /// `V::Context: Default` so the whole-struct [`Validate::validate`] convenience applies
     /// (one validation pass over the entry's entire input set, mirroring [`crate::render`](crate::render())).
     ///
+    /// ## No context-carrying validation in v1 (TY-4, deliberate scope)
+    ///
+    /// As with [`crate::render`](crate::render()), the `V::Context: Default` bound restricts
+    /// this to garde validators that need **no** caller-supplied context (the no-arg
+    /// [`Validate::validate`] is called). Context-carrying validation
+    /// (`#[garde(context(Ctx))]` / `validate_with`) is intentionally **out of v1 scope**; a
+    /// future `append_with(..., ctx)` is the named seam if a real consumer needs it (not built
+    /// for v1 — scope discipline, no speculative extension points).
+    ///
     /// # Errors
     /// [`ConsumerError::Validation`] — garde rejected `vars`. The entry is not appended.
     pub fn append<V>(
@@ -148,6 +157,9 @@ impl Composition {
 
         // Bridge the now-validated struct to the kernel's value type (FR-003a). `&V: Serialize`
         // (a reference to a Serialize type is Serialize), so no clone of the caller's struct.
+        // `from_serialize` is infallible (ER-2): a custom-`Serialize` failure — practically
+        // unreachable for garde-validated std structs — would surface downstream as a
+        // strict-undefined kernel error, never silently here.
         let values = Value::from_serialize(vars);
 
         self.entries.push(Entry {
