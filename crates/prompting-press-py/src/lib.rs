@@ -19,20 +19,19 @@
 //! Later phases add the render/check/compose paths:
 //! - [`render`] — validate-in-Python → marshal → kernel-direct render + `get_source` (US1).
 //! - [`check`] — `check(registry)` + the `CheckReport` / `Finding` pyclasses (US3).
-//!
-//! `compose` (US4) remains a placeholder in [`prompting_press_py`].
+//! - [`compose`] — the binding-owned `Composition` / `Message` pyclasses: eager-validate each
+//!   entry (reusing the US1 validation path), then a kernel-direct resolve loop (US4).
 //!
 //! [PyO3]: https://pyo3.rs
 
 use pyo3::prelude::*;
 
 pub mod check;
+pub mod compose;
 pub mod error;
 pub mod marshal;
 pub mod registry;
 pub mod render;
-
-// T0NN (US4): pub mod compose;  — Composition / Message; eager-validate append; resolve loop.
 
 /// Returns the kernel version, reached through the Rust consumer surface.
 ///
@@ -74,7 +73,11 @@ fn prompting_press_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<check::Finding>()?;
     m.add_function(wrap_pyfunction!(check::check, m)?)?;
 
-    // T0NN (US4): m.add_class::<compose::Composition>()?; m.add_class::<compose::Message>()?;
+    // Multi-message composition: the binding-owned Composition + Message pyclasses (US4, T020).
+    // Composition eager-validates each entry via the US1 Python-validation path, then resolves
+    // through the kernel directly (critique E1 / C-01) — no engine logic in the binding.
+    m.add_class::<compose::Composition>()?;
+    m.add_class::<compose::Message>()?;
 
     Ok(())
 }

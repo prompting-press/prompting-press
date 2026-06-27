@@ -11,10 +11,12 @@ re-export is the minimum needed for the US1 render surface to be importable.
 
 from .prompting_press import (  # the compiled extension submodule
     CheckReport,
+    Composition,
     FieldError,
     Finding,
     GuardConfig,
     LoadError,
+    Message,
     PromptingPressError,
     PromptRenderError,
     PromptValidationError,
@@ -39,6 +41,8 @@ __all__ = [
     "FieldError",
     "CheckReport",
     "Finding",
+    "Composition",
+    "Message",
     "render",
     "get_source",
     "check",

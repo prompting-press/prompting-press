@@ -269,7 +269,12 @@ pub fn get_source(
 /// each row's `loc` → `field` and `msg` → `message`, never `input`/`ctx`). Any *other* Python
 /// exception (e.g. the object has no `model_validate` — not a Pydantic model) is surfaced as-is:
 /// it is a caller-API misuse, not a validation failure, so it must not masquerade as one.
-fn validate_in_python<'py>(
+///
+/// `pub(crate)` so the [`compose`](crate::compose) module reuses the **exact same**
+/// validate-then-dump path for each composition entry (option (a): eager-validate at `append`).
+/// Sharing this function — rather than re-deriving validation — keeps validation owned in one
+/// place (Q1) and guarantees a composed entry is validated identically to a single `render`.
+pub(crate) fn validate_in_python<'py>(
     py: Python<'py>,
     vars: &Bound<'py, PyAny>,
     data: Option<&Bound<'py, PyAny>>,
