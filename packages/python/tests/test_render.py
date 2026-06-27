@@ -30,6 +30,8 @@ from prompting_press import (
     PromptRenderError,
     PromptValidationError,
     Registry,
+    UnknownPromptError,
+    get_source,
     render,
 )
 from prompting_press.generated import PromptDefinition
@@ -91,6 +93,40 @@ class Topic(BaseModel):
     """Vars for the guard-plumb prompt: a single (untrusted) `topic` string."""
 
     topic: str
+
+
+class Secret(BaseModel):
+    """A single string that *passes* Pydantic validation, so it reaches the kernel.
+
+    Unlike `Secretful` (whose validator rejects in Python before the kernel is touched),
+    this model carries the secret all the way into the render, where a value-misusing
+    template triggers a real `KernelError::Render`. SEC-004 must scrub the bound value
+    out of that kernel-path error too — not only out of the Pydantic-path error.
+    """
+
+    token: str
+
+
+class TwoFields(BaseModel):
+    """Two independently-validated fields, so a single bad input produces a
+    multi-row `pydantic.ValidationError` (SC-002: name *every* offending field)."""
+
+    name: str
+    count: int
+
+    @field_validator("name")
+    @classmethod
+    def _name_nonempty(cls, value: str) -> str:
+        if not value:
+            raise ValueError("name must not be empty")
+        return value
+
+    @field_validator("count")
+    @classmethod
+    def _count_non_negative(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError("count must be non-negative")
+        return value
 
 
 # --------------------------------------------------------------------------------------
@@ -177,6 +213,23 @@ def test_validation_failure_raises_before_render() -> None:
     assert all(r.code == "validation" for r in offending), [r.code for r in offending]
 
 
+def test_validation_failure_names_every_offending_field() -> None:
+    # SC-002: a structured exception naming EVERY offending field — exercise the real
+    # Pydantic→rows extraction (collect_validation_rows) with a multi-error
+    # ValidationError, not a single field.
+    reg = _registry(GREET_DEF)
+
+    with pytest.raises(PromptValidationError) as excinfo:
+        # Both fields violate their validators in one model_validate pass.
+        render(reg, "greet", TwoFields, {"name": "", "count": -1})
+
+    fields = {r.field for r in excinfo.value.errors}
+    assert {"name", "count"} <= fields, (
+        f"both offending fields must be named, got {sorted(fields)}"
+    )
+    assert all(r.code == "validation" for r in excinfo.value.errors)
+
+
 # --------------------------------------------------------------------------------------
 # 3. No native error type leaks across the boundary (SC-006 / C-06)
 # --------------------------------------------------------------------------------------
@@ -225,6 +278,39 @@ def test_rejected_sensitive_input_is_not_leaked() -> None:
         )
     # Positive check: the value-free validator message survives.
     assert any("forbidden prefix" in row.message for row in exc.errors)
+
+
+def test_secret_in_a_kernel_render_error_is_not_leaked() -> None:
+    """SEC-004 on the *kernel* path (not the Pydantic path).
+
+    `Secret` validates cleanly, so the secret crosses the FFI boundary into the kernel,
+    where `{{ token + 1 }}` (string + int) is a genuine `KernelError::Render`. The
+    binding routes that through the consumer's scrubber, which discards the raw detail
+    (which embeds the bound value) and emits the fixed `"render error"` message. The
+    secret must appear in neither `str(exc)`, `repr(exc)`, nor any row.
+    """
+    secret = "sk-super-secret-token-9f8a7b6c5d4e"
+    reg = _registry(
+        {
+            "name": "kernely",
+            "role": "user",
+            "body": "Using {{ token + 1 }}",  # string + int ⇒ kernel render error
+            "variables": {"token": {"type": "string", "provenance": "trusted"}},
+        }
+    )
+
+    with pytest.raises(PromptRenderError) as excinfo:
+        render(reg, "kernely", Secret, {"token": secret})
+
+    exc = excinfo.value
+    assert secret not in str(exc), f"str(exc) leaked the secret: {exc}"
+    assert secret not in repr(exc), "repr(exc) leaked the secret"
+    for row in exc.errors:
+        assert secret not in row.message, f"row leaked the secret: {row.message}"
+        assert secret not in row.field, f"row.field leaked the secret: {row.field}"
+    # The scrub replaces the value-bearing detail with the consumer's fixed message + code.
+    assert [r.code for r in exc.errors] == ["render"], [r.code for r in exc.errors]
+    assert any(r.message == "render error" for r in exc.errors)
 
 
 # --------------------------------------------------------------------------------------
@@ -317,3 +403,54 @@ def test_module_exposes_us1_surface() -> None:
     assert callable(prompting_press.render)
     assert callable(prompting_press.get_source)
     assert prompting_press.GuardConfig(enabled=True).enabled is True
+
+
+# --------------------------------------------------------------------------------------
+# 8. get_source (FR-010) — returns the UNRENDERED template; no vars, no validation
+# --------------------------------------------------------------------------------------
+
+
+def test_get_source_returns_unrendered_template() -> None:
+    reg = _registry(GREET_DEF)
+
+    source = get_source(reg, "greet")
+
+    # The KEY property: get_source returns the raw template, it does NOT interpolate.
+    assert source == "Hi {{ name }}, you have {{ count }} messages"
+    assert "{{" in source, "get_source must return the unrendered source"
+
+
+def test_get_source_unknown_name_raises_unknown_prompt() -> None:
+    reg = _registry(GREET_DEF)
+
+    with pytest.raises(UnknownPromptError):
+        get_source(reg, "does-not-exist")
+
+
+def test_get_source_unknown_variant_raises_render_error() -> None:
+    reg = _registry(GREET_DEF)
+
+    with pytest.raises(PromptRenderError) as excinfo:
+        get_source(reg, "greet", variant="nope")
+
+    assert any(r.code == "unknown_variant" for r in excinfo.value.errors), [
+        r.code for r in excinfo.value.errors
+    ]
+
+
+# --------------------------------------------------------------------------------------
+# 9. No token surface anywhere on the package (F4 / SC-010) — asserted, not only grep-gated
+# --------------------------------------------------------------------------------------
+
+
+def test_no_token_counting_surface() -> None:
+    # The library ships NO token counter (roadmap decision F4 / SC-010). Pin the absence
+    # at the package surface so dropping the CI grep gate cannot silently reintroduce it.
+    for forbidden in ("count_tokens", "token_count", "TokenCount", "count-tokens"):
+        assert not hasattr(prompting_press, forbidden), (
+            f"token-counting surface {forbidden!r} must not exist (F4)"
+        )
+    assert not any(
+        "token" in name.lower() and "count" in name.lower()
+        for name in prompting_press.__all__
+    ), f"no token-count symbol may appear in __all__: {prompting_press.__all__}"

@@ -147,8 +147,9 @@ reg.insert({
 report = check(reg)
 
 report.passed()      # False  (a clean registry → True)
-report.is_empty()    # False; bool(report) is the inverse of passed()
-len(report)          # 1
+report.is_empty()    # False  (alias for passed(): True iff there are no findings)
+bool(report)         # True   (truthy iff there ARE findings — the inverse of passed())
+len(report)          # 1      (number of findings)
 for f in report.findings:
     print(f.kind, f.prompt, f.variant, f.detail)
     # -> "undeclared_variable" "ghosty" "default" "...ghost..."

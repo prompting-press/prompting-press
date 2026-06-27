@@ -205,14 +205,16 @@ pub fn render(
     variant: Option<&str>,
     guard: Option<&GuardConfig>,
 ) -> PyResult<RenderResult> {
-    // 1. Resolve the prompt by name (absent ⇒ structured error, never a panic — FR-008a).
-    //    Done first and entirely in Rust against the inner consumer registry.
-    if reg.inner().get(name).is_none() {
+    // 1. Resolve the prompt by name once (absent ⇒ structured error, never a panic — FR-008a).
+    //    Done first and entirely in Rust against the inner consumer registry. The `&PromptDefinition`
+    //    borrow is held immutably across validation + marshaling below — sound because `reg` is a
+    //    shared `&Registry` here, so no `&mut` (and thus no mutation) can intervene.
+    let Some(def) = reg.inner().get(name) else {
         return Err(consumer_error_to_pyerr(
             py,
             ConsumerError::UnknownPrompt(name.to_string()),
         ));
-    }
+    };
 
     // 2. Validate in Python, BEFORE any templating (FR-002 / Q1). Returns the JSON-dumped,
     //    validated payload (a Python object) on success; raises PromptValidationError on a
@@ -227,12 +229,6 @@ pub fn render(
     //    (critique E1 / C-01). `None` ⇒ the kernel default (disabled). The binding does NO guard
     //    logic — it only marshals the two config fields; the kernel decides the `guard` field.
     let guard_cfg = guard.map_or_else(KernelGuardConfig::default, KernelGuardConfig::from);
-
-    // SAFETY of borrow: `def` borrows `reg.inner()` immutably; no `&mut` exists here.
-    let def = reg
-        .inner()
-        .get(name)
-        .expect("present: existence checked above and reg is not mutated in between");
 
     prompting_press_core::render(def, variant, values, &guard_cfg)
         .map(RenderResult::from)

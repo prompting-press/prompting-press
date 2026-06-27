@@ -165,12 +165,8 @@ impl Registry {
 impl Registry {
     /// Borrow the inner consumer registry, for the render/check/compose modules to resolve a
     /// prompt by name. A missing name is mapped to `UnknownPromptError` at the call site
-    /// (FR-008a) — this accessor itself never panics.
-    ///
-    /// `allow(dead_code)`: this accessor's only callers are the render (US1), check (US3), and
-    /// compose (US4) modules, which land in later tasks. It is deliberately present now so those
-    /// tasks slot in without reshaping this pyclass.
-    #[allow(dead_code)]
+    /// (FR-008a) — this accessor itself never panics. Called from `render`/`get_source`
+    /// (render.rs), `check` (check.rs), and `Composition::resolve` (compose.rs).
     pub(crate) fn inner(&self) -> &prompting_press::Registry {
         &self.inner
     }
