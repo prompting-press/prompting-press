@@ -44,3 +44,10 @@ tasks:
     options:
       runFromWorkspaceRoot: true
       cache: false
+
+  test-python:
+    description: 'Spec 004 (review I1) — build the prompting-press-py extension and run cargo test -p prompting-press-py + pytest packages/python/tests. Gates the Python-observable guarantees (validate-in-Python, SEC-004-PY scrub, loader parity) that cargo build --workspace does not exercise.'
+    command: 'bash scripts/ci/test-python.sh'
+    options:
+      runFromWorkspaceRoot: true
+      cache: false

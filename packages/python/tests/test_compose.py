@@ -271,14 +271,16 @@ def test_unknown_prompt_name_at_resolve_raises_and_returns_no_partial() -> None:
         comp.resolve(reg)
 
     # No partial result leaked out as a return value — resolve raised instead of
-    # returning the one successfully-rendered prefix.
-    result: object = object()  # sentinel that must NOT be overwritten
+    # returning the one successfully-rendered prefix. The sentinel proves the
+    # assignment never executed (resolve raised before returning).
+    sentinel: object = object()
+    result: object = sentinel
     try:
         result = comp.resolve(reg)
     except UnknownPromptError:
         pass
-    assert result is not None and not isinstance(result, list), (
-        "resolve must not return a partial list when an entry's name is unknown"
+    assert result is sentinel, (
+        "resolve must RAISE (not return a partial list) when an entry's name is unknown"
     )
 
 

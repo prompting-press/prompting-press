@@ -143,9 +143,17 @@ impl Registry {
                 kwargs
                     .set_item("exclude_none", true)
                     .map_err(|e| consumer_error_to_pyerr(py, ConsumerError::Load(e.to_string())))?;
-                let json_obj = dumper
-                    .call((), Some(&kwargs))
-                    .map_err(|e| consumer_error_to_pyerr(py, ConsumerError::Load(e.to_string())))?;
+                // SEC-004 (review L-3): a `model_dump_json` failure can carry value-bearing text
+                // (a serialization error naming the offending value). Withhold the raw detail —
+                // emit a fixed message, never fold `e.to_string()` into the surfaced LoadError.
+                let json_obj = dumper.call((), Some(&kwargs)).map_err(|_| {
+                    consumer_error_to_pyerr(
+                        py,
+                        ConsumerError::Load(
+                            "could not serialize the prompt definition".to_string(),
+                        ),
+                    )
+                })?;
                 let json: String = json_obj
                     .extract::<String>()
                     .map_err(|e| consumer_error_to_pyerr(py, ConsumerError::Load(e.to_string())))?;

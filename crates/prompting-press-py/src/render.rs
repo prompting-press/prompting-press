@@ -331,14 +331,22 @@ fn is_pydantic_validation_error(py: Python<'_>, err: &PyErr) -> bool {
 ///
 /// Reads `err.value.errors()` and copies **only** `loc` (joined by `.`) → `field` and `msg` →
 /// `message`; `input` and `ctx` are never read, so a secret in the rejected value cannot leak.
-/// `code` is the consumer's stable `"validation"`. If `.errors()` cannot be read (e.g. an
-/// unexpected pydantic shape) the original error is surfaced rather than a fabricated row.
+/// `code` is the consumer's stable `"validation"`. If `.errors()` cannot be introspected (e.g. an
+/// unexpected pydantic shape), we DISCARD detail and raise a fixed-message `PromptValidationError`
+/// with zero rows — we never surface the raw `pydantic.ValidationError`, whose `str()`/`errors()`
+/// embed the rejected `input_value` (SEC-004-PY: the scrub must hold by construction, not surface a
+/// native type on the degenerate path — security review M-1).
 fn validation_error_to_pyerr(py: Python<'_>, err: &PyErr) -> PyErr {
     let value = err.value(py);
     let rows = match collect_validation_rows(value.as_any()) {
         Ok(rows) => rows,
-        // Could not introspect the ValidationError — surface it rather than invent a row.
-        Err(_) => return err.clone_ref(py),
+        // Could not introspect the ValidationError — withhold detail (a fixed, value-free row)
+        // rather than leak the raw pydantic error, which embeds the rejected input value.
+        Err(_) => vec![ConsumerFieldError {
+            field: String::new(),
+            code: code::VALIDATION.to_string(),
+            message: "input validation failed (error detail withheld)".to_string(),
+        }],
     };
     consumer_error_to_pyerr(py, ConsumerError::Validation(rows))
 }

@@ -16,7 +16,7 @@ The import name is `prompting_press`; the PyPI distribution name is `prompting-p
 The package ships as a single **abi3 wheel** (one wheel for CPython 3.10+):
 
 ```bash
-pip install prompting-press
+pip install prompting-press   # not yet published (version 0.0.0) — build from source below
 ```
 
 To build from source (a mixed Rust/Python project, built with [maturin](https://www.maturin.rs/)):

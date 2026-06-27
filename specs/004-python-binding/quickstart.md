@@ -52,7 +52,8 @@ try:
     render(reg, "greet", Greeting, {"name": "Ada", "count": -1})
     assert False
 except PromptValidationError as e:
-    assert any(row["field"] == "count" and row["code"] == "validation" for row in e.errors)
+    # e.errors is a list of FieldError (attribute access, not dict subscription).
+    assert any(row.field == "count" and row.code == "validation" for row in e.errors)
 ```
 **Expected**: valid → text + provenance; invalid → structured exception naming `count`, kernel never reached.
 
