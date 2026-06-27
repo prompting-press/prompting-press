@@ -16,19 +16,22 @@
 //!   (SEC-004 scrub preserved).
 //! - [`registry`] — the `Registry` `#[pyclass]` (construct + insert; loaders are US2).
 //!
-//! Later phases add `render` (US1), `check` (US3), and `compose` (US4) — see the placeholders
-//! in [`prompting_press_py`].
+//! Later phases add the render/check/compose paths:
+//! - [`render`] — validate-in-Python → marshal → kernel-direct render + `get_source` (US1).
+//! - [`check`] — `check(registry)` + the `CheckReport` / `Finding` pyclasses (US3).
+//!
+//! `compose` (US4) remains a placeholder in [`prompting_press_py`].
 //!
 //! [PyO3]: https://pyo3.rs
 
 use pyo3::prelude::*;
 
+pub mod check;
 pub mod error;
 pub mod marshal;
 pub mod registry;
 pub mod render;
 
-// T0NN (US3): pub mod check;    — `check(registry)` + CheckReport / Finding pyclasses.
 // T0NN (US4): pub mod compose;  — Composition / Message; eager-validate append; resolve loop.
 
 /// Returns the kernel version, reached through the Rust consumer surface.
@@ -65,8 +68,12 @@ fn prompting_press_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(render::render, m)?)?;
     m.add_function(wrap_pyfunction!(render::get_source, m)?)?;
 
-    // T0NN (US3): m.add_function(wrap_pyfunction!(check::check, m)?)?;
-    //             m.add_class::<check::CheckReport>()?; m.add_class::<check::Finding>()?;
+    // The agreement + provenance lint: check(registry) + the CheckReport / Finding pyclasses
+    // (US3, T017). Pure CI lint marshaled to the consumer's `check` (C-01); nothing is re-derived.
+    m.add_class::<check::CheckReport>()?;
+    m.add_class::<check::Finding>()?;
+    m.add_function(wrap_pyfunction!(check::check, m)?)?;
+
     // T0NN (US4): m.add_class::<compose::Composition>()?; m.add_class::<compose::Message>()?;
 
     Ok(())
