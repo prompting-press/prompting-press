@@ -21,6 +21,9 @@ crate-type = ["cdylib"]
 prompting-press-core = { path = "../prompting-press-core" }
 prompting-press = { path = "../prompting-press" }
 # napi 3.x is the current Node-API binding line; `napi-derive` supplies the `#[napi]`
-# attribute macro. No extra features needed for a stub.
-napi = "3"
-napi-derive = "3"
+# attribute macro. Pinned EXACT (not floating "3") so the ci:check-floating-versions
+# gate stays green. NOTE: the two crates version INDEPENDENTLY — crates.io latest 3.x
+# verified 2026-06-24: napi = 3.9.4, napi-derive = 3.5.7. Marshaling-bridge features
+# (e.g. serde-json) are added in T005 once verified against the napi 3.9.4 feature set.
+napi = "3.9.4"
+napi-derive = "3.5.7"
