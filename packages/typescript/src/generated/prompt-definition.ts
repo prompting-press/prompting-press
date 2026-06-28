@@ -54,7 +54,7 @@ export interface PromptDefinition {
   };
 }
 /**
- * A declared input variable: type + provenance + optional JSON-Schema validation constraints (carried for generate-then-extend).
+ * A declared input variable: type + origin + optional JSON-Schema validation constraints (carried for generate-then-extend).
  */
 export interface VariableDecl {
   /**
@@ -64,9 +64,13 @@ export interface VariableDecl {
     | ("string" | "integer" | "number" | "boolean" | "array" | "object")
     | ("string" | "integer" | "number" | "boolean" | "array" | "object" | "null")[];
   /**
-   * Per-field provenance tag (FR-010a). DECLARATIVE METADATA ONLY — there is NO runtime enforcement of this tag in the current library version; it is not a security guard by itself. Untrusted-input guarding (the opt-in, additive guard expansion + lint) is introduced in a later spec per roadmap decision C-09 (deriving from constitution Principle IV). Do not assume the library protects `untrusted`/`external` fields until that version.
+   * Per-field origin (input-trust) tag (FR-010a; renamed from `provenance` in spec 008). DECLARATIVE METADATA ONLY — there is NO runtime enforcement of this tag in the current library version; it is not a security guard by itself. Untrusted-input guarding (the opt-in, additive guard expansion + lint) is introduced in a later spec per roadmap decision C-09 (deriving from constitution Principle IV). Do not assume the library protects `untrusted`/`external` fields until that version. NOTE: this is the per-VARIABLE trust tag, distinct from the render-result provenance (template_hash/render_hash) which is unchanged.
    */
-  provenance: "trusted" | "untrusted" | "external";
+  origin: "trusted" | "untrusted" | "external";
+  /**
+   * When true, a validator covering this variable MUST be supplied when the Prompt is constructed (spec 008). Orthogonal to `origin` — it MAY mark any variable, not only untrusted/external ones. Declarative metadata; enforcement is per-language (constitution Principle VI v1.2.0): TypeScript (Zod) and Python (Pydantic) introspect the supplied validator and throw/raise at construction if this variable is uncovered, while Rust guarantees coverage structurally at compile time. The kernel never reads this field (validation-blind).
+   */
+  validation_required?: boolean;
   format?: string;
   pattern?: string;
   enum?: unknown[];

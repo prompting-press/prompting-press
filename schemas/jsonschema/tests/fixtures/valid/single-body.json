@@ -5,7 +5,7 @@
   "variables": {
     "date": {
       "type": "string",
-      "provenance": "trusted",
+      "origin": "trusted",
       "format": "date",
       "description": "The current date injected by the server."
     }

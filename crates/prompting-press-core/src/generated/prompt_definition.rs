@@ -289,16 +289,16 @@ impl ::std::convert::TryFrom<::std::string::String> for PromptDefinitionRole {
         value.parse()
     }
 }
-#[doc = "A declared input variable: type + provenance + optional JSON-Schema validation constraints (carried for generate-then-extend)."]
+#[doc = "A declared input variable: type + origin + optional JSON-Schema validation constraints (carried for generate-then-extend)."]
 #[doc = r""]
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
 #[doc = "{"]
-#[doc = "  \"description\": \"A declared input variable: type + provenance + optional JSON-Schema validation constraints (carried for generate-then-extend).\","]
+#[doc = "  \"description\": \"A declared input variable: type + origin + optional JSON-Schema validation constraints (carried for generate-then-extend).\","]
 #[doc = "  \"type\": \"object\","]
 #[doc = "  \"required\": ["]
-#[doc = "    \"provenance\","]
+#[doc = "    \"origin\","]
 #[doc = "    \"type\""]
 #[doc = "  ],"]
 #[doc = "  \"properties\": {"]
@@ -325,17 +325,17 @@ impl ::std::convert::TryFrom<::std::string::String> for PromptDefinitionRole {
 #[doc = "    \"minimum\": {"]
 #[doc = "      \"type\": \"number\""]
 #[doc = "    },"]
-#[doc = "    \"pattern\": {"]
-#[doc = "      \"type\": \"string\""]
-#[doc = "    },"]
-#[doc = "    \"provenance\": {"]
-#[doc = "      \"description\": \"Per-field provenance tag (FR-010a). DECLARATIVE METADATA ONLY — there is NO runtime enforcement of this tag in the current library version; it is not a security guard by itself. Untrusted-input guarding (the opt-in, additive guard expansion + lint) is introduced in a later spec per roadmap decision C-09 (deriving from constitution Principle IV). Do not assume the library protects `untrusted`/`external` fields until that version.\","]
+#[doc = "    \"origin\": {"]
+#[doc = "      \"description\": \"Per-field origin (input-trust) tag (FR-010a; renamed from `provenance` in spec 008). DECLARATIVE METADATA ONLY — there is NO runtime enforcement of this tag in the current library version; it is not a security guard by itself. Untrusted-input guarding (the opt-in, additive guard expansion + lint) is introduced in a later spec per roadmap decision C-09 (deriving from constitution Principle IV). Do not assume the library protects `untrusted`/`external` fields until that version. NOTE: this is the per-VARIABLE trust tag, distinct from the render-result provenance (template_hash/render_hash) which is unchanged.\","]
 #[doc = "      \"type\": \"string\","]
 #[doc = "      \"enum\": ["]
 #[doc = "        \"trusted\","]
 #[doc = "        \"untrusted\","]
 #[doc = "        \"external\""]
 #[doc = "      ]"]
+#[doc = "    },"]
+#[doc = "    \"pattern\": {"]
+#[doc = "      \"type\": \"string\""]
 #[doc = "    },"]
 #[doc = "    \"type\": {"]
 #[doc = "      \"description\": \"JSON-Schema type keyword(s) for the variable.\","]
@@ -367,6 +367,11 @@ impl ::std::convert::TryFrom<::std::string::String> for PromptDefinitionRole {
 #[doc = "          }"]
 #[doc = "        }"]
 #[doc = "      ]"]
+#[doc = "    },"]
+#[doc = "    \"validation_required\": {"]
+#[doc = "      \"description\": \"When true, a validator covering this variable MUST be supplied when the Prompt is constructed (spec 008). Orthogonal to `origin` — it MAY mark any variable, not only untrusted/external ones. Declarative metadata; enforcement is per-language (constitution Principle VI v1.2.0): TypeScript (Zod) and Python (Pydantic) introspect the supplied validator and throw/raise at construction if this variable is uncovered, while Rust guarantees coverage structurally at compile time. The kernel never reads this field (validation-blind).\","]
+#[doc = "      \"default\": false,"]
+#[doc = "      \"type\": \"boolean\""]
 #[doc = "    }"]
 #[doc = "  },"]
 #[doc = "  \"additionalProperties\": false"]
@@ -402,21 +407,24 @@ pub struct VariableDecl {
     pub min_length: ::std::option::Option<u64>,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub minimum: ::std::option::Option<f64>,
+    #[doc = "Per-field origin (input-trust) tag (FR-010a; renamed from `provenance` in spec 008). DECLARATIVE METADATA ONLY — there is NO runtime enforcement of this tag in the current library version; it is not a security guard by itself. Untrusted-input guarding (the opt-in, additive guard expansion + lint) is introduced in a later spec per roadmap decision C-09 (deriving from constitution Principle IV). Do not assume the library protects `untrusted`/`external` fields until that version. NOTE: this is the per-VARIABLE trust tag, distinct from the render-result provenance (template_hash/render_hash) which is unchanged."]
+    pub origin: VariableDeclOrigin,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub pattern: ::std::option::Option<::std::string::String>,
-    #[doc = "Per-field provenance tag (FR-010a). DECLARATIVE METADATA ONLY — there is NO runtime enforcement of this tag in the current library version; it is not a security guard by itself. Untrusted-input guarding (the opt-in, additive guard expansion + lint) is introduced in a later spec per roadmap decision C-09 (deriving from constitution Principle IV). Do not assume the library protects `untrusted`/`external` fields until that version."]
-    pub provenance: VariableDeclProvenance,
     #[doc = "JSON-Schema type keyword(s) for the variable."]
     #[serde(rename = "type")]
     pub type_: VariableDeclType,
+    #[doc = "When true, a validator covering this variable MUST be supplied when the Prompt is constructed (spec 008). Orthogonal to `origin` — it MAY mark any variable, not only untrusted/external ones. Declarative metadata; enforcement is per-language (constitution Principle VI v1.2.0): TypeScript (Zod) and Python (Pydantic) introspect the supplied validator and throw/raise at construction if this variable is uncovered, while Rust guarantees coverage structurally at compile time. The kernel never reads this field (validation-blind)."]
+    #[serde(default)]
+    pub validation_required: bool,
 }
-#[doc = "Per-field provenance tag (FR-010a). DECLARATIVE METADATA ONLY — there is NO runtime enforcement of this tag in the current library version; it is not a security guard by itself. Untrusted-input guarding (the opt-in, additive guard expansion + lint) is introduced in a later spec per roadmap decision C-09 (deriving from constitution Principle IV). Do not assume the library protects `untrusted`/`external` fields until that version."]
+#[doc = "Per-field origin (input-trust) tag (FR-010a; renamed from `provenance` in spec 008). DECLARATIVE METADATA ONLY — there is NO runtime enforcement of this tag in the current library version; it is not a security guard by itself. Untrusted-input guarding (the opt-in, additive guard expansion + lint) is introduced in a later spec per roadmap decision C-09 (deriving from constitution Principle IV). Do not assume the library protects `untrusted`/`external` fields until that version. NOTE: this is the per-VARIABLE trust tag, distinct from the render-result provenance (template_hash/render_hash) which is unchanged."]
 #[doc = r""]
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
 #[doc = "{"]
-#[doc = "  \"description\": \"Per-field provenance tag (FR-010a). DECLARATIVE METADATA ONLY — there is NO runtime enforcement of this tag in the current library version; it is not a security guard by itself. Untrusted-input guarding (the opt-in, additive guard expansion + lint) is introduced in a later spec per roadmap decision C-09 (deriving from constitution Principle IV). Do not assume the library protects `untrusted`/`external` fields until that version.\","]
+#[doc = "  \"description\": \"Per-field origin (input-trust) tag (FR-010a; renamed from `provenance` in spec 008). DECLARATIVE METADATA ONLY — there is NO runtime enforcement of this tag in the current library version; it is not a security guard by itself. Untrusted-input guarding (the opt-in, additive guard expansion + lint) is introduced in a later spec per roadmap decision C-09 (deriving from constitution Principle IV). Do not assume the library protects `untrusted`/`external` fields until that version. NOTE: this is the per-VARIABLE trust tag, distinct from the render-result provenance (template_hash/render_hash) which is unchanged.\","]
 #[doc = "  \"type\": \"string\","]
 #[doc = "  \"enum\": ["]
 #[doc = "    \"trusted\","]
@@ -438,7 +446,7 @@ pub struct VariableDecl {
     PartialEq,
     PartialOrd,
 )]
-pub enum VariableDeclProvenance {
+pub enum VariableDeclOrigin {
     #[serde(rename = "trusted")]
     Trusted,
     #[serde(rename = "untrusted")]
@@ -446,7 +454,7 @@ pub enum VariableDeclProvenance {
     #[serde(rename = "external")]
     External,
 }
-impl ::std::fmt::Display for VariableDeclProvenance {
+impl ::std::fmt::Display for VariableDeclOrigin {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         match *self {
             Self::Trusted => f.write_str("trusted"),
@@ -455,7 +463,7 @@ impl ::std::fmt::Display for VariableDeclProvenance {
         }
     }
 }
-impl ::std::str::FromStr for VariableDeclProvenance {
+impl ::std::str::FromStr for VariableDeclOrigin {
     type Err = self::error::ConversionError;
     fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
         match value {
@@ -466,13 +474,13 @@ impl ::std::str::FromStr for VariableDeclProvenance {
         }
     }
 }
-impl ::std::convert::TryFrom<&str> for VariableDeclProvenance {
+impl ::std::convert::TryFrom<&str> for VariableDeclOrigin {
     type Error = self::error::ConversionError;
     fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
-impl ::std::convert::TryFrom<&::std::string::String> for VariableDeclProvenance {
+impl ::std::convert::TryFrom<&::std::string::String> for VariableDeclOrigin {
     type Error = self::error::ConversionError;
     fn try_from(
         value: &::std::string::String,
@@ -480,7 +488,7 @@ impl ::std::convert::TryFrom<&::std::string::String> for VariableDeclProvenance 
         value.parse()
     }
 }
-impl ::std::convert::TryFrom<::std::string::String> for VariableDeclProvenance {
+impl ::std::convert::TryFrom<::std::string::String> for VariableDeclOrigin {
     type Error = self::error::ConversionError;
     fn try_from(
         value: ::std::string::String,

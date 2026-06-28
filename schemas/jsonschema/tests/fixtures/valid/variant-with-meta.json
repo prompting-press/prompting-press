@@ -5,23 +5,23 @@
   "variables": {
     "product_name": {
       "type": "string",
-      "provenance": "trusted",
+      "origin": "trusted",
       "minLength": 1,
       "maxLength": 120
     },
     "target_audience": {
       "type": "string",
-      "provenance": "trusted",
+      "origin": "trusted",
       "description": "Primary customer segment."
     },
     "features": {
       "type": "array",
-      "provenance": "trusted",
+      "origin": "trusted",
       "description": "List of key product features."
     },
     "reviewer_notes": {
       "type": "string",
-      "provenance": "external",
+      "origin": "external",
       "description": "Optional notes from an external content reviewer."
     }
   },

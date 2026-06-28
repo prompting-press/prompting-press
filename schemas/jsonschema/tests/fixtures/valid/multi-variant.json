@@ -5,20 +5,20 @@
   "variables": {
     "article": {
       "type": "string",
-      "provenance": "untrusted",
+      "origin": "untrusted",
       "minLength": 1,
       "description": "Raw article text supplied by the end user."
     },
     "max_words": {
       "type": "integer",
-      "provenance": "trusted",
+      "origin": "trusted",
       "minimum": 10,
       "maximum": 500,
       "description": "Maximum word count for the summary."
     },
     "style": {
       "type": "string",
-      "provenance": "trusted",
+      "origin": "trusted",
       "enum": ["bullet", "prose", "headline"],
       "description": "Output style preference."
     }

@@ -7,19 +7,19 @@
 # Regenerate with: packages/python/scripts/codegen.sh  (re-run on schema change).
 # Hand edits are overwritten and will fail the US4 freshness gate. Edit the schema.
 
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class Role(Enum):
+class Role(StrEnum):
     system = 'system'
     user = 'user'
     assistant = 'assistant'
 
 
-class Type(Enum):
+class Type(StrEnum):
     string = 'string'
     integer = 'integer'
     number = 'number'
@@ -28,7 +28,7 @@ class Type(Enum):
     object = 'object'
 
 
-class TypeEnum(Enum):
+class TypeEnum(StrEnum):
     string = 'string'
     integer = 'integer'
     number = 'number'
@@ -38,7 +38,7 @@ class TypeEnum(Enum):
     null = 'null'
 
 
-class Provenance(Enum):
+class Origin(StrEnum):
     trusted = 'trusted'
     untrusted = 'untrusted'
     external = 'external'
@@ -52,12 +52,18 @@ class VariableDecl(BaseModel):
         Type | list[TypeEnum],
         Field(description='JSON-Schema type keyword(s) for the variable.'),
     ]
-    provenance: Annotated[
-        Provenance,
+    origin: Annotated[
+        Origin,
         Field(
-            description='Per-field provenance tag (FR-010a). DECLARATIVE METADATA ONLY — there is NO runtime enforcement of this tag in the current library version; it is not a security guard by itself. Untrusted-input guarding (the opt-in, additive guard expansion + lint) is introduced in a later spec per roadmap decision C-09 (deriving from constitution Principle IV). Do not assume the library protects `untrusted`/`external` fields until that version.'
+            description='Per-field origin (input-trust) tag (FR-010a; renamed from `provenance` in spec 008). DECLARATIVE METADATA ONLY — there is NO runtime enforcement of this tag in the current library version; it is not a security guard by itself. Untrusted-input guarding (the opt-in, additive guard expansion + lint) is introduced in a later spec per roadmap decision C-09 (deriving from constitution Principle IV). Do not assume the library protects `untrusted`/`external` fields until that version. NOTE: this is the per-VARIABLE trust tag, distinct from the render-result provenance (template_hash/render_hash) which is unchanged.'
         ),
     ]
+    validation_required: Annotated[
+        bool | None,
+        Field(
+            description='When true, a validator covering this variable MUST be supplied when the Prompt is constructed (spec 008). Orthogonal to `origin` — it MAY mark any variable, not only untrusted/external ones. Declarative metadata; enforcement is per-language (constitution Principle VI v1.2.0): TypeScript (Zod) and Python (Pydantic) introspect the supplied validator and throw/raise at construction if this variable is uncovered, while Rust guarantees coverage structurally at compile time. The kernel never reads this field (validation-blind).'
+        ),
+    ] = False
     format: str | None = None
     pattern: str | None = None
     enum: list[Any] | None = None
