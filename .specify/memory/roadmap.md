@@ -1,8 +1,26 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.2.0 → 1.3.0
-Bump rationale: MINOR — spec 008 materially broadened from "schema rename + fixture move"
+Version change: 1.3.0 → 1.3.1
+Bump rationale: PATCH — refinements within the existing 1.3.0 spec-008 entry from the
+  continued 2026-06-28 design conversation (no new spec, no decision reversed): registry
+  RESOLVED (dropped from the object model → query-registry added as a Deferred wishlist
+  entry, C-08-gated); construction taxonomy refined (shape = primary constructor, not
+  `.fromObject`; named factories parse foreign text); `Prompt.fromToml` + the TS
+  constructor-shape added as clarify questions. Clarifications only.
+
+Changes this revision (1.3.1, 2026-06-28):
+  - Spec 008: registry DROPPED from the object model (decided); object-model open questions
+    narrowed to TS interface→Zod, validation_required, all-bindings confirmation, fromToml,
+    TS constructor shape. Construction taxonomy: primary `new Prompt(shape)` constructor +
+    named `fromYaml`/`fromJson`/(candidate)`fromToml` text factories (no `.fromObject`).
+  - Deferred: added "Query-capable prompt Registry" wishlist (search by role/meta/origin;
+    optional registration only, no DSL; gated on a real consumer per C-08).
+  - Research note (docs/research/registry-value-and-object-model.md) §8b/§9 synced to the
+    refined constructor taxonomy.
+
+Prior revision (1.3.0, 2026-06-28):
+  Bump rationale: MINOR — spec 008 materially broadened from "schema rename + fixture move"
   to "Pre-publish API & schema reshape": adds the prompt-as-object API redesign + the
   candidate `validation_required` schema field, bundled because they are one object-model
   decision (research note docs/research/registry-value-and-object-model.md). 008 now blocks
@@ -413,11 +431,24 @@ Status legend (lifecycle): **undecided** · **needs-info** · **planned** ·
   - **Fixture move** — `schemas/jsonschema/fixtures/{valid,invalid}/` →
     `schemas/jsonschema/tests/fixtures/{valid,invalid}/`; fix the 3 refs (`validate_fixtures.py`, the
     `schemas:validate-fixtures` moon-task inputs, `conformance/schema/manifest.json`).
-  - **Prompt-as-object API redesign** (clarify-gated — see open questions) — a first-class `Prompt`
-    object across all three bindings; `render`/`getSource`/`check` migrate onto it (single-prompt ops);
-    `Composition` aggregates `Prompt` objects; the `Registry` is re-decided (kept-thin / optional sugar +
-    `checkAll()` / dropped). Resolves the TS `render` schema-vs-data duck-typing (named `schema` key, no
-    `isSchema()`/`.safeParse` sniff) and the `reg`/`name` positional questions.
+  - **Prompt-as-object API redesign** — a first-class **immutable** `Prompt` object across all three
+    bindings. **Construction taxonomy:** the **primary/default constructor takes the shape object directly**
+    (`new Prompt({...})` TS / `Prompt(shape)` Python / `Prompt::new(shape) -> Result` Rust) — NOT a named
+    `.fromObject` factory (constructing from the native shape is just "make one"). **Named alternate-format
+    factories parse foreign TEXT** into that same validating constructor: `Prompt.fromYaml(text)`,
+    `Prompt.fromJson(text)`, and (candidate — clarify) `Prompt.fromToml(text)`. All validate; all return a
+    `Result`/raise/throw, never panic. (Per-language nuance for clarify: a TS `constructor` cannot return a
+    `Result` and can only *throw* — so TS may use `Prompt.create({...})` returning a result, or accept that
+    `new Prompt({...})` throws on invalid; native idiom per C-06.) `render`/`getSource`/`check` migrate onto
+    it (single-prompt ops);
+    read-only **getters, no setters**; the ONLY way to vary a prompt is `prompt.with(overlay) -> Result`
+    (shallow replace per top-level field; validates the merged result; original untouched — replaces
+    `withVariant` + all mutators). `Composition` aggregates `Prompt` **objects** (not names). **The
+    `Registry` is DROPPED from the object model** (decided 2026-06-28): prompts are held as objects, so the
+    name→def map is no longer the home for prompts or on any operation's critical path; a query-capable
+    registry is Deferred (wishlist, gated on a real consumer per C-08). Resolves the TS `render`
+    schema-vs-data duck-typing (named `schema` key, no `isSchema()`/`.safeParse` sniff) and the `reg`/`name`
+    positional questions (both gone with the registry).
   - **`validation_required` (candidate, clarify-gated)** — an optional schema boolean letting a prompt
     mandate that a validator was supplied (closes the Python/TS static-render bypass). Tripwire, NOT a
     proof of meaningful validation (an empty Zod/Pydantic model still passes); pairs with `origin:
@@ -434,13 +465,22 @@ Status legend (lifecycle): **undecided** · **needs-info** · **planned** ·
   firmly SpecKit-worthy.
 - **Notes:** Bundled per the 2026-06-28 design conversation (see the research note). `origin` chosen over
   `provenance` (more descriptive; fits all three values; a boolean can't express the 3rd). Object-model
-  lean = prompt-as-object + optional registry (matches the actual data flow — `render` needs one def,
+  lean = prompt-as-object, registry DROPPED (matches the actual data flow — `render` needs one def,
   `check` is per-prompt, `Composition` aggregates prompts; aligns with BAML's method-per-prompt client +
   LangChain's held template objects, neither of which uses name-keyed registry lookup). ~180+ files; do
-  as ONE coordinated change, full conformance + CI re-run. **Open questions for clarify** (from the
-  research note §6): keep the registry at all? prompt.check() vs reg.checkAll()? accept the single-prompt-
-  on-Prompt / multi-prompt-elsewhere split? confirm the all-bindings (incl. Rust generic `render::<V>`)
-  appetite? ship `validation_required` now or defer?
+  as ONE coordinated change, full conformance + CI re-run. **Resolved 2026-06-28** (no longer open):
+  prompts immutable + validating static factory; `with(overlay)` is the sole mutator (shallow replace);
+  getters not setters; Composition holds objects; registry dropped from the object model (query-registry →
+  Deferred wishlist). **Open questions remaining for clarify:** (1) TS shape — switch codegen
+  `interface` → **Zod schema** so the TS validating constructor has a runtime enforcer (Python=Pydantic,
+  Rust=struct+checks); strong lean yes. (2) `validation_required` schema field — ship in 008 or defer?
+  (3) confirm the all-bindings appetite incl. Rust `Prompt` wrapping the generated struct with a generic
+  `with`/`render::<V>`. (4) does un-analyzable-template handling stay "build succeeds, `check()` reports
+  the AnalysisError" (lean yes — construction enforces decidable invariants, check covers the residue).
+  (5) ship `Prompt.fromToml(text)` in 008, or defer? (additive — same validating constructor; cost = a
+  pinned TOML parser per binding: Rust `toml`, Python stdlib `tomllib`, a JS TOML lib). (6) TS
+  constructor shape — `new Prompt({...})` that THROWS on invalid, vs `Prompt.create({...})` returning a
+  result (a TS `new` can't return a `Result`).
 
 ### 009 — Adversarial hardening & fuzzing  [status: planned]
 
@@ -559,6 +599,24 @@ Status legend (lifecycle): **undecided** · **needs-info** · **planned** ·
   `result.guard` is a separate field the caller can compose (`f"{r.guard}\n\n{r.text}"`).
   Trigger: a concrete consumer (e.g. Bellwether) finding the caller-side assembly repetitive
   enough to justify a kernel spec.
+- **Query-capable prompt Registry (WISHLIST — user-raised 2026-06-28, during the spec-008 design
+  conversation)** — `[status: deferred]` a searchable collection of `Prompt` objects, looking prompts up
+  by **more than name**: by `role` (all `system` prompts), by `meta`/`metadata` (e.g. all tagged
+  `experiment-q4`, all with a `model_hint`), by `origin` (every prompt declaring an `untrusted`/`external`
+  variable — a security-audit view), by variant presence / `output_model`, etc. **Why deferred, not in
+  008:** the spec-008 prompt-as-object reshape makes the registry **non-essential** — prompts are now
+  first-class objects you hold and pass directly (`Prompt.fromYaml(...)`; `prompt.with(overlay)`;
+  `Composition` aggregates `Prompt` objects), so the old name→def map is no longer the *home* for prompts
+  or on any operation's critical path. The ONLY residual value a registry could add over a plain
+  `list`/`Vec` of prompts is **indexed search by metadata/role/origin**, and per C-08 that query
+  capability must be **earned by a real consumer**, not anticipated. Constraints if/when built: **optional
+  registration only** (a prompt is NOT auto-added to any ambient/global registry — that reintroduces the
+  hidden global state + Singleton anti-pattern the object model removed; `registry.add(prompt)` is
+  explicit); **exact-match indexed lookup, NOT a query DSL** (a `WHERE metadata.x > 5` language brushes
+  Principle III's no-storage-layer line — keep it `find_by_role`/`find_by_tag`/`with_untrusted`, not an
+  in-memory database). Trigger: a concrete consumer (e.g. Bellwether) that needs to *discover* prompts by
+  attribute rather than render specific prompts it already holds. See
+  `docs/research/registry-value-and-object-model.md`.
 
 ## Never (boundary defense)
 
@@ -599,4 +657,4 @@ Status legend (lifecycle): **undecided** · **needs-info** · **planned** ·
 
 ---
 
-**Version**: 1.3.0 | **Ratified**: 2026-06-25 | **Last Amended**: 2026-06-28
+**Version**: 1.3.1 | **Ratified**: 2026-06-25 | **Last Amended**: 2026-06-28

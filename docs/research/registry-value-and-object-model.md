@@ -186,12 +186,16 @@ load-bearing verdicts were then **re-verified against the code main-thread**: Co
 - **Singleton: POOR (anti-fit)** — we create *many* immutable prompts; its "single instance / a single
   database object" use case is the opposite + I/O-coupled (Principle III).
 
-### 8b. The two creation paths (load-from-text vs construct-from-object)
+### 8b. The creation paths (construct-from-shape vs load-from-text)
 - **Verdict: NO GoF pattern models this** — they vary product *type* (Factory), *assembly* (Builder),
-  *copying* (Prototype), or *instance count* (Singleton); none addresses "same product, two input
-  *formats*." Correct shape: **two named static factories** (`Prompt.fromYaml` / `Prompt.fromJson` /
-  `Prompt.fromObject`) over the one internal validating constructor. (Explicitly *not* GoF Factory
-  Method, which is about subclassing.)
+  *copying* (Prototype), or *instance count* (Singleton); none addresses "same product, multiple input
+  *formats*." (Explicitly *not* GoF Factory Method, which is about subclassing.)
+- **Taxonomy (refined 2026-06-28):** constructing from the native **shape object is the PRIMARY
+  constructor**, NOT a named `.fromObject` factory — `new Prompt({...})` / `Prompt(shape)` /
+  `Prompt::new(shape)`. **Named alternate-format factories parse foreign TEXT** into that same validating
+  constructor: `Prompt.fromYaml(text)`, `Prompt.fromJson(text)`, and (candidate) `Prompt.fromToml(text)`.
+  TS nuance: a `constructor` can't return a `Result`/fail cleanly — so TS may use `Prompt.create({...})`
+  or accept that `new Prompt({...})` *throws* on invalid (native idiom per C-06).
 
 ### 8c. Immutable derive (clone-with-changes; e.g. "add a variant to an existing prompt")
 - **Verdict: Prototype-flavored "copy-with-changes" (PARTIAL — right intent, GoF rationale doesn't fire).**
@@ -282,7 +286,7 @@ The user resolved the core object-model questions during the design conversation
   variant" is just `prompt.with({ variants: { ...prompt.variants, terse: {body} } })`.
 - **This is a CORE primitive, not deferred.** (Supersedes §8c's C-08 "defer derive" caveat — since `with`
   is the *only* way to vary a prompt, it is in-scope for 008, not speculative.)
-- **Mental model:** a prompt is a *template you stamp variations from* — `fromObject`/`fromYaml` to create,
+- **Mental model:** a prompt is a *template you stamp variations from* — `new Prompt(shape)`/`fromYaml` to create,
   `with` to derive variations, all immutable.
 
 ### 9b. Merge semantics: SHALLOW replace per top-level field (DECIDED)
