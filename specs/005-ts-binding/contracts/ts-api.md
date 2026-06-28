@@ -29,11 +29,15 @@ reg.insert(def);                        // def: PromptDefinition (constructed-ob
 ```ts
 const Vars = z.object({ name: z.string(), count: z.number().int().refine(n => n >= 0) });
 
+// render(reg, name, schema, data, opts?)  — opts = { variant?, guard? } (options object, C-11)
 const r: RenderResult = render(reg, "greet", Vars, { name: "Ada", count: 3 });
 r.text;                                 // "Hi Ada, you have 3 messages"
 r.name; r.variant;                      // "greet", "default"
 r.templateHash; r.renderHash;           // 64-hex SHA-256 (byte-identical to Python/Rust)
 r.guard;                                // string | null (separate from text; never concatenated)
+
+// select a named variant + opt into a guard via the options object:
+render(reg, "greet", Vars, { name: "Ada", count: 3 }, { variant: "formal", guard: { enabled: true } });
 
 // invalid input → PromptValidationError BEFORE any render, naming every offending field:
 try { render(reg, "greet", Vars, { name: "Ada", count: -1 }); }
@@ -42,10 +46,13 @@ catch (e) {
   e.errors;                             // [{ field: "count", code: "validation", message: "…" }]
 }
 
-getSource(reg, "greet");                // unrendered template source (no vars, no validation)
+getSource(reg, "greet", { variant: "formal" });  // unrendered source (opts = { variant? })
 ```
 - Validation owned at the render boundary (Q1): `safeParse` runs once before any templating.
 - Static-only data (no Zod schema) is also accepted (Q4) and marshaled directly.
+- **Options object (C-11 / constitution v1.1.0):** `render`/`getSource` take their optional/config tail
+  (`variant`, `guard`) as a named object, never positional. Required operands (reg, name, schema, data)
+  stay positional.
 
 ## Check — the headline lint (US3)
 
@@ -62,9 +69,10 @@ for (const f of report.findings) {
 ## Compose (US4)
 
 ```ts
+// entries are objects { name, schema?, data, variant? } (C-11 — not positional tuples)
 const msgs: Message[] = Composition.fromMessages([
-  ["systemPreamble", SysVars, sysData],
-  ["greet", Vars, { name: "Ada", count: 3 }],
+  { name: "systemPreamble", schema: SysVars, data: sysData },
+  { name: "greet", schema: Vars, data: { name: "Ada", count: 3 } },
 ]).resolve(reg);
 msgs.map(m => m.role);                  // ["system", "user"]  (N entries → N ordered messages)
 // one invalid entry → throws (PromptValidationError / UnknownPromptError); NO partial array returned.

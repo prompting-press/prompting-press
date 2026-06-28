@@ -89,8 +89,17 @@ question is marked.
   shape the mapper reads are confirmed at plan time (verify-at-spec-time). The mapper targets v4's issue
   format only (not a v3/v4 dual range) — one issue shape, less mapper surface (FR-001/FR-014).
 - Q: **Module format the npm package ships** — ESM, CJS, or dual? → A: **ESM-only**, consistent with the
-  scaffold's existing `napi build --esm` flag. Consumers are Node 16+ / bundler environments; no
-  CommonJS entry point ships (FR-021).
+  scaffold's existing `napi build --esm` flag. Consumers are Node 20+ / bundler environments (matching
+  the scaffold's `engines.node: ">=20"`); no CommonJS entry point ships (FR-021).
+- Q (**Q9, added 2026-06-28 during the review cycle**): **Call shape for the optional/config tail
+  (variant, guard) on `render`/`getSource`/`Composition`** — positional optionals, or an options object?
+  → A: **Options object** (`render(reg, name, schema, data, { variant?, guard? })`, `getSource(reg, name,
+  { variant? })`, composition entries as `{ name, schema?, data, variant? }` objects), per the
+  constitution **v1.1.0** Principle VI / roadmap **C-11** amendment adopted this cycle. Required operands
+  stay positional; only the optional tail moves into the object. This closed a parity gap — the earlier
+  draft hardcoded `variant: undefined` on `render` (TS could render only the `default` arm); variant
+  selection on `render` is now full parity with Python/Rust. Also dissolved the schema-vs-data
+  duck-typing in composition (the entry is an object with an explicit `schema?` key).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -279,16 +288,21 @@ entry fails the whole resolution without emitting a partial result.
   resolved against the registry** and the caller's typed Vars value together, validates the vars, then
   delegates rendering to the Rust core, returning the rendered text plus provenance (name, variant,
   `templateHash`, `renderHash`, optional guard). The binding MUST NOT require pre-registering a Vars type
-  per prompt. Guard *expansion* is owned and tested by the kernel; the binding only plumbs guard
-  configuration through and surfaces the resulting guard field.
+  per prompt. Its optional/config tail — **variant selection** (caller-owned per Principle V) and the
+  guard config — MUST be passed as a single **options object** (`render(reg, name, schema, data, {
+  variant?, guard? })`), per C-11 / constitution v1.1.0 (clarified Q9), never as positional optionals.
+  Variant selection on `render` is full parity with the Python/Rust bindings. Guard *expansion* is owned
+  and tested by the kernel; the binding only plumbs guard configuration through and surfaces the result.
 - **FR-010**: The binding MUST expose a `getSource`-style operation returning a prompt variant's
-  unrendered template source, delegating to the Rust core.
+  unrendered template source, delegating to the Rust core; its optional `variant` is passed via an
+  options object (`getSource(reg, name, { variant? })` — C-11).
 - **FR-011**: The binding MUST NOT reimplement rendering, agreement analysis, variant resolution, or
   hashing; these live once in the Rust core and are reached across the FFI boundary (Principle I / C-02 —
   no engine logic in the binding).
 - **FR-012**: The binding MUST support composing a multi-message prompt as an **explicit ordered array**
-  of (prompt, vars, variant) entries (a `fromMessages`-style constructor over an ordered array, with
-  idiomatic builder sugar permitted) that resolves to an ordered array of `{role, text}` messages.
+  of entries — **options objects** `{ name, schema?, data, variant? }` (C-11; not positional tuples) —
+  via a `fromMessages`-style constructor + an `append(entry)` builder, resolving to an ordered array of
+  `{role, text}` messages.
 - **FR-013**: The binding MUST NOT offer a fluent `.chain()` composition API (it cannot cross the napi
   boundary and collides with JS idiom).
 
