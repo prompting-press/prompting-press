@@ -85,8 +85,8 @@ test("the append path preserves order, roles, and per-entry text (SC-008)", () =
   const reg = registry(SYS_PREAMBLE, GREET);
 
   const comp = new Composition();
-  assert.equal(comp.append("sys_preamble", EmptyVars, {}), undefined, "append is non-fluent (void)");
-  assert.equal(comp.append("greet", Named, { name: "Ada" }), undefined);
+  assert.equal(comp.append({ name: "sys_preamble", schema: EmptyVars, data: {} }), undefined, "append is non-fluent (void)");
+  assert.equal(comp.append({ name: "greet", schema: Named, data: { name: "Ada" } }), undefined);
   assert.equal(comp.length, 2, "length reflects the two stored entries");
 
   const messages = comp.resolve(reg);
@@ -102,8 +102,8 @@ test("the fromMessages path preserves order, roles, and per-entry text (SC-008)"
   const reg = registry(SYS_PREAMBLE, GREET);
 
   const comp = Composition.fromMessages([
-    ["sys_preamble", EmptyVars, {}],
-    ["greet", Named, { name: "Bo" }],
+    { name: "sys_preamble", schema: EmptyVars, data: {} },
+    { name: "greet", schema: Named, data: { name: "Bo" } },
   ]);
   assert.ok(comp instanceof Composition);
   assert.equal(comp.length, 2);
@@ -124,12 +124,12 @@ test("the fromMessages path preserves order, roles, and per-entry text (SC-008)"
 test("the two construction paths produce identical ordered messages", () => {
   const reg = registry(SYS_PREAMBLE, GREET);
   const entries = [
-    ["sys_preamble", EmptyVars, {}],
-    ["greet", Named, { name: "Cy" }],
+    { name: "sys_preamble", schema: EmptyVars, data: {} },
+    { name: "greet", schema: Named, data: { name: "Cy" } },
   ];
 
   const viaAppend = new Composition();
-  for (const [name, schema, data] of entries) viaAppend.append(name, schema, data);
+  for (const entry of entries) viaAppend.append(entry);
   const viaFactory = Composition.fromMessages(entries);
 
   const appended = viaAppend.resolve(reg).map((m) => [m.role, m.text]);
@@ -149,12 +149,12 @@ test("invalid vars at append throw PromptValidationError and store nothing (no p
   const reg = registry(GREET);
 
   const comp = new Composition();
-  comp.append("greet", Named, { name: "ok" }); // one good entry
+  comp.append({ name: "greet", schema: Named, data: { name: "ok" } }); // one good entry
   assert.equal(comp.length, 1);
 
   // An empty name fails the Zod refine; append eager-validates, so this is rejected.
   assert.throws(
-    () => comp.append("greet", Named, { name: "" }),
+    () => comp.append({ name: "greet", schema: Named, data: { name: "" } }),
     (err) => {
       assert.ok(err instanceof PromptValidationError);
       assert.ok(err.errors.some((row) => row.field === "name"));
@@ -179,14 +179,14 @@ test("the first invalid entry in fromMessages throws and yields no Composition (
   assert.throws(
     () =>
       Composition.fromMessages([
-        ["greet", Named, { name: "ok" }],
-        ["greet", Named, { name: "" }], // invalid second entry
+        { name: "greet", schema: Named, data: { name: "ok" } },
+        { name: "greet", schema: Named, data: { name: "" } }, // invalid second entry
       ]),
     PromptValidationError,
   );
 
   // The all-or-nothing factory hands back nothing on failure. A clean build still works.
-  const good = Composition.fromMessages([["greet", Named, { name: "ok" }]]);
+  const good = Composition.fromMessages([{ name: "greet", schema: Named, data: { name: "ok" } }]);
   assert.deepEqual(
     good.resolve(reg).map((m) => m.text),
     ["Hi ok"],
@@ -197,8 +197,8 @@ test("an unknown prompt name at resolve throws UnknownPromptError and returns no
   const reg = registry(SYS_PREAMBLE);
 
   const comp = new Composition();
-  comp.append("sys_preamble", EmptyVars, {}); // valid + present
-  comp.append("does_not_exist", EmptyVars, {}); // name not in the registry
+  comp.append({ name: "sys_preamble", schema: EmptyVars, data: {} }); // valid + present
+  comp.append({ name: "does_not_exist", schema: EmptyVars, data: {} }); // name not in the registry
   assert.equal(comp.length, 2, "append does not resolve the name; both entries are stored");
 
   // resolve RAISES (does not return the one successfully-rendered prefix).
@@ -237,7 +237,7 @@ test("there is no fluent .chain() on the class or an instance (FR-013)", () => {
   assert.equal(comp.chain, undefined, "no chain on an instance");
   assert.equal(typeof comp.chain, "undefined");
   // append returns undefined (void), so accidental chaining is impossible.
-  assert.equal(comp.append("greet", Named, { name: "x" }), undefined);
+  assert.equal(comp.append({ name: "greet", schema: Named, data: { name: "x" } }), undefined);
 });
 
 // --------------------------------------------------------------------------------------
@@ -247,7 +247,7 @@ test("there is no fluent .chain() on the class or an instance (FR-013)", () => {
 test("a [name, schema, data, variant] entry selects the named variant arm", () => {
   const reg = registry(WITH_VARIANT);
 
-  const viaFactory = Composition.fromMessages([["salute", Named, { name: "Di" }, "formal"]]);
+  const viaFactory = Composition.fromMessages([{ name: "salute", schema: Named, data: { name: "Di" }, variant: "formal" }]);
   assert.deepEqual(
     viaFactory.resolve(reg).map((m) => m.text),
     ["Good day, Di"],
@@ -255,14 +255,14 @@ test("a [name, schema, data, variant] entry selects the named variant arm", () =
 
   // The same selection via append.
   const viaAppend = new Composition();
-  viaAppend.append("salute", Named, { name: "Di" }, "formal");
+  viaAppend.append({ name: "salute", schema: Named, data: { name: "Di" }, variant: "formal" });
   assert.equal(viaAppend.resolve(reg)[0].text, "Good day, Di");
 });
 
 test("a [name, schema, data] entry defaults to the reserved default arm", () => {
   const reg = registry(WITH_VARIANT);
 
-  const comp = Composition.fromMessages([["salute", Named, { name: "Eli" }]]);
+  const comp = Composition.fromMessages([{ name: "salute", schema: Named, data: { name: "Eli" } }]);
   // The root body is the default arm — "Hi {{ name }}", not the `formal` arm.
   assert.deepEqual(
     comp.resolve(reg).map((m) => m.text),
@@ -274,7 +274,7 @@ test("an unknown variant fails at resolve as PromptRenderError", () => {
   const reg = registry(WITH_VARIANT);
 
   const comp = new Composition();
-  comp.append("salute", Named, { name: "Fa" }, "nonexistent");
+  comp.append({ name: "salute", schema: Named, data: { name: "Fa" }, variant: "nonexistent" });
 
   assert.throws(() => comp.resolve(reg), PromptRenderError);
 });
@@ -287,9 +287,9 @@ test("a mixed system + two user composition resolves to 3 ordered messages (SC-0
   const reg = registry(SYS_PREAMBLE, GREET, FAREWELL);
 
   const comp = Composition.fromMessages([
-    ["sys_preamble", EmptyVars, {}],
-    ["greet", Named, { name: "Ada" }],
-    ["farewell", Named, { name: "Bo" }],
+    { name: "sys_preamble", schema: EmptyVars, data: {} },
+    { name: "greet", schema: Named, data: { name: "Ada" } },
+    { name: "farewell", schema: Named, data: { name: "Bo" } },
   ]);
   assert.equal(comp.length, 3);
 
@@ -313,10 +313,10 @@ test("a mixed system + two user composition resolves to 3 ordered messages (SC-0
 test("static (no-schema) entries are marshaled directly (Q4)", () => {
   const reg = registry(SYS_PREAMBLE, GREET);
 
-  // [name, data] and [name, data, variant] forms, no schema.
+  // { name, data } and { name, data, variant } forms, no schema.
   const comp = Composition.fromMessages([
-    ["sys_preamble", {}],
-    ["greet", { name: "Zed" }],
+    { name: "sys_preamble", data: {} },
+    { name: "greet", data: { name: "Zed" } },
   ]);
   assert.deepEqual(
     comp.resolve(reg).map((m) => m.text),

@@ -79,8 +79,8 @@ if (!report.passed()) {
 import { Composition } from "prompting-press";
 
 const messages = Composition.fromMessages([
-  ["systemPreamble", SysVars, sysData],
-  ["greet", Greeting, { name: "Ada", count: 3 }],
+  { name: "systemPreamble", schema: SysVars, data: sysData },
+  { name: "greet", schema: Greeting, data: { name: "Ada", count: 3 } },
 ]).resolve(reg);
 // messages: [{ role: "system", text: ... }, { role: "user", text: "Hi Ada, ..." }]
 ```

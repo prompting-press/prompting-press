@@ -369,17 +369,22 @@ function validateOrThrow<T>(schema: ZodLikeSchema<T>, data: unknown): T {
  *
  * Two call forms, selected by the third argument:
  *
- *  - **Schema form (Q1):** `render(reg, name, schema, data, guard?)`. `schema.safeParse(data)` runs
+ *  - **Schema form (Q1):** `render(reg, name, schema, data, opts?)`. `schema.safeParse(data)` runs
  *    here, before any templating; on failure a {@link PromptValidationError} is thrown and the
  *    kernel is **never** reached (no render happens). On success the validated plain value is
  *    marshaled to the addon.
- *  - **Static form (Q4):** `render(reg, name, data, guard?)`. Already-typed plain data with no Zod
- *    schema — marshaled directly. (The fourth argument is then the optional guard config.)
+ *  - **Static form (Q4):** `render(reg, name, data, opts?)`. Already-typed plain data with no Zod
+ *    schema — marshaled directly. (The third argument is the data; the fourth is `opts`.)
  *
- * `guard` is the opt-in {@link GuardConfig}, plumbed straight through to the kernel: absent /
- * `{ enabled: false }` ⇒ a plain render and `RenderResult.guard === null`. The facade adds no guard
- * logic; the kernel populates `RenderResult.guard` when enabled and the prompt declares an
- * untrusted/external field.
+ * `opts` is an optional `{ variant?, guard? }` object — the TS-idiomatic equivalent of Python's
+ * `variant=` / `guard=` keyword arguments (constitution Principle VI: uniform capability, native
+ * idiom). It carries:
+ *  - `variant` — select a named variant arm (Principle V / FR-009; caller-owned). Absent ⇒ the
+ *    reserved `default` arm. An unknown name ⇒ a {@link PromptRenderError} with `code:
+ *    "unknown_variant"`.
+ *  - `guard` — the opt-in {@link GuardConfig}, plumbed straight through: absent / `{ enabled: false }`
+ *    ⇒ a plain render and `RenderResult.guard === null`. The facade adds no guard logic; the kernel
+ *    populates `RenderResult.guard` when enabled and the prompt declares an untrusted/external field.
  *
  * Any addon error is decoded into the matching {@link PromptingPressError} subclass:
  * `UnknownPromptError` (name absent — thrown before marshaling, nothing rendered), or a
@@ -389,47 +394,59 @@ function validateOrThrow<T>(schema: ZodLikeSchema<T>, data: unknown): T {
  * @param reg    the registry to resolve `name` against.
  * @param name   the prompt name.
  * @param schemaOrData a Zod-like schema (schema form) **or** the already-typed plain data (static form).
- * @param dataOrGuard  the data to validate (schema form) **or** the guard config (static form).
- * @param guard  the opt-in guard config (schema form only).
+ * @param dataOrOpts   the data to validate (schema form) **or** the `opts` object (static form).
+ * @param opts   `{ variant?, guard? }` (schema form only).
  */
+export interface RenderOptions {
+  /** Select a named variant arm; absent ⇒ the reserved `default` arm (FR-009 / Principle V). */
+  variant?: string;
+  /** Opt-in guard config; absent / `{ enabled: false }` ⇒ a plain render (`RenderResult.guard === null`). */
+  guard?: GuardConfig | null;
+}
 export function render<T>(
   reg: Registry,
   name: string,
   schema: ZodLikeSchema<T>,
   data: unknown,
-  guard?: GuardConfig | null,
+  opts?: RenderOptions | null,
 ): RenderResult;
 export function render(
   reg: Registry,
   name: string,
   data: unknown,
-  guard?: GuardConfig | null,
+  opts?: RenderOptions | null,
 ): RenderResult;
 export function render(
   reg: Registry,
   name: string,
   schemaOrData: unknown,
-  dataOrGuard?: unknown,
-  guard?: GuardConfig | null,
+  dataOrOpts?: unknown,
+  opts?: RenderOptions | null,
 ): RenderResult {
   let value: unknown;
-  let guardConfig: GuardConfig | null | undefined;
+  let options: RenderOptions | null | undefined;
 
   if (isSchema(schemaOrData)) {
-    // Schema form (Q1): validate `dataOrGuard` against the schema, then `guard` is the 5th arg.
-    value = validateOrThrow(schemaOrData, dataOrGuard);
-    guardConfig = guard;
+    // Schema form (Q1): validate `dataOrOpts` against the schema; `opts` is the 5th arg.
+    value = validateOrThrow(schemaOrData, dataOrOpts);
+    options = opts;
   } else {
-    // Static form (Q4): `schemaOrData` IS the plain data; `dataOrGuard` is the guard config.
+    // Static form (Q4): `schemaOrData` IS the plain data; `dataOrOpts` is the `opts` object.
     value = schemaOrData;
-    guardConfig = dataOrGuard as GuardConfig | null | undefined;
+    options = dataOrOpts as RenderOptions | null | undefined;
   }
 
   try {
-    // napi `render(reg, name, value, variant?, guard?)`. This facade does not expose a positional
-    // `variant` on `render` (variant selection rides through `getSource`/`Composition`); pass the
-    // reserved default arm by leaving `variant` undefined, and plumb the guard straight through.
-    return napiRender(napiRegistryOf(reg), name, value, undefined, guardConfig ?? undefined);
+    // napi `render(reg, name, value, variant?, guard?)`. Variant + guard are caller-owned via `opts`
+    // (the TS analogue of Python's variant=/guard= kwargs); the facade adds no engine logic, it only
+    // forwards them. Absent variant ⇒ the kernel's reserved default arm.
+    return napiRender(
+      napiRegistryOf(reg),
+      name,
+      value,
+      options?.variant ?? undefined,
+      options?.guard ?? undefined,
+    );
   } catch (thrown) {
     throw decodeAddonError(thrown);
   }
@@ -439,16 +456,22 @@ export function render(
 // getSource (US1) + check (US3) — the two remaining registry-reading entry points.
 // --------------------------------------------------------------------------------------
 
+/** Options for {@link getSource}. */
+export interface GetSourceOptions {
+  /** Select a named variant arm; absent ⇒ the reserved `default` arm. */
+  variant?: string;
+}
+
 /**
  * Return a prompt variant's **unrendered** template source (FR-010). Pure source lookup: no vars,
- * no validation, no marshaling. `variant` selects an arm (absent ⇒ the reserved `default`).
+ * no validation, no marshaling. `opts.variant` selects an arm (absent ⇒ the reserved `default`).
  *
  * @throws {UnknownPromptError} if `name` is absent from `reg`.
  * @throws {PromptRenderError} for a kernel rejection (e.g. an unknown variant).
  */
-export function getSource(reg: Registry, name: string, variant?: string | null): string {
+export function getSource(reg: Registry, name: string, opts?: GetSourceOptions | null): string {
   try {
-    return napiGetSource(napiRegistryOf(reg), name, variant ?? undefined);
+    return napiGetSource(napiRegistryOf(reg), name, opts?.variant ?? undefined);
   } catch (thrown) {
     throw decodeAddonError(thrown);
   }
@@ -471,13 +494,22 @@ export function check(reg: Registry): CheckReport {
 // --------------------------------------------------------------------------------------
 
 /**
- * One composition entry in the facade's idiomatic tuple form:
- * `[name, schema, data, variant?]` (schema form — validated here) or
- * `[name, data, variant?]` (static form — marshaled directly).
+ * One composition entry, as an **options object** (codebase convention: named fields over positional
+ * tuples — this also removes the `[name, schema, data]`-vs-`[name, data]` shape ambiguity that a
+ * positional tuple forces a reader/parser to duck-type):
+ *
+ *  - `name` — the prompt's registry name (resolved at {@link Composition.resolve}, not at append).
+ *  - `schema` — an optional Zod-like schema. Present ⇒ `schema.safeParse(data)` runs at append
+ *    (schema form, Q1); absent ⇒ `data` is marshaled directly (static form, Q4).
+ *  - `data` — the vars value (validated against `schema` when present).
+ *  - `variant` — the selected variant arm (absent ⇒ the reserved `default`).
  */
-export type CompositionEntry =
-  | readonly [name: string, schema: ZodLikeSchema, data: unknown, variant?: string]
-  | readonly [name: string, data: unknown, variant?: string];
+export interface CompositionEntry {
+  name: string;
+  schema?: ZodLikeSchema;
+  data: unknown;
+  variant?: string;
+}
 
 /**
  * An explicit, ordered composition of `(prompt, vars, variant?)` entries that resolves to an
@@ -498,63 +530,28 @@ export class Composition {
   }
 
   /**
-   * Build a composition from an ordered array of entries, validating each in order.
-   *
-   * Each entry is `[name, schema, data, variant?]` (validated via `schema.safeParse(data)`) or
-   * `[name, data, variant?]` (static). The first entry that fails validation throws a
+   * Build a composition from an ordered array of {@link CompositionEntry} objects, validating each
+   * in order. The first entry whose `schema.safeParse(data)` fails throws a
    * {@link PromptValidationError} and **no** `Composition` is returned (no partial state — FR-013).
    * The prompt `name` is **not** resolved here; an unknown name surfaces at {@link resolve}.
    */
   static fromMessages(entries: readonly CompositionEntry[]): Composition {
     const composition = new Composition();
     for (const entry of entries) {
-      composition.#appendEntry(entry);
+      composition.append(entry);
     }
     return composition;
   }
 
   /**
-   * Marshal + store one entry. Validation (schema form) runs here; on failure a
-   * {@link PromptValidationError} is thrown and nothing is stored.
-   *
-   * Returns `void` (not `this`): the builder is intentionally **not** fluent/chainable (FR-013).
-   *
-   * @param name    the prompt's registry name (resolved at {@link resolve}, not here).
-   * @param schemaOrData a Zod-like schema (then validate `data`) or the already-typed plain value.
-   * @param dataOrVariant the data to validate (schema form) or the variant (static form).
-   * @param variant the selected variant (schema form only; absent ⇒ the reserved `default` arm).
+   * Marshal + store one {@link CompositionEntry}. When `entry.schema` is present, validation runs
+   * here (`schema.safeParse(entry.data)`); on failure a {@link PromptValidationError} is thrown and
+   * nothing is stored. Returns `void` (not `this`): intentionally **not** fluent/chainable (FR-013).
    */
-  append(name: string, schema: ZodLikeSchema, data: unknown, variant?: string): void;
-  append(name: string, data: unknown, variant?: string): void;
-  append(
-    name: string,
-    schemaOrData: unknown,
-    dataOrVariant?: unknown,
-    variant?: string,
-  ): void {
-    if (isSchema(schemaOrData)) {
-      const value = validateOrThrow(schemaOrData, dataOrVariant);
-      this.#inner.append(name, value, variant);
-    } else {
-      this.#inner.append(name, schemaOrData, dataOrVariant as string | undefined);
-    }
-  }
-
-  /** Validate + append a single entry tuple (the shared path for `fromMessages` and the array). */
-  #appendEntry(entry: CompositionEntry): void {
-    const [name, second, third, fourth] = entry as readonly [
-      string,
-      unknown,
-      unknown?,
-      string?,
-    ];
-    if (isSchema(second)) {
-      // [name, schema, data, variant?]
-      this.append(name, second, third, fourth);
-    } else {
-      // [name, data, variant?]
-      this.append(name, second, third as string | undefined);
-    }
+  append(entry: CompositionEntry): void {
+    const value =
+      entry.schema === undefined ? entry.data : validateOrThrow(entry.schema, entry.data);
+    this.#inner.append(entry.name, value, entry.variant);
   }
 
   /** The number of appended entries (== the resolved-message count on success). */

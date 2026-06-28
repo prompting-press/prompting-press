@@ -288,7 +288,7 @@ test("an enabled guard is plumbed through and stays separate from text", () => {
   reg.loadYaml(ASK_YAML);
 
   const plain = render(reg, "ask", Topic, { topic: "rivers" });
-  const guarded = render(reg, "ask", Topic, { topic: "rivers" }, { enabled: true });
+  const guarded = render(reg, "ask", Topic, { topic: "rivers" }, { guard: { enabled: true } });
 
   // Default render ⇒ no guard.
   assert.equal(plain.guard, null);
@@ -310,7 +310,7 @@ test("a disabled / absent guard config matches no guard at all", () => {
   reg.loadYaml(ASK_YAML);
 
   const noGuard = render(reg, "ask", Topic, { topic: "rivers" });
-  const disabled = render(reg, "ask", Topic, { topic: "rivers" }, { enabled: false });
+  const disabled = render(reg, "ask", Topic, { topic: "rivers" }, { guard: { enabled: false } });
 
   assert.equal(noGuard.guard, null);
   assert.equal(disabled.guard, null);
@@ -329,6 +329,52 @@ test("an unknown prompt name raises UnknownPromptError", () => {
     (err) => {
       assert.ok(err instanceof UnknownPromptError);
       assert.ok(err instanceof PromptingPressError);
+      return true;
+    },
+  );
+});
+
+// --------------------------------------------------------------------------------------
+// 7b. Variant selection (FR-009 / Principle V) — opts.variant, caller-owned, parity with Py/Rust
+// --------------------------------------------------------------------------------------
+
+const VARIANT_YAML = `
+name: greetv
+role: user
+body: "Hi {{ name }}"
+variables:
+  name: { type: string, provenance: trusted }
+variants:
+  formal: { body: "Good day, {{ name }}" }
+`;
+
+test("render selects a named variant via opts.variant (default arm when absent)", () => {
+  const reg = new Registry();
+  reg.loadYaml(VARIANT_YAML);
+  const V = z.object({ name: z.string() });
+
+  const def = render(reg, "greetv", V, { name: "Ada" });
+  const formal = render(reg, "greetv", V, { name: "Ada" }, { variant: "formal" });
+
+  // Default arm vs the named variant render to DIFFERENT bodies — variant selection works.
+  assert.equal(def.text, "Hi Ada");
+  assert.equal(formal.text, "Good day, Ada");
+  assert.equal(def.variant, "default");
+  assert.equal(formal.variant, "formal");
+  // Provenance differs because the template source differs.
+  assert.notEqual(def.templateHash, formal.templateHash);
+});
+
+test("render with an unknown variant raises PromptRenderError code unknown_variant", () => {
+  const reg = new Registry();
+  reg.loadYaml(VARIANT_YAML);
+  const V = z.object({ name: z.string() });
+
+  assert.throws(
+    () => render(reg, "greetv", V, { name: "Ada" }, { variant: "nope" }),
+    (err) => {
+      assert.ok(err instanceof PromptRenderError);
+      assert.ok(err.errors.some((row) => row.code === "unknown_variant"));
       return true;
     },
   );
@@ -355,7 +401,7 @@ test("getSource on an unknown name raises UnknownPromptError", () => {
 test("getSource on an unknown variant raises PromptRenderError with code unknown_variant", () => {
   const reg = greetRegistry();
   assert.throws(
-    () => getSource(reg, "greet", "nope"),
+    () => getSource(reg, "greet", { variant: "nope" }),
     (err) => {
       assert.ok(err instanceof PromptRenderError);
       assert.ok(err.errors.some((row) => row.code === "unknown_variant"));
