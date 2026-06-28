@@ -15,9 +15,16 @@
   "engines": {
     "node": ">=20"
   },
-  "main": "index.js",
-  "types": "index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "files": [
+    "dist",
     "index.js",
     "index.d.ts",
     "*.node"
@@ -27,10 +34,14 @@
     "packageName": "prompting-press"
   },
   "scripts": {
-    "build": "napi build --release --platform --esm --manifest-path ../../crates/prompting-press-node/Cargo.toml --output-dir .",
-    "build:debug": "napi build --platform --esm --manifest-path ../../crates/prompting-press-node/Cargo.toml --output-dir .",
+    "build": "pnpm run build:addon && pnpm run build:facade",
+    "build:addon": "napi build --release --platform --esm --manifest-path ../../crates/prompting-press-node/Cargo.toml --output-dir .",
+    "build:addon:debug": "napi build --platform --esm --manifest-path ../../crates/prompting-press-node/Cargo.toml --output-dir .",
+    "build:facade": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "codegen": "node ./scripts/codegen.mjs",
-    "test": "node --test test/",
+    "pretest": "pnpm run build:facade",
+    "test": "node --test \"test/*.test.mjs\"",
     "prepublishOnly": "napi prepublish -t npm"
   },
   "dependencies": {
