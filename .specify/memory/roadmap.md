@@ -1,13 +1,32 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.1.2 → 1.1.3
-Bump rationale: PATCH — spec 003 status transition (planned → implemented) plus a
+Version change: 1.1.3 → 1.1.4
+Bump rationale: PATCH — spec 006 status transition (planned → implemented) from its
+  post-implementation debrief. Outcome met, scope clean, C-01/C-07 upheld, zero
+  Must-Address findings — so NO scope/outcome reword (a contrast to 002/003 which
+  had roadmap-stale scope). Notes line added citing the debrief + memories D1/A1 +
+  the int-vs-float critique refinement. No new decision; C-01..C-11 untouched.
+
+Changes this revision (1.1.4, 2026-06-28):
+  - Spec 006 status: planned → implemented (PR #185, squash b2092c0; 21 issues
+    #164–#184 auto-closed; full Phase-3 QA — verify-tasks/verify/review/qa/
+    code-review/security-review/cleanup/sync.analyze/sync.conflicts/retro — all
+    passed clean; CI green incl. the new conformance gate, verified on a real runner).
+    Debrief: specs/006-conformance-corpus/roadmap-reviews/debrief-2026-06-28.md.
+  - Spec 006 Notes: recorded the as-built shape (shared corpus + 3 runners +
+    ci:conformance gate that also closes the Rust-consumer CI gap), the two captured
+    memories (D1 canonical-serialized-form marshaling; A1 loader-vs-schema-validator
+    layers), and the int-vs-float critique refinement (1 vs 1.0 → 1 vs 2.5). Outcome/
+    scope UNCHANGED — the debrief found the §278 entry accurate.
+
+Prior revision (1.1.3, 2026-06-27):
+  Bump rationale: PATCH — spec 003 status transition (planned → implemented) plus a
   scope refresh of the 003 entry from its post-implementation cycle: the token-count
   hook was DROPPED at the analyze gate (refinement F4) and folded into the existing
   "Token budgeting / truncation" Deferred entry. No new decision; C-01..C-10 untouched.
 
-Changes this revision (1.1.3, 2026-06-27):
+Changes in revision (1.1.3, 2026-06-27):
   - Spec 003 status: planned → implemented (code complete + SC-verified; full Phase-3
     QA — verify-tasks/verify/review/qa/code-review/security-review/cleanup/sync.analyze/
     sync.conflicts — all passed clean; 44 consumer tests, 94 workspace, all CI gates green
@@ -51,7 +70,8 @@ Prior revision (1.0.0, 2026-06-25):
   - Added Deferred section (Go binding, inline partials, token budgeting, etc.)
   - Added Never section (boundary defense — requires constitution amendment)
 
-Specs affected: 001 (this revision, → implemented); 007 (1.1.0); 001–007 (initial).
+Specs affected: 006 (this revision, → implemented); 003 (1.1.3); 002 (1.1.2);
+  001 (1.1.1); 007 (1.1.0); 001–007 (initial).
 Open questions added/resolved: none this revision; 3 added at 1.0.0.
 
 Notes: Supersedes the informal docs/research/roadmap.md (which remains as a
@@ -275,7 +295,7 @@ Status legend (lifecycle): **undecided** · **needs-info** · **planned** ·
 - **Notes:** Second binding makes the FFI boundary real — surfaces marshaling
   divergences that 006 then locks down.
 
-### 006 — Conformance corpus + cross-language hardening  [status: planned]
+### 006 — Conformance corpus + cross-language hardening  [status: implemented]
 
 - **Description:** The corpus in its verified-correct scope — FFI-boundary
   marshaling and schema round-trip, **not** render parity (structural via C-01).
@@ -290,7 +310,20 @@ Status legend (lifecycle): **undecided** · **needs-info** · **planned** ·
 - **Depends on:** 004, 005.
 - **Governed by:** C-01, C-07.
 - **Notes:** Corpus pivoted from "prove renderers match" (now guaranteed) to
-  "prove bindings marshal identically + schema round-trips."
+  "prove bindings marshal identically + schema round-trips." **Implemented**
+  (PR #185, squash `b2092c0`; 21 issues #164–#184 auto-closed): shared
+  `conformance/` corpus + 3 thin runners (Rust consumer / Python pytest / TS
+  node:test) + a `ci:conformance` gate (the Rust consumer leg also closes a CI gap
+  — its tests ran nowhere before). Full Phase-3 QA passed clean; CI green incl. the
+  conformance gate. Two implementation decisions captured to `docs/memory/`:
+  **D1** (cross-binding type parity uses the *canonical serialized form*, not native
+  objects — Pydantic emits `Z`/`1E-17`, JS `Date` emits `.000Z`) and **A1** (the
+  binding loaders do serde *shape* validation, not full JSON-Schema — so
+  `variant-named-default` is loader-accepted and excluded from the loader round-trip
+  set). The int-vs-float case was refined at the critique gate (`1 vs 1.0` was
+  JS-unrepresentable → `1` vs fractional `2.5`). Debrief:
+  `specs/006-conformance-corpus/roadmap-reviews/debrief-2026-06-28.md` (outcome met,
+  scope clean, C-01/C-07 upheld, zero Must-Address).
 
 ### 007 — v1 release  [status: planned]
 
@@ -417,4 +450,4 @@ Status legend (lifecycle): **undecided** · **needs-info** · **planned** ·
 
 ---
 
-**Version**: 1.1.3 | **Ratified**: 2026-06-25 | **Last Amended**: 2026-06-27
+**Version**: 1.1.4 | **Ratified**: 2026-06-25 | **Last Amended**: 2026-06-28
