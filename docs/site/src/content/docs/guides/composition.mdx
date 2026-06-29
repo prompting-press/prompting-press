@@ -30,7 +30,7 @@ strict-undefined reference), the whole call fails and no partial result is retur
 <Tabs syncKey="construct">
 <TabItem label="Rust">
 ```rust
-use prompting_press::{Composition, GuardConfig, Prompt};
+use prompting_press::{Composition, Prompt, PromptDefinition};
 use garde::Validate;
 use serde::Serialize;
 
@@ -46,8 +46,22 @@ struct UserVars {
     query: String,
 }
 
-let sys = Prompt::from_yaml(sys_yaml)?;
-let user = Prompt::from_yaml(user_yaml)?;
+// Build the two prompts inline from their shape, so the content is explicit.
+let sys_def: PromptDefinition = serde_json::from_value(serde_json::json!({
+    "name": "system-preamble",
+    "role": "system",
+    "body": "{{ instructions }}",
+    "variables": { "instructions": { "type": "string", "origin": "trusted" } }
+}))?;
+let user_def: PromptDefinition = serde_json::from_value(serde_json::json!({
+    "name": "user-turn",
+    "role": "user",
+    "body": "{{ query }}",
+    "variables": { "query": { "type": "string", "origin": "untrusted" } }
+}))?;
+
+let sys = Prompt::new(sys_def)?;
+let user = Prompt::new(user_def)?;
 
 let mut comp = Composition::new();
 comp.append(
@@ -86,8 +100,19 @@ class SysVars(BaseModel):
 class UserVars(BaseModel):
     query: str
 
-sys_prompt = Prompt.from_yaml(sys_yaml)
-user_prompt = Prompt.from_yaml(user_yaml)
+# Build the two prompts inline from their shape, so the content is explicit.
+sys_prompt = Prompt({
+    "name": "system-preamble",
+    "role": "system",
+    "body": "{{ instructions }}",
+    "variables": {"instructions": {"type": "string", "origin": "trusted"}},
+})
+user_prompt = Prompt({
+    "name": "user-turn",
+    "role": "user",
+    "body": "{{ query }}",
+    "variables": {"query": {"type": "string", "origin": "untrusted"}},
+})
 
 comp = Composition()
 comp.append(sys_prompt, SysVars(instructions="Be concise."))
@@ -122,8 +147,19 @@ import { Composition, Prompt } from "prompting-press";
 const SysVars = z.object({ instructions: z.string().min(1) });
 const UserVars = z.object({ query: z.string().min(1) });
 
-const sysPrompt = Prompt.fromYaml(sysYaml);
-const userPrompt = Prompt.fromYaml(userYaml);
+// Build the two prompts inline from their shape, so the content is explicit.
+const sysPrompt = new Prompt({
+  name: "system-preamble",
+  role: "system",
+  body: "{{ instructions }}",
+  variables: { instructions: { type: "string", origin: "trusted" } },
+});
+const userPrompt = new Prompt({
+  name: "user-turn",
+  role: "user",
+  body: "{{ query }}",
+  variables: { query: { type: "string", origin: "untrusted" } },
+});
 
 // fromMessages: all validation runs before any Composition state is created.
 const comp = Composition.fromMessages([
