@@ -83,7 +83,7 @@ The named variants map (`&#123; [name]: PromptVariant &#125;`). Empty object whe
 #### `constructor`
 
 ```ts
-new Prompt(shape: PromptDefinition, validators?: ValidatorMap, _internal?: InternalCtorArg): Prompt
+new Prompt(shape: PromptDefinition, validators?: ValidatorMap): Prompt
 ```
 
 Primary public constructor — constructs a `Prompt` from a `PromptDefinition`-shaped object. The optional third parameter `_internal` is a module-private token (type `InternalCtorArg`) that can only be formed by code within this module. External callers cannot construct a valid `InternalCtorArg` value (its type uses a `unique symbol` brand), so `new Prompt(shape, v?)` is effectively the only publicly-callable form. The static factories (`fromYaml`, `fromJson`, `fromToml`) and `with()` use the internal path to avoid re-running the Rust validator on an already-validated handle.
@@ -152,7 +152,7 @@ Render this prompt's resolved variant with typed inputs, validating first. Three
 class RenderResult
 ```
 
-A rendered prompt + its content-addressed provenance, read-only from JS. The Node mirror of the kernel's RenderResult (; ). Surfaced **1:1** — the binding adds nothing and interprets nothing. A `` class with read-only getters; the snake_case Rust getters surface as camelCase JS accessors (`template_hash` → `templateHash`). A result is produced by [`render`], never constructed from JS.
+A rendered prompt + its content-addressed provenance, read-only from JS. The Node mirror of the kernel's RenderResult (; ). Surfaced **1:1** — the binding adds nothing and interprets nothing. A Read-only class with camelCase JS accessors (`template_hash` → `templateHash`). A result is produced by [`render`], never constructed from JS.
 
 #### `guard`
 
@@ -210,7 +210,7 @@ The resolved variant name (the reserved `default`, or the named arm).
 interface GuardConfig
 ```
 
-The opt-in guard-expansion config, accepted from JS as a plain object and **plumbed through** to the kernel. A 1:1 mirror of the kernel's GuardConfig — `enabled` plus an optional override `template`. This is **config only**; it carries no logic. The kernel owns guard *expansion*; the binding only marshals these two fields across the boundary and surfaces whatever [`RenderResult::guard`] the kernel populates. As a `` it crosses as a plain TS object `&#123; enabled, template? &#125;`.
+The opt-in guard-expansion config, accepted from JS as a plain object and **plumbed through** to the kernel. A 1:1 mirror of the kernel's GuardConfig — `enabled` plus an optional override `template`. This is **config only**; it carries no logic. The kernel owns guard *expansion*; the binding only marshals these two fields across the boundary and surfaces whatever [`RenderResult::guard`] the kernel populates. Accepted from JS as a plain TS object `&#123; enabled, template? &#125;`.
 
 #### `enabled`
 
@@ -260,7 +260,7 @@ Select a named variant arm; absent ⇒ the reserved `default` arm.
 class CheckReport
 ```
 
-The output of [`check`]: an ordered, read-only list of [`Finding`]s. Empty ⇒ the lint passed. The Node mirror of the consumer's CheckReport (; ). Surfaced **1:1** — the binding adds nothing and interprets nothing. A `` class with read-only accessors; a report is produced by [`check`], never constructed from JS.
+The output of [`check`]: an ordered, read-only list of [`Finding`]s. Empty ⇒ the lint passed. The Node mirror of the consumer's CheckReport (; ). Surfaced **1:1** — the binding adds nothing and interprets nothing. Read-only class with read-only accessors; a report is produced by [`check`], never constructed from JS.
 
 #### `findings`
 
@@ -294,7 +294,7 @@ passed(): boolean
 interface Finding
 ```
 
-One actionable lint finding, read-only from JS. The Node mirror of the consumer's Finding. It names the `prompt`, the `variant` where applicable (`null` for a prompt-level provenance finding), the failure `kind` (a stable snake_case discriminant string — see the module docs), and a human-readable `detail`. The `detail` carries no bound-value content. A `` so a `Finding` crosses as a plain JS object with all four fields (the natural shape for the `findings` array the TS facade iterates / matches on).
+One actionable lint finding, read-only from JS. The Node mirror of the consumer's Finding. It names the `prompt`, the `variant` where applicable (`null` for a prompt-level provenance finding), the failure `kind` (a stable snake_case discriminant string — see the module docs), and a human-readable `detail`. The `detail` carries no bound-value content. Surfaced as a plain JS object with all four fields (the natural shape for the `findings` array the TS facade iterates / matches on).
 
 #### `detail`
 
@@ -418,7 +418,7 @@ The selected variant arm. Absent means the reserved `default` variant.
 interface Message
 ```
 
-One resolved message in a composition's output: a role-tagged rendered string. The Node mirror of the consumer's `Message` (). `role` is the prompt definition's role stringified (`"system"` / `"user"` / `"assistant"`); `text` is that prompt rendered with the entry's own validated value. A `` so it crosses as a plain JS object `&#123; role, text &#125;`; a message is produced by [`Composition::resolve`], never constructed from JS.
+One resolved message in a composition's output: a role-tagged rendered string. The Node mirror of the consumer's `Message` (). `role` is the prompt definition's role stringified (`"system"` / `"user"` / `"assistant"`); `text` is that prompt rendered with the entry's own validated value. Surfaced as a plain JS object `&#123; role, text &#125;`; a message is produced by [`Composition::resolve`], never constructed from JS.
 
 #### `role`
 

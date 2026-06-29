@@ -136,6 +136,80 @@ const SHAPE_REFS = new Set([
 ]);
 
 // ---------------------------------------------------------------------------
+// Fallback docs for napi-addon re-exports (KIND_REFERENCE)
+//
+// When the addon's index.d.ts is not built (doc-gen runs without a compiled
+// Rust extension), TypeDoc emits these symbols as unresolved Reference nodes
+// (kind 4194304) with no comment. Their authoritative docs live in the Rust
+// napi source (crates/prompting-press-node/src/*.rs `///` comments), but
+// napi-rs does not propagate Rust doc comments into the generated .d.ts file.
+//
+// This registry provides authored fallback text for those symbols so that the
+// FR-008 "every public symbol must be documented" gate does not fire. The text
+// is sourced from the Rust-side docs and the index.ts usage commentary; it is
+// authored by a human here (approach B from the spec-011 task definition),
+// not fabricated by the renderer.
+//
+// If a future napi-rs version propagates Rust /// to .d.ts JSDoc, TypeDoc will
+// resolve the class directly and this fallback will be unreachable (the
+// KIND_REFERENCE branch will not trigger).
+// ---------------------------------------------------------------------------
+
+/** Authored fallback docs for napi addon re-exports that TypeDoc cannot resolve. */
+const NAPI_ADDON_DOCS = new Map([
+	[
+		"RenderResult",
+		"The result returned by `Prompt.render()`. " +
+			"Read-only class surfaced 1:1 from the Rust engine. " +
+			"Carries the rendered text, the resolved prompt name and variant, " +
+			"two SHA-256 content-addressed hashes (`templateHash` / `renderHash`), " +
+			"and the optional advisory guard text (`guard`). " +
+			"The hashes are byte-identical across all three language bindings " +
+			"because rendering is performed once in the shared Rust core.",
+	],
+	[
+		"CheckReport",
+		"The result returned by `Prompt.check()`. " +
+			"Read-only class surfaced 1:1 from the Rust engine. " +
+			"Carries a `passed()` boolean and a `findings` array. " +
+			"The only live finding kind is `\"untrusted_without_guard\"` — " +
+			"a variable whose `origin` is untrusted or external but whose " +
+			"prompt metadata declares no guard key. " +
+			"Hard construction invariants (agreement, parse, reserved names) " +
+			"are enforced at `new Prompt()` time and are never returned here.",
+	],
+	[
+		"Finding",
+		"One advisory finding returned inside a `CheckReport`. " +
+			"Fields: `prompt` (string — prompt name), " +
+			"`variant` (string | null — variant name, or null for the root body), " +
+			"`kind` (string — stable finding code, currently only " +
+			"`\"untrusted_without_guard\"`), " +
+			"and `detail` (string — human-readable description).",
+	],
+	[
+		"GuardConfig",
+		"Options passed to `render()` to enable the advisory guard. " +
+			"`{ enabled: false }` (or omitting `guard` in `RenderOptions`) opts out " +
+			"and leaves `RenderResult.guard` as `null`. " +
+			"When `enabled: true`, the optional `template` string overrides the " +
+			"default guard prose.",
+	],
+	[
+		"Message",
+		"One role-tagged message entry produced by `Composition.resolve()`. " +
+			"Fields: `role` (string — the prompt's declared role, e.g. " +
+			"`\"system\"`, `\"user\"`, `\"assistant\"`) " +
+			"and `text` (string — the rendered body text for that entry).",
+	],
+	[
+		"coreVersion",
+		"Returns the semantic version string of the underlying `prompting-press-core` " +
+			"Rust engine (e.g. `\"0.1.0\"`). Useful for diagnostics and version pinning.",
+	],
+]);
+
+// ---------------------------------------------------------------------------
 // TypeDoc kind constants (TypeDoc 0.28.x ReflectionKind numeric values)
 // ---------------------------------------------------------------------------
 const KIND_PROJECT = 1;
@@ -152,6 +226,7 @@ const KIND_PROPERTY = 1024;
 const KIND_METHOD = 2048;
 const KIND_TYPE_ALIAS = 2097152;
 const KIND_ACCESSOR = 262144; // get/set accessor pair
+const KIND_REFERENCE = 4194304; // re-export that TypeDoc could not resolve to its declaration
 
 // ---------------------------------------------------------------------------
 // Group assignment: symbol name → canonical group title
@@ -319,8 +394,14 @@ function serializeType(type) {
 function serializeSignature(sig, ownerName, isStatic = false) {
 	const kindNum = sig.kind;
 	// Constructor: "new OwnerName(params): OwnerName"
+	// Filter out module-private params whose name starts with "_internal" — these
+	// are branded opaque tokens (InternalCtorArg) that external callers can never
+	// supply, so they must not appear in the public API signature.
 	if (kindNum === 16384 /* constructor signature */) {
-		const params = serializeParams(sig.parameters ?? []);
+		const publicParams = (sig.parameters ?? []).filter(
+			(p) => !p.name.startsWith("_internal"),
+		);
+		const params = serializeParams(publicParams);
 		return `new ${ownerName}(${params}): ${ownerName}`;
 	}
 	// Function / method call signature
@@ -493,6 +574,39 @@ function symbolToIR(node) {
 	const name = node.name;
 	const isShapeRef = SHAPE_REFS.has(name);
 
+	// --- napi addon re-export (KIND_REFERENCE or unresolved TYPE_ALIAS/VARIABLE) ---
+	// When the compiled addon index.d.ts is absent, TypeDoc cannot resolve these
+	// re-exports and emits them as either:
+	//   - Reference nodes (kind 4194304) with no comment, no children, no signatures
+	//     (value exports: RenderResult, CheckReport, coreVersion)
+	//   - TypeAlias nodes (kind 2097152) with no comment when it processed a
+	//     `export type { ... }` statement but the source type has no JSDoc
+	//     (type exports: Finding, GuardConfig, Message)
+	// Use authored fallback docs (NAPI_ADDON_DOCS) so the FR-008 gate does not fire.
+	// shapeRefs are excluded — they are handled by the isShapeRef path further down.
+	const isUnresolvedAddonExport =
+		!isShapeRef &&
+		NAPI_ADDON_DOCS.has(name) &&
+		(node.kind === KIND_REFERENCE ||
+			(node.kind === KIND_TYPE_ALIAS &&
+				(node.comment == null || !node.comment.summary?.length)));
+	if (isUnresolvedAddonExport) {
+		const fallbackDoc = NAPI_ADDON_DOCS.get(name) ?? null;
+		process.stderr.write(
+			`[extract-ts-api] INFO: "${name}" is an unresolved napi re-export ` +
+				`(kind ${node.kind}) — using authored fallback doc.\n`,
+		);
+		return {
+			name,
+			kind: node.kind === KIND_REFERENCE ? "class" : "type",
+			signature: name,
+			doc: fallbackDoc,
+			members: [],
+			shapeRef: null,
+			deprecated: null,
+		};
+	}
+
 	// --- doc comment ---
 	// For classes/interfaces the comment is on the node itself.
 	// For functions it's on the first signature.
@@ -595,6 +709,7 @@ function run() {
 				"--entryPointStrategy",
 				"expand",
 				"--skipErrorChecking",
+				"--excludeInternal",
 				"--logLevel",
 				"Warn",
 			],

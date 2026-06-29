@@ -396,6 +396,8 @@ declare const _CTOR_BRAND: unique symbol;
  * The internal construction token passed as the third argument to `new Prompt(...)` by the
  * static factories and `with()`. Its type uses a `unique symbol` brand so TypeScript rejects
  * any attempt to construct it outside this module.
+ *
+ * @internal
  */
 type InternalCtorArg = { readonly [_CTOR_BRAND]: true; handle: NapiPrompt };
 
@@ -461,6 +463,7 @@ export class Prompt {
 	constructor(
 		shape: PromptDefinition,
 		validators?: ValidatorMap,
+		/** @internal */
 		_internal?: InternalCtorArg,
 	) {
 		if (_internal !== undefined) {
