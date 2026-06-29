@@ -88,9 +88,7 @@ description: "Task list for spec 011 — auto-generated language API references"
 
 **Independent test**: confirm primary types carry conceptual prose sourced from their doc comments; confirm there is NO sidecar prose store.
 
-- [ ] T018 (DEFERRED — quality polish, non-blocking: enrich thin source doc comments + clean up the pre-existing `prompting-press-core` private-item rustdoc-link warnings surfaced by extraction)
-  <!-- original -->
-- [ ] T018-orig [US3] Audit the generated pages for readability: where a primary type reads thin, enrich the **source doc comment** (in `crates/`, `packages/typescript/src/index.ts`, `packages/python/…`) — NOT the generated page or any sidecar (full-autogen, FR-014). Regenerate. **GATE**: primary types have conceptual prose on the page; no sidecar prose file exists.
+- [ ] T018 [US3] (DEFERRED — quality polish, non-blocking) Audit the generated pages for readability: where a primary type reads thin, enrich the **source doc comment** (in `crates/`, `packages/typescript/src/index.ts`, `packages/python/…`) — NOT the generated page or any sidecar (full-autogen, FR-014). Also clean up the pre-existing `prompting-press-core` private-item rustdoc-link warnings surfaced by extraction. Regenerate. **GATE**: primary types have conceptual prose; no sidecar prose file exists.
 
 **Checkpoint (US3)**: pages are readable and drift-proof (prose lives in source).
 
