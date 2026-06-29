@@ -92,6 +92,6 @@ addition to the rendered `text`):
 | `render_hash` (`renderHash` in TS) | `SHA256(rendered output text)` |
 
 These hashes are **not** the same as the per-variable `origin` tag. They are content-addressed
-fingerprints you can store in a trace to pin exactly which template produced which output —
+fingerprints that can be stored in a trace to pin exactly which template produced which output —
 and because all three bindings share the same Rust engine, the hashes are **byte-identical** across
 Rust, Python, and TypeScript for the same inputs.
