@@ -17,8 +17,11 @@
 
 ## Requirement Completeness
 
-- [ ] **[NEEDS CLARIFICATION] Q1, Q2, Q3 remain open** — see Notes section below; these three
-      items are marked in FR-003, FR-006, FR-007 and must be resolved before planning
+- [x] **All clarifications resolved** — Q1 (source-canonical for ALL samples), Q2 (auto-promote
+      ALL `// =>`/`# =>` to assertions; hash fields format/length only), Q3 (git-branch-implicit
+      per-version pin) resolved in the 2026-06-29 clarify session; Q4–Q8 (fold #30 in; two homes
+      samples/ + docs dir; local→published dep flip; each app = realistic CLI + coverage suite; one
+      app per language) resolved in the fold session. See spec ## Clarifications.
 - [x] All resolved requirements are testable and unambiguous
 - [x] Success criteria are measurable (100% coverage audit; gate-blocks-publish; per-version
       library pin; assertions pass; no published runtime deps)
@@ -39,8 +42,8 @@
 - [x] Feature meets measurable outcomes defined in Success Criteria
 - [x] No implementation details leak beyond intrinsic tool choices (e.g. per-language test
       idioms are "intrinsic" — there is no non-idiomatic alternative in each ecosystem)
-- [ ] **Blocked on Q1/Q2/Q3 for planning** — spec is draft-complete but three clarifications
-      must be resolved before the plan/tasks phase
+- [x] **Ready for planning** — all clarifications (Q1–Q8) resolved; spec expanded to fold in
+      consumer sample apps (US4, FR-013..019, SC-008..011).
 
 ## Notes
 
