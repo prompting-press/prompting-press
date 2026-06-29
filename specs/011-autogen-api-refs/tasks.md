@@ -75,8 +75,8 @@ description: "Task list for spec 011 — auto-generated language API references"
 
 **Independent test**: diff each generated page's symbol set against `lib.rs` re-exports / `index.ts` exports / `__all__`.
 
-- [ ] T016 [US2] Coverage assertion: a script/test that compares each generated page's symbol set to the language's public surface (Rust lib.rs re-exports, TS index.ts exports, Python `__all__`) and fails on any missing public symbol or any leaked internal symbol (FR-005, SC-004). **GATE**: coverage check passes for all three.
-- [ ] T017 [US2] Cross-language consistency check: assert the three pages use the same canonical group order and that a group present in one language is present (or explicitly empty) in the others (FR-009). **GATE**: structural parity verified.
+- [x] T016 [US2] Coverage assertion: a script/test that compares each generated page's symbol set to the language's public surface (Rust lib.rs re-exports, TS index.ts exports, Python `__all__`) and fails on any missing public symbol or any leaked internal symbol (FR-005, SC-004). **GATE**: coverage check passes for all three.
+- [x] T017 [US2] Cross-language consistency check: assert the three pages use the same canonical group order and that a group present in one language is present (or explicitly empty) in the others (FR-009). **GATE**: structural parity verified.
 
 **Checkpoint (US2)**: full, parallel, leak-free coverage. SC-004 satisfied.
 
@@ -88,7 +88,9 @@ description: "Task list for spec 011 — auto-generated language API references"
 
 **Independent test**: confirm primary types carry conceptual prose sourced from their doc comments; confirm there is NO sidecar prose store.
 
-- [ ] T018 [US3] Audit the generated pages for readability: where a primary type reads thin, enrich the **source doc comment** (in `crates/`, `packages/typescript/src/index.ts`, `packages/python/…`) — NOT the generated page or any sidecar (full-autogen, FR-014). Regenerate. **GATE**: primary types have conceptual prose on the page; no sidecar prose file exists.
+- [ ] T018 (DEFERRED — quality polish, non-blocking: enrich thin source doc comments + clean up the pre-existing `prompting-press-core` private-item rustdoc-link warnings surfaced by extraction)
+  <!-- original -->
+- [ ] T018-orig [US3] Audit the generated pages for readability: where a primary type reads thin, enrich the **source doc comment** (in `crates/`, `packages/typescript/src/index.ts`, `packages/python/…`) — NOT the generated page or any sidecar (full-autogen, FR-014). Regenerate. **GATE**: primary types have conceptual prose on the page; no sidecar prose file exists.
 
 **Checkpoint (US3)**: pages are readable and drift-proof (prose lives in source).
 
@@ -99,8 +101,8 @@ description: "Task list for spec 011 — auto-generated language API references"
 **Purpose**: flip the three reference pages from hand-written to generated; verify the boundary.
 
 - [x] T019 Replace the committed hand-written `reference/{rust,python,typescript}.mdx` with the generated output (commit the generated pages; they now carry the AUTO-GENERATED marker). **GATE**: the three pages match a fresh generation (gate green).
-- [ ] T020 [P] Verify Principle II/III boundary: `mise exec -- moon run ci:check-ffi` passes and no extractor toolchain (TypeDoc/griffe/nightly-rustdoc) appears in any crate `Cargo.toml [dependencies]` or package runtime deps (FR-011, SC-006). **GATE**: ci:check-ffi green; grep confirms dev-only.
-- [ ] T021 [P] Sweep for now-stale hand-maintenance notes (e.g. any "edit this page by hand" guidance, the sidebar/AGENTS references) and remove them; confirm the version/output-path param shape is stable for spec 012 to call (R8). **GATE**: no stale hand-maintenance guidance remains.
+- [x] T020 [P] Verify Principle II/III boundary: `mise exec -- moon run ci:check-ffi` passes and no extractor toolchain (TypeDoc/griffe/nightly-rustdoc) appears in any crate `Cargo.toml [dependencies]` or package runtime deps (FR-011, SC-006). **GATE**: ci:check-ffi green; grep confirms dev-only.
+- [x] T021 [P] Sweep for now-stale hand-maintenance notes (e.g. any "edit this page by hand" guidance, the sidebar/AGENTS references) and remove them; confirm the version/output-path param shape is stable for spec 012 to call (R8). **GATE**: no stale hand-maintenance guidance remains.
 
 ---
 
