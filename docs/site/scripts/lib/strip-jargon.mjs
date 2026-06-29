@@ -51,6 +51,10 @@ export function stripJargon(str) {
  */
 export function escapeCell(str) {
 	return String(str ?? "")
+		// Escape backslashes FIRST so the pipe-escaping below cannot be
+		// defeated by a literal backslash already in the input
+		// (js/incomplete-sanitization). Order matters: \ → \\ before | → \|.
+		.replace(/\\/g, "\\\\")
 		.replace(/\|/g, "\\|")
 		.replace(/\n/g, " ");
 }
