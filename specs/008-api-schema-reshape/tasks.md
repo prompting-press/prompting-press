@@ -74,15 +74,15 @@ determinism).
 **Goal**: introduce the immutable `Prompt`, migrate ops onto it, `with` as sole mutator, drop `Registry`.
 **Gate**: `cargo test -p prompting-press`.
 
-- [ ] T026 Create `crates/prompting-press/src/prompt.rs`: `Prompt` struct wrapping the generated `PromptDefinition`; `Prompt::new(shape) -> Result<Prompt, ConsumerError>` (validating: shape OK by type; parse + `required_roots` agreement → construction error on excluded-feature/syntax/undeclared). Read-only accessors. (FR-010, FR-011, FR-012, FR-020; US1, US3)
-- [ ] T027 Add the text factories `Prompt::from_yaml` / `from_json` / `from_toml` (add `toml@1.1.2` to `crates/prompting-press/Cargo.toml` + workspace deps); fold the old `registry.rs` dual-input loaders into these. (FR-013; US1, SC-010)
-- [ ] T028 Move `render` onto `Prompt`: `Prompt::render<V: Serialize + Validate>(&self, vars, variant, guard)` delegating to the unchanged kernel; byte-identical output. (FR-015, FR-016; US1, SC-003)
-- [ ] T029 Move `get_source` + `check` onto `Prompt`: `Prompt::get_source(variant)` and `Prompt::check() -> CheckReport` (advisory: origin/guard finding; analysis-error arm unreachable post-construction). (FR-015, FR-020, FR-021; US3)
-- [ ] T030 Implement `Prompt::with(overlay) -> Result<Prompt>`: shallow-replace per top-level field (incl. `name`), re-validate the merged whole through `Prompt::new`, original untouched. Define `PromptOverlay`. (FR-017; US2, SC-004)
-- [ ] T031 Migrate `Composition` to aggregate `Prompt` objects (not names); `resolve()` over held objects, no registry. (FR-018; US4)
-- [ ] T032 Remove `Registry` (`crates/prompting-press/src/registry.rs`) + the registry-keyed free fns; update `lib.rs` re-exports (`Prompt`/`Composition` in; `Registry`/`render`/`get_source`/`check` free-fns out). (FR-019; US5, SC-001)
-- [ ] T033 Add Rust unit/integration tests for: construct valid/invalid (incl. excluded-feature → construction error), `with` immutability + merged-validation, `from_toml`, no-`Registry`. (SC-001, SC-004, SC-005, SC-009, SC-010)
-- [ ] T034 GATE: `cargo test -p prompting-press` green. (FR-028)
+- [X] T026 Create `crates/prompting-press/src/prompt.rs`: `Prompt` struct wrapping the generated `PromptDefinition`; `Prompt::new(shape) -> Result<Prompt, ConsumerError>` (validating: shape OK by type; parse + `required_roots` agreement → construction error on excluded-feature/syntax/undeclared). Read-only accessors. (FR-010, FR-011, FR-012, FR-020; US1, US3)
+- [X] T027 Add the text factories `Prompt::from_yaml` / `from_json` / `from_toml` (add `toml@1.1.2` to `crates/prompting-press/Cargo.toml` + workspace deps); fold the old `registry.rs` dual-input loaders into these. (FR-013; US1, SC-010)
+- [X] T028 Move `render` onto `Prompt`: `Prompt::render<V: Serialize + Validate>(&self, vars, variant, guard)` delegating to the unchanged kernel; byte-identical output. (FR-015, FR-016; US1, SC-003)
+- [X] T029 Move `get_source` + `check` onto `Prompt`: `Prompt::get_source(variant)` and `Prompt::check() -> CheckReport` (advisory: origin/guard finding; analysis-error arm unreachable post-construction). (FR-015, FR-020, FR-021; US3)
+- [X] T030 Implement `Prompt::with(overlay) -> Result<Prompt>`: shallow-replace per top-level field (incl. `name`), re-validate the merged whole through `Prompt::new`, original untouched. Define `PromptOverlay`. (FR-017; US2, SC-004)
+- [X] T031 Migrate `Composition` to aggregate `Prompt` objects (not names); `resolve()` over held objects, no registry. (FR-018; US4)
+- [X] T032 Remove `Registry` (`crates/prompting-press/src/registry.rs`) + the registry-keyed free fns; update `lib.rs` re-exports (`Prompt`/`Composition` in; `Registry`/`render`/`get_source`/`check` free-fns out). (FR-019; US5, SC-001)
+- [X] T033 Add Rust unit/integration tests for: construct valid/invalid (incl. excluded-feature → construction error), `with` immutability + merged-validation, `from_toml`, no-`Registry`. (SC-001, SC-004, SC-005, SC-009, SC-010)
+- [X] T034 GATE: `cargo test -p prompting-press` green. (FR-028)
 
 ---
 
@@ -121,7 +121,7 @@ determinism).
 **Goal**: re-prove cross-binding parity over the renamed field/moved fixtures; eliminate every stale reference.
 **Gate**: `moon run ci:conformance` + full CI.
 
-- [ ] T049 Update the conformance corpus: the `origin` field in `conformance/schema/yaml/*.yaml` + `conformance/marshaling/*.json`, and any fixture paths in the runners; keep the canonical-serialized-form parity approach (decision memory D1 — do NOT build native objects). (FR-005; SC-003)
+- [X] T049 ~~Update the conformance corpus field rename~~ **DONE IN PHASE 3 (spillover)**: the `origin` rename in `conformance/marshaling/*.json` (5 files) + `conformance/schema/yaml/valid-single-body.yaml` was applied during Phase 3 (the Rust consumer's own tests consume these, and the regenerated Rust types reject `provenance`). Verified: zero `provenance` refs remain in `conformance/`. Canonical-serialized-form parity (D1) preserved. The RUNNER updates (object-surface, not the field) remain — see T050. (FR-005; SC-003)
 - [ ] T050 Update the conformance runners to drive the new `Prompt` object surface (construct + render) instead of the `Registry` + free-fn surface, in all three language runners. (FR-016, FR-019; SC-003, SC-001)
 - [ ] T051 GATE: `moon run ci:conformance` green (byte-identical hashes across all three bindings over the renamed field). (SC-003)
 - [ ] T052 [P] Sweep + reconcile docs for the OLD surface (mid-amendment lesson): every `README.md`, package README, quickstart, and merged-spec quickstart referencing `Registry`/`render(reg,name,…)`/the `provenance` field → update to the `Prompt`/`origin` surface. `rg -n 'Registry|provenance|render\(reg'` across `README.md packages/*/README.md` etc. (FR-005; SC-002, SC-007)
