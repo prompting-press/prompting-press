@@ -13,9 +13,9 @@ library behavior change.
 
 ## Phase 1: Scaffold
 
-- [ ] T001 Create the `docs/site/` Astro+Starlight package: `package.json` (`private: true`; exact pins `astro` `7.0.3`, `@astrojs/starlight` `0.41.1`; NOT published), `astro.config.mjs` (Starlight integration, site title, sidebar, GitHub-Pages `base`/`site`), and a minimal `src/content/docs/index.mdx`. Node ≥22.12 noted in `package.json` engines. (FR-001)
-- [ ] T002 Register the docs package in `.moon/workspace.yml` (explicit entry, no glob) + a `docs/site/moon.yml` with a `build` task (`astro build`); confirm it does NOT inherit the cargo build/test tasks. (FR-001, FR-010)
-- [ ] T003 GATE: `pnpm -C docs/site install && pnpm -C docs/site build` produces a site with zero errors. Confirm the docs deps appear in NO published package manifest (SC-007). (FR-001; SC-007)
+- [X] T001 Create the `docs/site/` Astro+Starlight package: `package.json` (`private: true`; exact pins `astro` `7.0.3`, `@astrojs/starlight` `0.41.1`; NOT published), `astro.config.mjs` (Starlight integration, site title, sidebar, GitHub-Pages `base`/`site`), and a minimal `src/content/docs/index.mdx`. Node ≥22.12 noted in `package.json` engines. (FR-001)
+- [X] T002 Register the docs package in `.moon/workspace.yml` (explicit entry, no glob) + a `docs/site/moon.yml` with a `build` task (`astro build`); confirm it does NOT inherit the cargo build/test tasks. (FR-001, FR-010)
+- [X] T003 GATE: `pnpm -C docs/site install && pnpm -C docs/site build` produces a site with zero errors. Confirm the docs deps appear in NO published package manifest (SC-007). (FR-001; SC-007)
 
 ## Phase 2: Schema-derived shape doc
 

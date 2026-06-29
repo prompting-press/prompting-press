@@ -1,0 +1,32 @@
+---
+title: Prompting Press
+description: A typed, versioned, variant-aware prompt-template library for Rust, Python, and TypeScript.
+---
+
+**Prompting Press** is a typed, versioned, variant-aware prompt-template library — the prompt analogue of a
+typed config system. It parses, validates, and renders prompt text and stamps content-addressed provenance,
+across **Rust, Python, and TypeScript** from one shared Rust engine, so a rendered prompt is byte-identical
+across all three.
+
+## What it does
+
+- **Typed inputs, checked statically.** A prompt declares its variables; the **sound agreement check** catches a
+  template that references a variable the prompt never declared — at construction and as a CI lint, not as a
+  silent empty render. This is the headline differentiator.
+- **An immutable `Prompt` object.** Construct one from a shape object or from YAML / JSON / TOML text, then
+  `render`, read its source, `check` it, or derive a variant with `with`. Prompts are immutable values — no
+  setters.
+- **Content-addressed provenance.** Every render returns a `template_hash` and a `render_hash` (SHA-256), so a
+  trace can pin exactly which template produced which output.
+- **Native validators.** Your variables are validated by your language's own system — garde (Rust), Pydantic
+  (Python), Zod (TypeScript).
+
+## What it deliberately does *not* do
+
+- It performs **no I/O** — you push prompt data in; it never reads files, a database, or the network.
+- It **never calls an LLM**, assembles a provider request body, counts tokens, or parses model output.
+- Its untrusted-input **guard is advisory text, not enforcement** — it names untrusted fields for the
+  downstream model; it does not sanitize values, and the library has no model of its own.
+
+Start with **[Getting started](/prompting-press/getting-started/rust/)** for your language, or read the
+**[API reference](/prompting-press/reference/prompt-definition/)**.
