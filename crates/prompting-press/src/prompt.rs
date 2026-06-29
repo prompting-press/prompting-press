@@ -21,7 +21,7 @@
 //!
 //! ## `with` — the sole mutator (R6)
 //!
-//! [`Prompt::with`] shallow-replaces top-level fields via a [`PromptOverlay`] and routes the
+//! [`Prompt::derive`] shallow-replaces top-level fields via a [`PromptOverlay`] and routes the
 //! merged definition through `Prompt::new` (full re-validation). The original `Prompt` is
 //! untouched. In Rust the validator is generic `V` named at the `render` / `with` call site
 //! (compile-time coverage); `PromptOverlay` therefore carries only data fields — no runtime
@@ -57,7 +57,7 @@ const DEFAULT: &str = "default";
 
 /// An immutable, fully-validated prompt. Wraps a [`PromptDefinition`]; all invariants
 /// (shape-valid, template-parseable, agreement-sound, reserved-name clean) are enforced at
-/// construction time. There are no setters; the sole mutator is [`Prompt::with`].
+/// construction time. There are no setters; the sole mutator is [`Prompt::derive`].
 #[derive(Debug, Clone)]
 pub struct Prompt {
     /// The validated definition. Private; exposed only through read-only accessors.
@@ -350,7 +350,7 @@ impl Prompt {
 
 // ─── PromptOverlay ───────────────────────────────────────────────────────────
 
-/// A shallow-replacement overlay for [`Prompt::with`].
+/// A shallow-replacement overlay for [`Prompt::derive`].
 ///
 /// Each field is `Option<T>`. A `Some(value)` replaces the corresponding field on the
 /// cloned definition; a `None` leaves it unchanged. All fields are optional — pass only
@@ -798,16 +798,8 @@ origin = "trusted"
         );
     }
 
-    /// T002 (b): default (false) scrubs render detail — re-confirming via the prompt
-    /// render path that the flag defaults to scrub semantics (the fuzz_scrub corpus also
-    /// verifies this at the integration level).
-    ///
-    /// T003: only the Render arm differs across flag values. Non-Render failures
-    /// (validation, unknown variant, parse errors) are identical regardless of the flag.
-    /// Tested via the from_kernel_revealing unit tests in error.rs (T001 coverage);
-    /// here we confirm the validation path is unaffected (validation errors come from
-    /// garde, not from a KernelError::Render, so from_kernel_revealing is never called
-    /// for them).
+    /// T003: validation errors are unchanged by the reveal flag (validation uses
+    /// ConsumerError::from, not from_kernel_revealing — the kernel is never reached).
     #[test]
     fn reveal_flag_does_not_affect_validation_errors() {
         #[derive(serde::Serialize, garde::Validate)]

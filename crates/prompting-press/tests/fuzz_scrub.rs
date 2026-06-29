@@ -260,8 +260,7 @@ proptest! {
         let _ = &secret; // ensure it's in scope but not passed to garde
         let vars = LeakyVars { name: String::new() }; // always invalid
         let err = prompt
-            .render(&vars, None, &no_guard(), false)
-            .expect_err("invalid vars must fail");
+            .render(&vars, None, &no_guard(), false)            .expect_err("invalid vars must fail");
 
         // Confirm it's a Validation error (not a Kernel error — the kernel was never reached).
         prop_assert!(
@@ -384,7 +383,6 @@ fn default_render_false_scrubs_render_path() {
         other => panic!("expected ConsumerError::Kernel, got {other:?}"),
     }
 }
-
 // ── secret-shaped string strategy ────────────────────────────────────────────
 
 /// A proptest strategy generating strings that look like real secrets (API keys, tokens,

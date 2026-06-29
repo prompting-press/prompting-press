@@ -179,8 +179,7 @@ impl NapiPrompt {
         )
         .map(RenderResult::from)
         .map_err(|e| {
-            let consumer =
-                prompting_press::ConsumerError::from_kernel_revealing(e, reveal);
+            let consumer = prompting_press::ConsumerError::from_kernel_revealing(e, reveal);
             consumer_error_to_napi_err(consumer)
         })
     }

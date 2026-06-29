@@ -17,7 +17,7 @@
 //! - Storing a bound Pydantic model class (or `None`) for `render`.
 //! - Marshaling validated Pydantic vars → [`to_kernel_value`] (reusing the same bridge
 //!   the old `render.rs` uses).
-//! - Wrapping errors via [`consumer_error_to_pyerr`] / [`kernel_error_to_pyerr`]
+//! - Wrapping errors via [`consumer_error_to_pyerr`] (SEC-004 scrub preserved throughout).
 //!   (SEC-004 scrub preserved throughout).
 //!
 //! ## validators kwarg — a single Pydantic model CLASS (not a map)
