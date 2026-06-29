@@ -10,6 +10,14 @@
 automated test, gated as part of docs publishing, so examples can't rot. VERSION-AGNOSTIC:
 each docs version's samples are tested against THAT version of prompting-press."
 
+## Clarifications
+
+### Session 2026-06-29
+
+- Q1: Architecture for getting samples tested — source-canonical for ALL samples vs. hybrid? → A: **Source-canonical for ALL samples**, including migrating the ~108 existing hand-written MDX blocks. Every doc code sample becomes a tested source file (Rust doctest / Python test / TS example) INJECTED into the MDX at build time — the same generate-from-source pattern as the shape page and the spec-011 API references. One mechanism, no exceptions; drift-proof; per-version pinning falls out of the frozen source tree (Q3).
+- Q2: Promote inline `// =>` / `# =>` expected-output comments to real assertions? → A: **Auto-promote ALL** of them to assertions (`assert_eq!` / `==` / `expect().toBe`). SHA-256 hash fields (`template_hash` / `render_hash`) are the exception — verified by format/length (64-hex), never exact value, since they are content-addressed. Maximum rot-protection: a shown output that changes fails the build.
+- Q3: Per-version library-pin mechanism for version-agnostic testing? → A: **Git-branch-implicit (lockfiles in the frozen tree)**. Under source-canonical (Q1), a frozen docs version snapshots the source-tree state — including `Cargo.lock` / `package-lock.json` / the Python lock — which already pin the library version. Running `cargo test` / `pytest` / vitest within that snapshot tests against the matching library version automatically. No extra version manifest field; consistent with git-owns-versioning (Principle V) and coordinates with spec 012's frozen versioned trees.
+
 ## Overview
 
 The docs site (~108 fenced code blocks across getting-started, guides, reference, and templates
@@ -132,9 +140,9 @@ with an assertion mismatch pointing to that annotation.
 - **SHA-256 hash assertions**: `template_hash` and `render_hash` values are content-addressed over
   the template source; they change if the sample's template text changes. Expected-output
   assertions for hash fields MUST use format/length checks, not exact-match.
-- **Version-agnostic pinning across docs versions**: a frozen v1.1 docs tree (spec 012) MUST run
-  its samples against the v1.1 library, not the latest. The per-version mechanism MUST be decided
-  (see [NEEDS CLARIFICATION] Q3).
+- **Version-agnostic pinning across docs versions**: a frozen v1.1 docs tree (spec 012) runs its
+  samples against the v1.1 library, not the latest — pinned implicitly by the lockfiles in that
+  frozen source tree (Q3 resolved; see FR-006).
 
 ## Requirements *(mandatory)*
 
@@ -146,11 +154,12 @@ with an assertion mismatch pointing to that annotation.
 - **FR-002**: The sample-test gate MUST run as part of the docs-publish CI workflow — docs MUST NOT
   be published if any sample test fails (gate is non-optional, same model as the conformance corpus
   gate from spec 006).
-- **FR-003**: The source-canonical architecture MUST be used: real, tested example source files
-  live in the repo and are injected into the MDX pages at docs build time — the MDX pages are
-  never the source of truth for sample code. This is the same pattern as `gen-shape-table.mjs`
-  (spec 011) and extends it to all doc samples. [NEEDS CLARIFICATION: Q1 — confirm source-canonical
-  vs hybrid is the agreed architecture before implementing the injection harness]
+- **FR-003**: The source-canonical architecture MUST be used for **all** samples: real, tested
+  example source files live in the repo and are injected into the MDX pages at docs build time — the
+  MDX pages are never the source of truth for sample code. This is the same pattern as
+  `gen-shape-table.mjs` + the spec-011 reference generator, extended to all doc samples. The ~108
+  existing hand-written MDX code blocks MUST be migrated into tested source files (no hybrid /
+  extract-from-MDX path is retained).
 - **FR-004**: Per-language testing MUST use each language's native testing idiom:
   - **Rust**: `cargo test --doc` (rustdoc doctests in `///` doc comments) or `cargo test` on
     example files under `examples/` — whichever fits the sample's completeness level.
@@ -162,14 +171,18 @@ with an assertion mismatch pointing to that annotation.
   introduced into any published library package (`prompting-press`, `prompting-press-py`,
   `prompting-press-node`). The test harness and example files are dev-only artifacts. (Principle
   II/III: FFI isolation and minimal boundary are not affected.)
-- **FR-006**: The feature MUST be **version-agnostic**: a frozen docs version (spec 012) MUST
-  run its sample tests against the matching version of the library, not the latest. [NEEDS
-  CLARIFICATION: Q3 — per-version library-pin mechanism]
-- **FR-007**: Expected-output annotations in sample files (`// => "..."`, `# => ...`) SHOULD be
-  promoted to real assertions in the test. SHA-256 hash fields (`template_hash`, `render_hash`,
-  `templateHash`, `renderHash`) MUST be verified by format and length only (64-char lowercase hex),
-  never by exact value. [NEEDS CLARIFICATION: Q2 — whether to promote all `// =>` annotations or
-  only a curated subset]
+- **FR-006**: The feature MUST be **version-agnostic**: a frozen docs version (spec 012) MUST run its
+  sample tests against the matching version of the library, not the latest. The pin is
+  **git-branch-implicit**: a frozen docs version snapshots the source tree including its lockfiles
+  (`Cargo.lock` / `package-lock.json` / the Python lock), which already pin the library version, so
+  running the sample tests within that snapshot tests against the matching version automatically. No
+  separate version-manifest field is introduced (consistent with Principle V / git-owns-versioning;
+  coordinates with spec 012's frozen versioned trees).
+- **FR-007**: ALL expected-output annotations in sample files (`// => "..."`, `# => ...`) MUST be
+  promoted to real assertions in the test (`assert_eq!` / `==` / `expect().toBe`) — a shown output
+  that no longer matches fails the build. The sole exception: SHA-256 hash fields (`template_hash`,
+  `render_hash`, `templateHash`, `renderHash`) MUST be verified by format and length only (64-char
+  lowercase hex), never by exact value (they are content-addressed, not human-stable).
 - **FR-008**: A coverage-audit step MUST report which fenced runnable code blocks in the MDX pages
   lack a corresponding tested source file. The audit MUST distinguish runnable code blocks from
   definition-only blocks (YAML/JSON/TOML prompt definitions and config snippets).
