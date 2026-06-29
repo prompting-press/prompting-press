@@ -27,9 +27,9 @@ description: "Task list for spec 012 — native docs versioning, snapshot-per-re
 
 **Purpose**: the versioned content structure + manifest schema + the version helper — everything else builds on these.
 
-- [ ] T001 Create the versioned-content directory convention `docs/site/src/versions/` (frozen per-minor trees, e.g. `versions/v1.1/…`) with a `.gitkeep` + a README explaining it is snapshot-owned (never hand-edited). Latest stays in `src/content/docs/`.
-- [ ] T002 Define the version-dropdown manifest `docs/site/src/data/versions.json` per contracts/version-manifest.md: `{ latest, versions: [{ minor, lastPatch, isLatest, label, slugs[] }] }`, canonical sorted-key JSON. Seed it pre-1.0 with a single `next` entry (IO-1) representing main (no released minor yet). **GATE**: valid JSON matching the contract; `next` present.
-- [ ] T003 `docs/site/scripts/lib/version.mjs` — semver helpers: parse `X.Y.Z`, derive the `X.Y` bucket, `bucketAction(newVer, prevVer)` → `'new-bucket' | 'overwrite'` (major.minor changed ⇒ new; patch-only ⇒ overwrite; unparseable/missing-prev ⇒ throw, FR-013/FR-016), and canonical manifest read/write. Stable Node APIs only (IO-3). **GATE**: unit-style checks: `bucketAction('1.1.0','1.0.3')='new-bucket'`, `('1.1.1','1.1.0')='overwrite'`, `('garbage','1.1.0')` throws.
+- [x] T001 Create the versioned-content directory convention `docs/site/src/versions/` (frozen per-minor trees, e.g. `versions/v1.1/…`) with a `.gitkeep` + a README explaining it is snapshot-owned (never hand-edited). Latest stays in `src/content/docs/`.
+- [x] T002 Define the version-dropdown manifest `docs/site/src/data/versions.json` per contracts/version-manifest.md: `{ latest, versions: [{ minor, lastPatch, isLatest, label, slugs[] }] }`, canonical sorted-key JSON. Seed it pre-1.0 with a single `next` entry (IO-1) representing main (no released minor yet). **GATE**: valid JSON matching the contract; `next` present.
+- [x] T003 `docs/site/scripts/lib/version.mjs` — semver helpers: parse `X.Y.Z`, derive the `X.Y` bucket, `bucketAction(newVer, prevVer)` → `'new-bucket' | 'overwrite'` (major.minor changed ⇒ new; patch-only ⇒ overwrite; unparseable/missing-prev ⇒ throw, FR-013/FR-016), and canonical manifest read/write. Stable Node APIs only (IO-3). **GATE**: unit-style checks: `bucketAction('1.1.0','1.0.3')='new-bucket'`, `('1.1.1','1.1.0')='overwrite'`, `('garbage','1.1.0')` throws.
 
 **Checkpoint**: content structure + manifest + version helper exist; the route/dropdown/snapshot can build on them.
 
@@ -41,10 +41,10 @@ description: "Task list for spec 012 — native docs versioning, snapshot-per-re
 
 **Independent test**: with ≥2 versioned trees + `next`, build the site; confirm the dropdown lists them, switching serves the right version, latest is canonical, missing pages degrade gracefully.
 
-- [ ] T004 [US1] Dynamic Astro route `docs/site/src/pages/v/[version]/[...slug].astro` — `getStaticPaths` enumerates `(version × slug)` from the manifest + the `versions/<vX.Y>/` trees; serves pinned content under `/v/X.Y/…`. Latest stays on the existing unprefixed routes (FR-004). **GATE**: build emits `/v/<ver>/…` pages for each non-latest version.
-- [ ] T005 [US1] Graceful page-missing degradation (FR-003): when a slug doesn't exist in a target version, the route/selector lands on that version's nearest valid page or its index — never a broken link. **GATE**: switching to a version lacking a page does not 404.
-- [ ] T006 [US1] Non-latest `noindex` (FR-017): pinned `/v/X.Y/` pages (not latest) emit `<meta name="robots" content="noindex">`. **GATE**: built non-latest pages carry noindex; latest does not.
-- [ ] T007 [US1] Canonical/default (FR-004): the bare/unprefixed docs path serves `latest`; confirm `next` and pinned versions are reachable only under their prefixes. **GATE**: bare path = latest content.
+- [x] T004 [US1] Dynamic Astro route `docs/site/src/pages/v/[version]/[...slug].astro` — `getStaticPaths` enumerates `(version × slug)` from the manifest + the `versions/<vX.Y>/` trees; serves pinned content under `/v/X.Y/…`. Latest stays on the existing unprefixed routes (FR-004). **GATE**: build emits `/v/<ver>/…` pages for each non-latest version.
+- [x] T005 [US1] Graceful page-missing degradation (FR-003): when a slug doesn't exist in a target version, the route/selector lands on that version's nearest valid page or its index — never a broken link. **GATE**: switching to a version lacking a page does not 404.
+- [x] T006 [US1] Non-latest `noindex` (FR-017): pinned `/v/X.Y/` pages (not latest) emit `<meta name="robots" content="noindex">`. **GATE**: built non-latest pages carry noindex; latest does not.
+- [x] T007 [US1] Canonical/default (FR-004): the bare/unprefixed docs path serves `latest`; confirm `next` and pinned versions are reachable only under their prefixes. **GATE**: bare path = latest content.
 
 **Checkpoint (US1)**: the multi-version site serves + routes correctly. (Dropdown component in Phase 3 — the route works without it for testing.)
 
@@ -52,9 +52,9 @@ description: "Task list for spec 012 — native docs versioning, snapshot-per-re
 
 ## Phase 3 — User Story 1 cont. (P1): the version dropdown
 
-- [ ] T008 [US1] `docs/site/src/components/VersionSelect.astro` — renders the dropdown from `versions.json` (newest-first; current highlighted; `next` labeled distinctly per IO-1); each entry links to the equivalent slug in that version (or its index — degradation per T005). **GATE**: dropdown lists all manifest versions incl. `next`; selecting navigates correctly.
-- [ ] T009 [US1] Wire `VersionSelect` into the Starlight nav (a header/sidebar component override per Starlight's component slots). **GATE**: the selector appears on every page.
-- [ ] T010 [US1] Freshness footer (FR-018): each version's pages show "docs current as of `X.Y.Z`" from the manifest's `lastPatch`. **GATE**: footer reflects the bucket's lastPatch.
+- [x] T008 [US1] `docs/site/src/components/VersionSelect.astro` — renders the dropdown from `versions.json` (newest-first; current highlighted; `next` labeled distinctly per IO-1); each entry links to the equivalent slug in that version (or its index — degradation per T005). **GATE**: dropdown lists all manifest versions incl. `next`; selecting navigates correctly.
+- [x] T009 [US1] Wire `VersionSelect` into the Starlight nav (a header/sidebar component override per Starlight's component slots). **GATE**: the selector appears on every page.
+- [x] T010 [US1] Freshness footer (FR-018): each version's pages show "docs current as of `X.Y.Z`" from the manifest's `lastPatch`. **GATE**: footer reflects the bucket's lastPatch.
 
 **Checkpoint (US1 complete / MVP)**: a reader can switch versions via the nav dropdown, land on the right page, see freshness. SC-001/002 satisfied.
 
@@ -66,9 +66,9 @@ description: "Task list for spec 012 — native docs versioning, snapshot-per-re
 
 **Independent test**: run it locally for a fake 1.0.0/1.1.0/1.1.1; verify bucket-create vs overwrite (rollup), manifest update, idempotence (twice-run zero diff).
 
-- [ ] T011 [US3] Introduce the docs moon project `docs/site/moon.yml` (first docs moon project) declaring the `docs:snapshot` task (cacheable; locally runnable). Justified per research R3 (snapshot logic = moon task, not inline CI). **GATE**: `moon run docs:snapshot` is invokable.
-- [ ] T012 [US3] `docs/site/scripts/snapshot-docs.mjs` (the task body): given `--version X.Y.Z`, (a) call spec-011's `gen-api-refs.mjs --version X.Y --out <staging>` behind the adapter (IO-2; fallback + warn if 011 absent); (b) freeze current docs → `src/versions/vX.Y/` (create if new minor, overwrite if patch rollup — uses version.mjs); (c) update `versions.json` (add minor / set latest / refresh lastPatch + slugs); (d) stamp the freshness footer source. Canonical JSON ⇒ idempotent. **GATE**: produces the tree + manifest update for a given version.
-- [ ] T013 [US3] Idempotence (FR-008/SC-004): re-running `docs:snapshot` for the same `X.Y.Z` yields zero diff. **GATE**: twice-run `git diff --stat` empty.
+- [x] T011 [US3] Introduce the docs moon project `docs/site/moon.yml` (first docs moon project) declaring the `docs:snapshot` task (cacheable; locally runnable). Justified per research R3 (snapshot logic = moon task, not inline CI). **GATE**: `moon run docs:snapshot` is invokable.
+- [x] T012 [US3] `docs/site/scripts/snapshot-docs.mjs` (the task body): given `--version X.Y.Z`, (a) call spec-011's `gen-api-refs.mjs --version X.Y --out <staging>` behind the adapter (IO-2; fallback + warn if 011 absent); (b) freeze current docs → `src/versions/vX.Y/` (create if new minor, overwrite if patch rollup — uses version.mjs); (c) update `versions.json` (add minor / set latest / refresh lastPatch + slugs); (d) stamp the freshness footer source. Canonical JSON ⇒ idempotent. **GATE**: produces the tree + manifest update for a given version.
+- [x] T013 [US3] Idempotence (FR-008/SC-004): re-running `docs:snapshot` for the same `X.Y.Z` yields zero diff. **GATE**: twice-run `git diff --stat` empty.
 
 **Checkpoint (US3)**: snapshot works locally + idempotently.
 
