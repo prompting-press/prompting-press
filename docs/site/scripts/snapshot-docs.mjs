@@ -44,6 +44,9 @@ const SRC_DOCS = resolve(SITE_ROOT, "src/content/docs");
 const SRC_VERSIONS = resolve(SITE_ROOT, "src/versions");
 const MANIFEST_PATH = resolve(SITE_ROOT, "src/data/versions.json");
 const GEN_API_REFS = resolve(__dirname, "gen-api-refs.mjs");
+// Repo root = three levels up from docs/site/scripts (scripts → site → docs → root).
+const REPO_ROOT = resolve(SITE_ROOT, "../..");
+const ROOT_CHANGELOG = resolve(REPO_ROOT, "CHANGELOG.md");
 
 // ---------------------------------------------------------------------------
 // Argument parsing
@@ -165,6 +168,71 @@ if (apiRefsStagedDir && existsSync(apiRefsStagedDir)) {
 }
 
 console.log(`[snapshot-docs] Frozen docs to ${versionDir}`);
+
+// ---------------------------------------------------------------------------
+// Step (b2): Capture this version's changelog into the frozen tree.
+//
+// release-please maintains a root CHANGELOG.md (per-version sections headed by
+// `## [X.Y.Z]` or `## X.Y.Z`). Extract the section for THIS version and write it
+// as changelog.mdx inside the frozen tree, so each /v/X.Y/ has its own changelog
+// page. Pre-release (no CHANGELOG.md yet), this is a no-op with a logged note —
+// the snapshot still succeeds (R5; degrades gracefully like the spec-011 adapter).
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract the changelog section for a specific version from a Keep-a-Changelog /
+ * release-please CHANGELOG body. Matches a heading line containing the exact
+ * version (e.g. `## [1.2.0]`, `## 1.2.0`, `## [1.2.0](url) (date)`) and returns
+ * everything up to the next `## ` heading. Returns null if not found.
+ */
+function extractChangelogSection(changelogText, ver) {
+  const lines = changelogText.split(/\r?\n/);
+  // A version heading: starts with "## ", and the version token appears as a
+  // whole token (bracketed or bare) — avoids matching 1.2.0 inside 11.2.0.
+  const verEsc = ver.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const headingRe = new RegExp(`^##\\s+\\[?${verEsc}\\b`);
+  const anyHeadingRe = /^##\s+/;
+  let start = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (headingRe.test(lines[i])) {
+      start = i;
+      break;
+    }
+  }
+  if (start === -1) return null;
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) {
+    if (anyHeadingRe.test(lines[i])) {
+      end = i;
+      break;
+    }
+  }
+  return lines.slice(start, end).join("\n").trim();
+}
+
+{
+  const changelogOut = resolve(versionDir, "changelog.mdx");
+  let section = null;
+  if (existsSync(ROOT_CHANGELOG)) {
+    section = extractChangelogSection(readFileSync(ROOT_CHANGELOG, "utf-8"), version);
+  }
+  if (section) {
+    const frontmatter = `---\ntitle: "Changelog — ${version}"\ndescription: "What changed in Prompting Press ${version}."\n---\n\n`;
+    writeFileSync(changelogOut, frontmatter + section + "\n", "utf-8");
+    console.log(`[snapshot-docs] Captured changelog for ${version} → ${changelogOut}`);
+  } else {
+    // Graceful pre-release fallback: no root CHANGELOG.md, or no matching
+    // section yet. Write a stub so the page exists and the slug is stable.
+    const stub =
+      `---\ntitle: "Changelog — ${version}"\ndescription: "What changed in Prompting Press ${version}."\n---\n\n` +
+      `_No changelog entry was found for ${version} at snapshot time._\n`;
+    writeFileSync(changelogOut, stub, "utf-8");
+    console.warn(
+      `[snapshot-docs] WARNING: no CHANGELOG.md section for ${version} ` +
+        `(${existsSync(ROOT_CHANGELOG) ? "section not found" : "no root CHANGELOG.md"}). Wrote a stub changelog page.`,
+    );
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Step (c): Update src/data/versions.json
