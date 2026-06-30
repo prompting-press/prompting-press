@@ -101,7 +101,7 @@ The named variants map (`&#123; name: PromptVariant &#125;`), as a Python `dict`
 check(self, /)
 ```
 
-Pure advisory lint: returns a [`CheckReport`] containing only the origin/guard
+Pure advisory lint: returns a [`CheckReport`] containing only the trust/guard
 finding class (the only LIVE finding class for a constructed `Prompt`). Construction already enforces agreement, parse, and reserved-name invariants, so
 those finding classes are structurally unreachable here. Pure: takes `&self`, never
 renders, never mutates.
@@ -215,7 +215,7 @@ guard: <read-only property>
 ```
 
 The opt-in guard instruction text (present iff a guard was enabled and the prompt declares
-an untrusted/external field); `None` for a plain render. Never part of `text`.
+a `trusted: false` field); `None` for a plain render. Never part of `text`.
 
 #### `name`
 
