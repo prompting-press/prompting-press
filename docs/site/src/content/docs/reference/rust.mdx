@@ -293,7 +293,7 @@ The resolved variant name (the reserved `default`, or the named arm). [FR-015]
 pub struct GuardConfig
 ```
 
-Per-render guard-expansion option (data-model §GuardConfig; FR-022..FR-025). Opt-in, per render. When [`enabled`](Self::enabled) is `false`, `build_guard_text` returns `None` and the render is a plain render with a byte-identical body. [`template`](Self::template) overrides the [`DEFAULT_GUARD_TEMPLATE`]; `None` ⇒ the default. **This is NOT a sanitizer (critique X1 / SEC-002).** Enabling the guard only produces a separate, advisory instruction string that *names* the untrusted/external fields. It never inspects, escapes, strips, or rewrites a bound value, and the rendered body is byte-identical whether the guard is on or off. The untrusted/external values still flow into the rendered `text` unchanged; the guard is a suggestion to the downstream model, never a runtime filter. ## Override-template contract The (default or override) template is expanded by a **plain string replacement** of the single `&#123;fields&#125;` placeholder with the comma-joined sorted union of untrusted/external field names (e.g. `q, ctx`). The substitution is **NOT** a MiniJinja render: the guard template is not a prompt template and MUST NOT re-enter the engine — that would open a recursive-injection path through caller-controlled template text. If an override omits `&#123;fields&#125;`, the text is used verbatim (no error).
+Per-render guard option. Opt-in, per render. When [`enabled`](Self::enabled) is `false`: - The rendered body is byte-identical to a plain render (the pre-pass is not applied, no values are inspected, no entity-escaping occurs). - [`build_guard_text`] returns `None`. When `enabled` is `true` AND the definition declares at least one untrusted field (`trusted: false`): - The source pre-pass runs before rendering, rewriting each `&#123;&#123; EXPR &#125;&#125;` whose root identifier is untrusted into `&#123;&#123; (EXPR) \| pp_guard_wrap &#125;&#125;`. The `pp_guard_wrap` filter entity-escapes `&`, `<`, `>` (in that order) and wraps the result in `<untrusted>…</untrusted>`. Values of trusted roots are never touched. - [`build_guard_text`] returns a fixed advisory string referencing the markers. **This is NOT a sanitizer.** Enabling the guard makes untrusted values visually locatable in the output; it is not a guarantee that a downstream model will honour the markers. The advisory is a suggestion, not enforcement.
 
 #### `enabled`
 
@@ -301,15 +301,7 @@ Per-render guard-expansion option (data-model §GuardConfig; FR-022..FR-025). Op
 pub enabled: bool
 ```
 
-When `false`, no guard field is produced and the render is a plain render.
-
-#### `template`
-
-```rust
-pub template: Option<String>
-```
-
-Caller override of the guard instruction text; `None` ⇒ [`DEFAULT_GUARD_TEMPLATE`].
+When `false`, no delimiting and no guard advisory are produced.
 
 ## CheckReport
 

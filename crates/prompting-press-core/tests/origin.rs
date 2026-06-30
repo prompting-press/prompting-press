@@ -33,12 +33,18 @@ fn guard_with_advisory(text: &str) -> GuardConfig {
 
 /// Disabled guard config — baseline plain-render configuration.
 fn no_guard() -> GuardConfig {
-    GuardConfig { enabled: false, ..Default::default() }
+    GuardConfig {
+        enabled: false,
+        ..Default::default()
+    }
 }
 
 /// Enabled guard config.
 fn guard_on() -> GuardConfig {
-    GuardConfig { enabled: true, ..Default::default() }
+    GuardConfig {
+        enabled: true,
+        ..Default::default()
+    }
 }
 
 // ── untrusted_fields API ──────────────────────────────────────────────────────
@@ -427,6 +433,7 @@ fn advisory_override_not_validated_when_guard_disabled() {
         enabled: false,
         advisory: Some("nonsense, no markers".to_string()),
     };
-    let result = render(&def, None, values, &cfg).expect("disabled guard must not validate advisory");
+    let result =
+        render(&def, None, values, &cfg).expect("disabled guard must not validate advisory");
     assert_eq!(result.guard, None, "disabled guard emits no advisory");
 }

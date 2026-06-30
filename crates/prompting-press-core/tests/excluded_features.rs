@@ -62,7 +62,10 @@ const EXCLUDED_FIXTURES: [&str; 6] = [
 ];
 
 fn no_guard() -> GuardConfig {
-    GuardConfig { enabled: false, ..Default::default() }
+    GuardConfig {
+        enabled: false,
+        ..Default::default()
+    }
 }
 
 /// `true` iff `err` is one of the two acceptable excluded-feature rejection variants

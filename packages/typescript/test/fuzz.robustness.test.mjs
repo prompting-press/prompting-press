@@ -70,7 +70,7 @@ const SIMPLE_SHAPE = {
   name: "fuzz_anchor",
   role: "user",
   body: "Hello {{ name }}",
-  variables: { name: { type: "string", origin: "trusted" } },
+  variables: { name: { type: "string", trusted: true } },
 };
 
 // ── T014-A: hostile YAML strings never crash ─────────────────────────────────────────────
@@ -152,9 +152,9 @@ test("T014-D: new Prompt(shape) never crashes on hostile shape objects", () => {
             fc.constantFrom("string", "integer", "float", "boolean"),
             fc.string({ maxLength: 10 }),
           ),
-          origin: fc.oneof(
-            fc.constantFrom("trusted", "untrusted", "external"),
-            fc.string({ maxLength: 10 }),
+          trusted: fc.oneof(
+            fc.boolean(),
+            fc.string({ maxLength: 10 }), // hostile: wrong type, must not crash
           ),
         }),
       ), { nil: undefined }),
@@ -215,8 +215,6 @@ test("T014-E: render never crashes on hostile var-set values (static form)", () 
 
 test("T014-F: check() never crashes on any successfully-constructed prompt", () => {
   // Build prompts from a variety of valid shapes, then call check() on each.
-  const origins = ["trusted", "untrusted", "external"];
-
   const validShape = fc.record({
     name: fc.string({ minLength: 1, maxLength: 20 }).filter(s => /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(s)),
     role: fc.constantFrom("user", "system", "assistant"),
@@ -225,7 +223,7 @@ test("T014-F: check() never crashes on any successfully-constructed prompt", () 
       fc.string({ minLength: 1, maxLength: 10 }).filter(s => /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(s)),
       fc.record({
         type: fc.constantFrom("string", "integer", "float", "boolean"),
-        origin: fc.constantFrom(...origins),
+        trusted: fc.boolean(),
       }),
       { maxKeys: 5 },
     ),

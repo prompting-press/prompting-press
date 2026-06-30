@@ -60,8 +60,8 @@ name: greet
 role: user
 body: "Hi {{ name }}, you have {{ count }} messages"
 variables:
-  name:  { type: string,  origin: trusted }
-  count: { type: integer, origin: trusted }
+  name:  { type: string,  trusted: true }
+  count: { type: integer, trusted: true }
 `;
 
 const ASK_YAML = `
@@ -69,7 +69,7 @@ name: ask
 role: user
 body: "Tell me about {{ topic }}."
 variables:
-  topic: { type: string, origin: untrusted }
+  topic: { type: string, trusted: false }
 `;
 
 // ── 1. Valid render (SC-001) ──────────────────────────────────────────────────────────────
@@ -170,7 +170,7 @@ name: leaky
 role: user
 body: "Using {{ token }}"
 variables:
-  token: { type: string, origin: trusted }
+  token: { type: string, trusted: true }
 `);
 
 	assert.throws(
@@ -207,7 +207,7 @@ name: kernely
 role: user
 body: "Using {{ token + 1 }}"
 variables:
-  token: { type: string, origin: trusted }
+  token: { type: string, trusted: true }
 `);
 
 	assert.throws(
@@ -238,7 +238,7 @@ name: greet
 role: user
 body: "Hi {{ name }}!"
 variables:
-  name: { type: string, origin: trusted }
+  name: { type: string, trusted: true }
 `);
 
 	assert.throws(
@@ -257,7 +257,9 @@ variables:
 
 // ── 6. Guard plumb-through (FR-009) ─────────────────────────────────────────────────────
 
-test("an enabled guard is plumbed through and stays separate from text", () => {
+test("spec-015: enabled guard wraps untrusted value in <untrusted>…</untrusted>; advisory is separate", () => {
+	// spec-015: when guard is enabled, untrusted variable values are wrapped in
+	// <untrusted>…</untrusted> delimiters in the rendered body.
 	const p = Prompt.fromYaml(ASK_YAML);
 
 	const plain = p.render(Topic, { topic: "rivers" });
@@ -267,13 +269,37 @@ test("an enabled guard is plumbed through and stays separate from text", () => {
 		{ guard: { enabled: true } },
 	);
 
+	// Unguarded render: no guard advisory, value verbatim.
 	assert.equal(plain.guard, null);
+	assert.equal(plain.text, "Tell me about rivers.");
+
+	// Guarded render: advisory field is a non-empty static instruction string.
 	assert.notEqual(guarded.guard, null);
 	assert.equal(typeof guarded.guard, "string");
-	assert.ok(guarded.guard.includes("topic"), guarded.guard);
-	assert.equal(plain.text, "Tell me about rivers.");
-	assert.equal(guarded.text, "Tell me about rivers.");
-	assert.ok(!guarded.text.includes(guarded.guard));
+	// spec-015: guard advisory is a static instruction, not a per-field enumeration.
+	assert.ok(
+		guarded.guard.length > 0,
+		`guard advisory must be non-empty, got: ${guarded.guard}`,
+	);
+
+	// spec-015 delimiting: the body wraps the untrusted value.
+	assert.ok(
+		guarded.text.includes("<untrusted>rivers</untrusted>"),
+		`expected <untrusted>rivers</untrusted> in body, got: ${guarded.text}`,
+	);
+
+	// The body IS altered by the guard (body !== plain body).
+	assert.notEqual(
+		guarded.text,
+		plain.text,
+		"guard-enabled body must differ from plain body (spec-015 delimiting)",
+	);
+
+	// Guard advisory is a SEPARATE string — not embedded in the body.
+	assert.ok(
+		!guarded.text.includes(guarded.guard),
+		"guard advisory must not be embedded in the body",
+	);
 });
 
 test("a disabled / absent guard config matches no guard at all", () => {
@@ -298,7 +324,7 @@ name: greetv
 role: user
 body: "Hi {{ name }}"
 variables:
-  name: { type: string, origin: trusted }
+  name: { type: string, trusted: true }
 variants:
   formal: { body: "Good day, {{ name }}" }
 `;

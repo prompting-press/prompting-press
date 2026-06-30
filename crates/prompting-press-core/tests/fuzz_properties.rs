@@ -36,7 +36,10 @@ fn no_guard() -> GuardConfig {
 }
 
 fn guard_on() -> GuardConfig {
-    GuardConfig { enabled: true, ..Default::default() }
+    GuardConfig {
+        enabled: true,
+        ..Default::default()
+    }
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
