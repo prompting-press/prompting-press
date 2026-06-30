@@ -121,7 +121,7 @@ fn guard_config_is_plumbed_through() {
         "disabled GuardConfig must surface guard = None"
     );
 
-    let enabled_cfg = GuardConfig { enabled: true };
+    let enabled_cfg = GuardConfig { enabled: true, ..Default::default() };
     let enabled = prompt
         .render(&vars, None, &enabled_cfg, false)
         .expect("render enabled guard");

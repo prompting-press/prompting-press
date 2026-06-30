@@ -189,6 +189,12 @@ pub fn render(
         std::borrow::Cow::Borrowed(resolved.source)
     };
 
+    // Build (and validate) the guard advisory BEFORE rendering, so an invalid
+    // advisory override (`GuardConfig::advisory` missing the marker contract) fails
+    // fast rather than after the render work. A SEPARATE field — never concatenated
+    // into the body (FR-022..FR-025); the caller routes it (e.g. into a system message).
+    let guard_text = build_guard_text(def, guard)?;
+
     // Per-render environment + a single anonymous template against the (possibly rewritten)
     // source. With `macros`/`multi_template` disabled, an excluded-feature tag fails right
     // here at parse time (research D1/D4); `add_template_owned` parses eagerly.
@@ -211,10 +217,6 @@ pub fn render(
 
     let template_hash = sha256_hex(resolved.source);
     let render_hash = sha256_hex(&text);
-
-    // Opt-in, additive guard advisory — a SEPARATE field. Returns `None` unless
-    // `guard.enabled` and there are untrusted fields (FR-022..FR-025).
-    let guard_text = build_guard_text(def, guard);
 
     Ok(RenderResult {
         text,

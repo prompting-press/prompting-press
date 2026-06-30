@@ -22,7 +22,7 @@ const RENDER_FIXTURES: &[&str] = &["interpolation", "conditional-loop"];
 /// A disabled guard config — these regression cases render plain template features
 /// (interpolation, conditionals, loops) and never opt into guard expansion (US3 owns that).
 fn no_guard() -> GuardConfig {
-    GuardConfig { enabled: false }
+    GuardConfig { enabled: false, ..Default::default() }
 }
 
 /// Build a minimal default-arm `PromptDefinition` whose root `body` is the fixture's

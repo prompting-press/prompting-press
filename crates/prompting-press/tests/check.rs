@@ -111,7 +111,11 @@ fn untrusted_false_field_obligation_and_metadata_guard_satisfaction() {
         .iter()
         .filter(|f| matches!(&f.kind, FindingKind::UntrustedWithoutGuard { .. }))
         .collect();
-    assert_eq!(prov.len(), 1, "untrusted (trusted: false) field must carry the obligation");
+    assert_eq!(
+        prov.len(),
+        1,
+        "untrusted (trusted: false) field must carry the obligation"
+    );
     let FindingKind::UntrustedWithoutGuard { field } = &prov[0].kind;
     assert_eq!(field, "feed");
 

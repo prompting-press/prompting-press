@@ -324,7 +324,7 @@ fn robustness_guard_enabled_on_render_error_does_not_panic() {
     }))
     .expect("definition must deserialise");
 
-    let guard_on = GuardConfig { enabled: true };
+    let guard_on = GuardConfig { enabled: true, ..Default::default() };
     let _ = render(
         &def,
         None,

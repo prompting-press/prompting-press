@@ -46,7 +46,10 @@ pub struct GuardConfig {
 
 impl From<GuardConfig> for KernelGuardConfig {
     fn from(g: GuardConfig) -> Self {
-        Self { enabled: g.enabled }
+        Self {
+            enabled: g.enabled,
+            advisory: None, // JS callers use the default advisory (spec-015)
+        }
     }
 }
 

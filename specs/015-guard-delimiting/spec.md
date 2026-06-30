@@ -29,14 +29,22 @@ Deterministic — preserves cross-binding parity (Principle I) and `render_hash`
 (SC-001). This is the Anthropic/OpenAI/OWASP industry-standard pattern; random-nonce tags were
 rejected (they break parity and determinism, and are defeatable even per their originator).
 
-**Q2 — Activation → always-on + `trusted` boolean + no custom guard string.** Enabling the
+**Q2 — Activation → always-on + `trusted` boolean + optional advisory override.** Enabling the
 guard implies delimiting; there is no separate name-only advisory mode. The per-variable
 `origin` enum (`trusted | untrusted | external`) collapses to a **`trusted` boolean** — with a
 single fixed delimiter, "untrusted" and "external" are no longer handled differently, so the
 distinction is dropped. This is a JSON-Schema change (Principle VII) → regenerate all three
-shapes (Rust struct, Pydantic model, TS interface). The caller-supplied custom guard string is
-dropped: the advisory prose is fixed and references the fixed markers. (Supersedes spec 002
-FR-024 "configurable guard template" — recorded in the amendment.)
+shapes (Rust struct, Pydantic model, TS interface).
+
+**Advisory text (revised 2026-06-30, user decision):** the `<untrusted>` **markers are fixed**
+(library-owned, non-configurable — they are the security-relevant contract). The **advisory
+sentence** that explains them, however, **is overridable**: `GuardConfig` carries an optional
+advisory override; `None`/absent ⇒ the correct fixed default that references the markers. A
+caller may supply their own wording (model-tuning, localization), in which case they own its
+correctness. This narrows — does not fully remove — spec 002 FR-024: the *marker scheme* is no
+longer configurable, but the *advisory wording* remains a caller seam. (Unlike spec 002's
+template, the override is plain text — there is no `{fields}` placeholder substitution and it
+never re-enters the engine.)
 
 **Q3 — Implementation layer → kernel pre-pass, wrap-by-root-identifier.** The kernel performs a
 template pre-pass over the source, value-blind, driven by the declared trust tags (parity by
@@ -157,7 +165,7 @@ The guard instruction string tells the model what the delimiter markers mean, so
 
 #### Activation
 
-- **FR-D10**: **Resolved (Q2):** activation is **always-on when the guard is enabled** — there is no separate name-only advisory sub-mode. Enabling the guard implies delimiting. Two coupled schema/API changes follow: (a) the per-variable `origin` enum (`trusted | untrusted | external`) collapses to a **`trusted` boolean** (a variable is wrapped iff `trusted == false`); (b) the caller-supplied custom guard template (spec 002 FR-024) is **removed** — the advisory prose is fixed and references the markers. Both are recorded in the constitution amendment.
+- **FR-D10**: **Resolved (Q2):** activation is **always-on when the guard is enabled** — there is no separate name-only advisory sub-mode. Enabling the guard implies delimiting. Coupled changes: (a) the per-variable `origin` enum (`trusted | untrusted | external`) collapses to a **`trusted` boolean** (a variable is wrapped iff `trusted == false`); (b) the **marker scheme is fixed** (non-configurable — security contract); (c) the **advisory sentence is overridable** via an optional `GuardConfig` field (`None` ⇒ the fixed default that references the markers). The override is plain text with no `{fields}` substitution and never re-enters the engine. This narrows spec 002 FR-024 (marker scheme no longer configurable; advisory wording still a caller seam) rather than removing it. Recorded in the constitution amendment.
 
 #### Provenance
 

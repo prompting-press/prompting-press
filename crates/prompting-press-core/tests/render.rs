@@ -11,7 +11,7 @@ use prompting_press_core::{get_source, render, GuardConfig};
 
 /// A disabled guard config — US1 never opts into guard expansion (US3 owns that).
 fn no_guard() -> GuardConfig {
-    GuardConfig { enabled: false }
+    GuardConfig { enabled: false, ..Default::default() }
 }
 
 /// V1.1 — render a single-body prompt with no variant named.

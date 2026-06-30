@@ -83,7 +83,10 @@ impl GuardConfig {
 
 impl From<&GuardConfig> for KernelGuardConfig {
     fn from(g: &GuardConfig) -> Self {
-        Self { enabled: g.enabled }
+        Self {
+            enabled: g.enabled,
+            advisory: None, // Python callers use the default advisory (spec-015)
+        }
     }
 }
 

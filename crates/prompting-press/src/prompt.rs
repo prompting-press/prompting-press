@@ -467,6 +467,13 @@ fn kernel_analysis_error_to_field(err: &KernelError) -> (&'static str, String, &
             "template uses an excluded feature".to_string(),
             code::EXCLUDED_FEATURE,
         ),
+        // spec-015: only raised when a caller supplies an invalid advisory override.
+        // The detail names the missing element(s) — no bound value content.
+        KernelError::GuardAdvisoryInvalid { detail } => (
+            "guard",
+            format!("guard advisory override is invalid: {detail}"),
+            code::RENDER,
+        ),
     }
 }
 

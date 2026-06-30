@@ -151,7 +151,7 @@ pub mod origin;
 pub use agreement::{required_roots, Agreement};
 pub use engine::{get_source, render, RenderResult};
 pub use error::KernelError;
-pub use origin::{untrusted_fields, GuardConfig};
+pub use origin::{untrusted_fields, GuardConfig, DEFAULT_GUARD_ADVISORY};
 
 /// Returns the kernel's package version, sourced from Cargo at compile time.
 ///
