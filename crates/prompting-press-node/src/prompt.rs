@@ -199,7 +199,7 @@ impl NapiPrompt {
             .map_err(kernel_error_to_napi_err)
     }
 
-    /// `prompt.checkPrompt()` — pure advisory lint: origin/guard finding only.
+    /// `prompt.checkPrompt()` — pure advisory lint: trust/guard finding only.
     ///
     /// Delegates to [`prompting_press::Prompt::check`] and converts the consumer's
     /// [`prompting_press::CheckReport`] to the napi [`CheckReport`] via [`Finding::from`]

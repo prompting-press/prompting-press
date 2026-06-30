@@ -16,8 +16,8 @@
 //!    reserved root-body alias); that is a construction failure (CR-1).
 //!
 //! After construction every operation is infallible with respect to the above invariants;
-//! `check()` is a pure advisory pass that can only surface the origin/guard finding (a prompt
-//! with `untrusted`/`external` vars and no guard configured).
+//! `check()` is a pure advisory pass that can only surface the trust/guard finding (a prompt
+//! with `trusted: false` vars and no guard configured).
 //!
 //! ## `with` — the sole mutator (R6)
 //!
@@ -272,13 +272,13 @@ impl Prompt {
         prompting_press_core::get_source(&self.def, variant).map_err(ConsumerError::from)
     }
 
-    /// Pure advisory lint: returns a [`CheckReport`] containing only the origin/guard
+    /// Pure advisory lint: returns a [`CheckReport`] containing only the trust/guard
     /// finding class.
     ///
     /// Construction already enforces agreement, parse, and reserved-name invariants, so those
     /// arms are structurally unreachable for a constructed `Prompt`. The only LIVE finding
     /// `check()` can surface is [`FindingKind::UntrustedWithoutGuard`] — a prompt declaring
-    /// `untrusted`/`external` vars but carrying no `"guard"` key in `metadata`.
+    /// `trusted: false` vars but carrying no `"guard"` key in `metadata`.
     ///
     /// Pure: takes `&self`, never renders, never mutates (FR-019).
     #[must_use]
@@ -477,7 +477,7 @@ fn kernel_analysis_error_to_field(err: &KernelError) -> (&'static str, String, &
     }
 }
 
-/// The origin/guard advisory check for a single prompt (the only LIVE finding class for a
+/// The trust/guard advisory check for a single prompt (the only LIVE finding class for a
 /// constructed `Prompt`).
 ///
 /// A prompt declaring variables with `trusted: false` that carry no `"guard"` key in

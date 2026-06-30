@@ -7,7 +7,7 @@
  * gap (a loud `undefined_variable`, never a silent empty render), and the guard plumb-through
  * (FR-009).
  *
- * All fixtures use `origin` (not `provenance` — renamed in spec 008 Phase 1).
+ * All fixtures use `trusted` (spec 015 replaced the `origin` enum with a boolean).
  */
 
 import assert from "node:assert/strict";

@@ -11,7 +11,7 @@ These tests prove:
   representation (byte-identical render + provenance hashes — SC-003 / FR-005).
 - Malformed input raises `LoadError` and NOTHING is partially constructed (FR-007).
 - Norway-safe YAML parsing is inherited across FFI (YAML-1.2 / research D2).
-- `provenance` (old field name) is rejected by the serde layer; `origin` is accepted.
+- `provenance` and `origin` (old field names) are rejected by the serde layer; `trusted` is the current field.
 """
 
 from __future__ import annotations

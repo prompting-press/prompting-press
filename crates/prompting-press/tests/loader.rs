@@ -19,8 +19,8 @@
 use prompting_press::{ConsumerError, Prompt, PromptDefinition};
 
 /// The spec-001 valid fixtures, reused as JSON loader inputs (FR-008: the crate consumes the
-/// kernel's `PromptDefinition`, no parallel shape). These fixtures use `origin` (renamed in
-/// spec 008 Phase 1 from `provenance`).
+/// kernel's `PromptDefinition`, no parallel shape). These fixtures use `trusted` (spec 015
+/// replaced the `origin` enum with a boolean; spec 008 renamed it from `provenance`).
 const SINGLE_BODY_JSON: &str =
     include_str!("../../../schemas/jsonschema/tests/fixtures/valid/single-body.json");
 const MULTI_VARIANT_JSON: &str =
@@ -60,7 +60,7 @@ variables:
 #[test]
 fn yaml_and_json_parse_to_equal_definitions_single_body() {
     // The hand-written YAML below is the field-for-field equivalent of single-body.json.
-    // Uses `origin` (renamed from `provenance` in spec 008 Phase 1).
+    // Uses `trusted` (spec 015 boolean; spec 008 renamed from `provenance`).
     let yaml = "\
 name: greeting
 role: system
@@ -117,7 +117,7 @@ metadata:
 /// `PromptDefinition`s.
 #[test]
 fn yaml_and_json_parse_to_equal_definitions_multi_variant() {
-    // Field-for-field equivalent of multi-variant.json. Uses `origin` for variable tags.
+    // Field-for-field equivalent of multi-variant.json. Uses `trusted` for variable tags.
     let equiv_def: PromptDefinition = serde_json::from_value(serde_json::json!({
         "name": "content-summariser",
         "role": "user",

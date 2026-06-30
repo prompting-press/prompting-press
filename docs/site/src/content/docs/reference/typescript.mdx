@@ -70,7 +70,7 @@ The conversational role (`"system"` / `"user"` / `"assistant"`).
 get variables(): object | undefined
 ```
 
-The declared variables map (`&#123; [name]: PromptVariable &#125;`). Read-only metadata. Each entry carries the variable's `type`, `origin`, and optional `validation_required`.
+The declared variables map (`&#123; [name]: PromptVariable &#125;`). Read-only metadata. Each entry carries the variable's `type`, `trusted` flag, and optional `validation_required`.
 
 #### `variants`
 
@@ -94,7 +94,7 @@ Primary public constructor — constructs a `Prompt` from a `PromptDefinition`-s
 check(): CheckReport
 ```
 
-Pure advisory lint: returns a CheckReport containing only the origin/guard finding class (`"untrusted_without_guard"`). Construction already enforces agreement, parse, and reserved-name invariants; those are structurally unreachable here. Pure: never renders, never mutates.
+Pure advisory lint: returns a CheckReport containing only the `trusted`/guard finding class (`"untrusted_without_guard"`). Construction already enforces agreement, parse, and reserved-name invariants; those are structurally unreachable here. Pure: never renders, never mutates.
 
 #### `derive`
 

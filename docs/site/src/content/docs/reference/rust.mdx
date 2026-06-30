@@ -38,7 +38,7 @@ The root body template source (the default arm's unrendered template).
 pub fn check(&self) -> CheckReport
 ```
 
-Pure advisory lint: returns a [`CheckReport`] containing only the origin/guard finding class. Construction already enforces agreement, parse, and reserved-name invariants, so those arms are structurally unreachable for a constructed `Prompt`. The only LIVE finding `check()` can surface is [`FindingKind::UntrustedWithoutGuard`] — a prompt declaring `untrusted`/`external` vars but carrying no `"guard"` key in `metadata`. Pure: takes `&self`, never renders, never mutates.
+Pure advisory lint: returns a [`CheckReport`] containing only the trust/guard finding class. Construction already enforces agreement, parse, and reserved-name invariants, so those arms are structurally unreachable for a constructed `Prompt`. The only LIVE finding `check()` can surface is [`FindingKind::UntrustedWithoutGuard`] — a prompt declaring `trusted: false` vars but carrying no `"guard"` key in `metadata`. Pure: takes `&self`, never renders, never mutates.
 
 #### `definition`
 
@@ -385,7 +385,7 @@ The prompt's name.
 pub variant: Option<String>
 ```
 
-The variant the finding pertains to (`Some("default")` / `Some("<name>")` for an agreement or analysis finding); `None` for a prompt-level origin finding.
+The variant the finding pertains to (`Some("default")` / `Some("<name>")` for an agreement or analysis finding); `None` for a prompt-level trust/guard finding.
 
 ### `FindingKind`
 
@@ -401,7 +401,7 @@ The closed set of lint-failure classes. `UntrustedWithoutGuard` is the only advi
 UntrustedWithoutGuard { field: String }
 ```
 
-The prompt declares `field` as `untrusted`/`external` but configures no guard for it (the origin advisory — FR-018; the `metadata.guard` convention, module docs). The only advisory class surfaced by `Prompt::check()`.
+The prompt declares `field` as `trusted: false` but configures no guard for it (the trust/guard advisory — FR-018; the `metadata.guard` convention, module docs). The only advisory class surfaced by `Prompt::check()`.
 
 ## Composition
 

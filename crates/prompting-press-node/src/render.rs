@@ -107,7 +107,7 @@ impl RenderResult {
     }
 
     /// The opt-in guard instruction text (present iff a guard was enabled and the prompt declares
-    /// an untrusted/external field); `null` for a plain render. Never part of `text`.
+    /// a `trusted: false` field); `null` for a plain render. Never part of `text`.
     #[napi(getter)]
     #[must_use]
     pub fn guard(&self) -> Option<String> {

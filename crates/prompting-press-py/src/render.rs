@@ -121,7 +121,7 @@ pub struct RenderResult {
     #[pyo3(get)]
     pub render_hash: String,
     /// The opt-in guard instruction text (present iff a guard was enabled and the prompt declares
-    /// an untrusted/external field); `None` for a plain render. Never part of `text`.
+    /// a `trusted: false` field); `None` for a plain render. Never part of `text`.
     #[pyo3(get)]
     pub guard: Option<String>,
 }

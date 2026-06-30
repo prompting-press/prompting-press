@@ -16,7 +16,7 @@
  *   - no `.chain()` on the class or an instance (FR-013).
  *   - a `variant` entry field selects the variant arm.
  *
- * All fixtures use `origin` (spec 008 rename from `provenance`).
+ * All fixtures use `trusted` (spec 015 replaced the `origin` enum with a boolean).
  */
 
 import assert from "node:assert/strict";

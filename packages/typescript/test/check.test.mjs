@@ -9,9 +9,9 @@
  *
  * Post-reshape (spec 008 / R7 / Q4): construction enforces the **hard** invariants (agreement,
  * parse, reserved-name). The only LIVE finding `check()` can surface is:
- *   - `untrusted_without_guard` — a prompt with untrusted/external vars and no guard configured.
+ *   - `untrusted_without_guard` — a prompt with `trusted: false` vars and no guard configured.
  *
- * All fixtures use `origin` (spec 008 rename from `provenance`).
+ * All fixtures use `trusted` (spec 015 replaced the `origin` enum with a boolean).
  */
 
 import assert from "node:assert/strict";

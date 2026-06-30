@@ -8,7 +8,7 @@ Tests the new `Prompt` pyclass surface introduced in the api-schema reshape:
 
 Also exercises:
 - `Composition` with `Prompt` objects (T039 reshape: no registry, no name strings).
-- The `origin` field name (Phase 1 rename from `provenance`).
+- The `trusted` boolean field (spec 015; replaced the `origin` enum from spec 008).
 - `Registry` is absent from `__all__` / `prompting_press` public surface.
 """
 
@@ -75,7 +75,7 @@ class SecretVars(BaseModel):
     token: str
 
 
-# ─── fixture dicts (use `origin` not `provenance` — Phase 1 rename) ──────────
+# ─── fixture dicts (use `trusted` boolean — spec 015 replaced `origin` enum) ─
 
 GREET_DEF = {
     "name": "greet",

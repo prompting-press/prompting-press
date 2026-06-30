@@ -13,7 +13,7 @@
  * leaves nothing partially loaded (FR-007 → LoadError), and that the consumer's YAML-1.2 /
  * Norway-safe parsing is inherited across FFI (research D2).
  *
- * All fixtures use `origin` (spec 008 rename from `provenance`).
+ * All fixtures use `trusted` (spec 015 replaced the `origin` enum with a boolean).
  */
 
 import assert from "node:assert/strict";

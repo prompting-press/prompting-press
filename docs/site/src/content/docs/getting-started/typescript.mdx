@@ -51,10 +51,10 @@ body: "Hi {{ name }}, you have {{ count }} messages."
 variables:
   name:
     type: string
-    origin: trusted
+    trusted: true
   count:
     type: integer
-    origin: trusted
+    trusted: true
 ```
 </TabItem>
 <TabItem label="JSON">
@@ -64,8 +64,8 @@ variables:
   "role": "user",
   "body": "Hi {{ name }}, you have {{ count }} messages.",
   "variables": {
-    "name": { "type": "string", "origin": "trusted" },
-    "count": { "type": "integer", "origin": "trusted" }
+    "name": { "type": "string", "trusted": true },
+    "count": { "type": "integer", "trusted": true }
   }
 }
 ```
@@ -78,11 +78,11 @@ body = "Hi {{ name }}, you have {{ count }} messages."
 
 [variables.name]
 type = "string"
-origin = "trusted"
+trusted = true
 
 [variables.count]
 type = "integer"
-origin = "trusted"
+trusted = true
 ```
 </TabItem>
 </Tabs>
@@ -114,14 +114,14 @@ greet.body; // => "Hi {{ name }}, you have {{ count }} messages."
 import { Prompt, type PromptDefinition } from "prompting-press";
 
 // The constructor takes a typed PromptDefinition — an editor type-checks the
-// shape (field names, the role enum, each variable's `origin`) at author time.
+// shape (field names, the role enum, each variable's `trusted` flag) at author time.
 const definition: PromptDefinition = {
   name: "greet",
   role: "user",
   body: "Hi {{ name }}, you have {{ count }} messages.",
   variables: {
-    name: { type: "string", origin: "trusted" },
-    count: { type: "integer", origin: "trusted" },
+    name: { type: "string", trusted: true },
+    count: { type: "integer", trusted: true },
   },
 };
 

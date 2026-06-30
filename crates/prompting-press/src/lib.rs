@@ -79,13 +79,13 @@
 //! Closing this gap in-library would require per-prompt type registration, which clarify Q3
 //! deliberately rejected for v1.
 //!
-//! ## The `check()` origin convention (roadmap decision C-09)
+//! ## The `check()` trust/guard convention (roadmap decision C-09)
 //!
-//! A prompt that declares one or more `untrusted` / `external` variables is expected to
-//! carry a top-level `"guard"` key in its `meta` (or `metadata`) map. If such a prompt
-//! declares an untrusted/external field and **no** `"guard"` key is present, [`Prompt::check`]
-//! emits an [`UntrustedWithoutGuard`](check::FindingKind::UntrustedWithoutGuard) finding naming
-//! the uncovered field. The lint reads `meta`/`metadata` read-only and checks only for the
+//! A prompt that declares one or more `trusted: false` variables is expected to carry a
+//! top-level `"guard"` key in its `meta` (or `metadata`) map. If such a prompt declares a
+//! `trusted: false` field and **no** `"guard"` key is present, [`Prompt::check`] emits an
+//! [`UntrustedWithoutGuard`](check::FindingKind::UntrustedWithoutGuard) finding naming the
+//! uncovered field. The lint reads `meta`/`metadata` read-only and checks only for the
 //! *presence* of the key (the contents are opaque to the library).
 //!
 //! ## `prompt.check()` as a CI gate

@@ -415,7 +415,7 @@ impl Prompt {
             .map_err(|e| consumer_error_to_pyerr(py, e))
     }
 
-    /// Pure advisory lint: returns a [`CheckReport`] containing only the origin/guard
+    /// Pure advisory lint: returns a [`CheckReport`] containing only the trust/guard
     /// finding class (the only LIVE finding class for a constructed `Prompt`).
     ///
     /// Construction already enforces agreement, parse, and reserved-name invariants, so

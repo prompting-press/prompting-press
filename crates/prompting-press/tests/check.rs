@@ -2,7 +2,7 @@
 //!
 //! Post-reshape, the lint runs per-prompt via `Prompt::check()`. Construction enforces the
 //! hard invariants (agreement, parse, reserved name). `Prompt::check()` surfaces only the
-//! origin/guard advisory — `UntrustedWithoutGuard`.
+//! trust/guard advisory — `UntrustedWithoutGuard`.
 //!
 //! Vignettes:
 //! - **V3.1** a well-formed prompt (declared vars, guarded untrusted field) → `check()` passes.
@@ -77,10 +77,10 @@ fn untrusted_without_guard_is_flagged() {
 
     let finding = prov[0];
     assert_eq!(finding.prompt, "unguarded", "finding must name the prompt");
-    // The origin advisory is prompt-level (no variant).
+    // The trust/guard advisory is prompt-level (no variant).
     assert_eq!(
         finding.variant, None,
-        "origin finding is prompt-level (no variant)"
+        "trust/guard finding is prompt-level (no variant)"
     );
     let FindingKind::UntrustedWithoutGuard { field } = &finding.kind;
     assert_eq!(field, "payload", "finding must name the uncovered field");

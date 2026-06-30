@@ -8,7 +8,7 @@
  *   - T045: derive() immutability + merged-validation
  *   - T046: Composition over Prompt objects, no Registry, resolve() with no arg
  *
- * All tests use `origin` (not `provenance` — renamed in spec 008 Phase 1).
+ * All tests use `trusted` (spec 015 replaced the `origin` enum with a boolean).
  * All tests confirm no Registry symbol on the public surface (SC-001 post-reshape).
  *
  * Model invariants:
@@ -34,7 +34,7 @@ const HEX64 = /^[0-9a-f]{64}$/;
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────────────────
 
-/** A minimal valid PromptDefinition object (using `origin`, not `provenance`). */
+/** A minimal valid PromptDefinition object (using `trusted`, not the old `origin` enum). */
 const GREET_SHAPE = {
 	name: "greet",
 	role: "user",
