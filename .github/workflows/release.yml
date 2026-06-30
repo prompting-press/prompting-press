@@ -76,7 +76,8 @@ jobs:
     if: needs.release-please.outputs.releases_created == 'true'
     runs-on: ubuntu-latest
     permissions:
-      contents: write # commit the frozen docs tree back to main
+      contents: write # push the snapshot branch
+      pull-requests: write # open + auto-merge the snapshot PR
     steps:
       - name: Checkout main
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -140,7 +141,10 @@ jobs:
       - name: Run docs:snapshot
         run: mise exec -- moon run docs:snapshot -- --version "${{ steps.ver.outputs.version }}"
 
-      - name: Commit frozen docs tree back to main
+      - name: Open + auto-merge a PR with the frozen docs tree
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VER: ${{ steps.ver.outputs.version }}
         run: |
           set -euo pipefail
           git config user.name "prompting-press-release[bot]"
@@ -150,12 +154,24 @@ jobs:
             echo "Snapshot produced no changes (idempotent re-run); nothing to commit."
             exit 0
           fi
-          # NOTE: intentionally NO [skip ci] — this push must trigger docs.yml
-          # so the freshly frozen version is published. release.yml re-runs too
-          # but no-ops (release-please finds no new conventional commits ⇒
-          # releases_created=false ⇒ this job is skipped), so no loop.
-          git commit -m "docs: snapshot version ${{ steps.ver.outputs.version }}"
-          git push origin HEAD:main
+          # Push to a short-lived branch + open a PR rather than pushing straight
+          # to main: main is a protected branch with required status checks and
+          # no per-actor bypass, so a direct push is rejected. A PR runs the
+          # required checks on the snapshot, then auto-merges. The squash-merge
+          # to main then triggers docs.yml, which publishes the frozen version.
+          # (No [skip ci] anywhere — the merge MUST trigger the docs publish.)
+          branch="docs-snapshot-${VER}"
+          git checkout -b "$branch"
+          git commit -m "docs: snapshot version ${VER}"
+          git push origin "$branch" --force-with-lease
+          # Open the PR (or reuse an existing one for this version) and arm
+          # auto-merge so it lands automatically once the required checks pass.
+          if ! gh pr view "$branch" >/dev/null 2>&1; then
+            gh pr create --base main --head "$branch" \
+              --title "docs: snapshot version ${VER}" \
+              --body "Automated docs snapshot for the ${VER} release (spec 012). Freezes \`docs/site/src/versions/\` + updates \`versions.json\`. Auto-merges once required checks pass; the merge triggers the docs publish."
+          fi
+          gh pr merge "$branch" --squash --auto --delete-branch
 
   # ---------------------------------------------------------------------------
   # publish — INTENTIONALLY DISABLED (pre-publish; everything except publish).
