@@ -1,8 +1,33 @@
 {
-  "latest": "next",
+  "latest": "0.1",
   "versions": [
     {
       "isLatest": true,
+      "label": "0.1 (latest)",
+      "lastPatch": "0.1.0",
+      "minor": "0.1",
+      "slugs": [
+        "",
+        "changelog",
+        "faq",
+        "getting-started/python",
+        "getting-started/rust",
+        "getting-started/typescript",
+        "guides/composition",
+        "guides/derive",
+        "guides/guard",
+        "guides/lint-in-ci",
+        "guides/metadata",
+        "guides/variants",
+        "reference/prompt-definition",
+        "reference/python",
+        "reference/rust",
+        "reference/typescript",
+        "templates"
+      ]
+    },
+    {
+      "isLatest": false,
       "label": "next (main)",
       "lastPatch": "next",
       "minor": "next",

@@ -20,6 +20,10 @@ tasks:
     command: node scripts/snapshot-docs.mjs
     args: []
     options:
-      # Mark cacheable; the cache key includes --version arg + source content hash.
-      cache: true
+      # NOT cacheable: this task mutates the working tree (writes src/versions/vX.Y/
+      # + versions.json). With cache:true, moon replays cached stdout WITHOUT
+      # re-running the file writes on a repeat invocation, so the snapshot silently
+      # produces no files and the release commit-back finds "no changes" — the
+      # snapshot never lands. A side-effecting task must always execute.
+      cache: false
       runInCI: true
