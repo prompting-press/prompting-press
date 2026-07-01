@@ -48,7 +48,7 @@ class PromptVariable(BaseModel):
     trusted: Annotated[
         bool,
         Field(
-            description="Per-field input-trust flag (spec 015). `true` ⇒ a trusted input (never delimited). `false` ⇒ untrusted input: when the opt-in guard is enabled, the variable's interpolated value is wrapped in injection-resistant `<untrusted>…</untrusted>` delimiters in the rendered body, and the guard advisory references the markers. Replaces the former `origin` enum (trusted|untrusted|external) — with one fixed delimiter the untrusted/external distinction was no longer meaningful. Use `check()` to detect untrusted variables (`trusted: false`) that lack a declared guard."
+            description="Per-field input-trust flag. `true` ⇒ a trusted input (never delimited). `false` ⇒ untrusted input: when the opt-in guard is enabled, the variable's interpolated value is wrapped in injection-resistant `<untrusted>…</untrusted>` delimiters in the rendered body, and the guard advisory references the markers. Use `check()` to detect untrusted variables (`trusted: false`) that lack a declared guard."
         ),
     ]
     validation_required: Annotated[
@@ -106,7 +106,7 @@ class PromptDefinition(BaseModel):
     variables: Annotated[
         dict[str, PromptVariable] | None,
         Field(
-            description="Declared input variables, shared across all variants. Each entry declares the variable's type and input-trust origin.",
+            description="Declared input variables, shared across all variants. Each entry declares the variable's type and input-trust flag.",
             validate_default=True,
         ),
     ] = {}

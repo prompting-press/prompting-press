@@ -1,19 +1,14 @@
-//! Composition types and the `Message` napi object (spec 004, US4; T022; FR-012/FR-013).
+//! Composition types and the `Message` napi object.
 //!
-//! Post-spec-008 reshape:
-//! - The TS facade owns its own `Composition` class that stores `NapiPrompt` handles and
-//!   calls `NapiPrompt::render_prompt` directly — no registry needed, no `#[napi] Composition`.
-//! - The napi `Composition` class and its `append`/`resolve`/`fromMessages` methods are
-//!   **demoted to plain Rust** (no `#[napi]`) so they no longer appear on the JS surface
-//!   (SC-001 / T046).
-//! - [`Message`] is kept as a `#[napi(object)]` because the TS facade imports it as a type
-//!   from the addon's generated `index.d.ts`.
-//! - [`MessageEntry`] is demoted to plain Rust (the TS facade no longer uses it as a napi type;
-//!   the facade's own `CompositionEntry` interface takes a `Prompt` object, not a name string).
-//! - The `#[cfg(test)]` suites below are kept in Rust so `cargo test -p prompting-press-node`
-//!   exercises the kernel-direct resolve path without a Node runtime.
-//! - `Composition::resolve` now takes a `&BTreeMap<String, PromptDefinition>` directly (FR-019
-//!   / spec 008 Registry removal); the `Registry` type is gone from this crate.
+//! The TS facade owns its own `Composition` class that stores `NapiPrompt` handles and
+//! calls `NapiPrompt::render_prompt` directly — no registry needed, no `#[napi] Composition`.
+//! The napi `Composition` struct and its `append`/`resolve` methods are plain Rust (not `#[napi]`)
+//! so they do not appear on the JS surface — they are used only by the `#[cfg(test)]` suites that
+//! exercise the kernel-direct resolve path without a Node runtime.
+//! [`Message`] is kept as a `#[napi(object)]` because the TS facade imports it as a type from the
+//! addon's generated `index.d.ts`.
+//! `Composition::resolve` takes a `&BTreeMap<String, PromptDefinition>` directly; the `Registry`
+//! type is gone from this crate.
 
 use std::collections::BTreeMap;
 
@@ -28,10 +23,10 @@ use crate::marshal::to_kernel_value;
 
 /// One resolved message in a composition's output: a role-tagged rendered string.
 ///
-/// The Node mirror of the consumer's `Message` (data-model §Message). `role` is the prompt
-/// definition's role stringified (`"system"` / `"user"` / `"assistant"`); `text` is that prompt
-/// rendered with the entry's own validated value. Surfaced as a plain JS object `{ role, text }`;
-/// a message is produced by [`Composition::resolve`], never constructed from JS.
+/// `role` is the prompt definition's role stringified (`"system"` / `"user"` / `"assistant"`);
+/// `text` is that prompt rendered with the entry's own validated value. Surfaced as a plain JS
+/// object `{ role, text }`; a message is produced by [`Composition::resolve`], never constructed
+/// from JS.
 #[derive(Clone, Debug)]
 #[napi(object)]
 pub struct Message {
@@ -112,8 +107,7 @@ impl Composition {
     /// Used by `#[cfg(test)]` suites; the public JS path is the TS facade's own `Composition`
     /// class (which calls `NapiPrompt::render_prompt` directly, no registry needed).
     ///
-    /// `defs` is a plain `BTreeMap<String, PromptDefinition>` — no `Registry` type (FR-019 /
-    /// spec 008 removal).
+    /// `defs` is a plain `BTreeMap<String, PromptDefinition>`.
     ///
     /// # Errors
     /// - `load` — an entry's name is absent from `defs`.

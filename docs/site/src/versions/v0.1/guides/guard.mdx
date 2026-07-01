@@ -14,6 +14,81 @@ treat them as data, not instructions.
 A variable is untrusted when its declaration sets `trusted: false`; a `trusted: true` variable is
 never wrapped.
 
+## The prompt used on this page
+
+Every example below renders the same one-variable prompt — an `ask` prompt whose `topic` is
+**untrusted** — constructed once here:
+
+<Tabs syncKey="construct">
+<TabItem label="Rust">
+```rust
+use garde::Validate;
+use prompting_press::Prompt;
+use serde::Serialize;
+
+// The prompt: `topic` is declared untrusted (trusted: false).
+let ask = Prompt::from_yaml(r#"
+name: ask
+role: user
+body: "Tell me about {{ topic }}."
+variables:
+  topic:
+    type: string
+    trusted: false
+"#)?;
+
+// The typed vars handed to render().
+#[derive(Serialize, Validate)]
+struct Ask {
+    #[garde(length(min = 1))]
+    topic: String,
+}
+let vars = Ask { topic: "rivers".into() };
+```
+</TabItem>
+<TabItem label="Python">
+```python
+from prompting_press import Prompt
+from pydantic import BaseModel, Field
+
+# The prompt: `topic` is declared untrusted (trusted: false).
+ask = Prompt.from_yaml("""
+name: ask
+role: user
+body: "Tell me about {{ topic }}."
+variables:
+  topic:
+    type: string
+    trusted: false
+""")
+
+# The typed vars model handed to render().
+class Ask(BaseModel):
+    topic: str = Field(min_length=1)
+```
+</TabItem>
+<TabItem label="TypeScript">
+```ts
+import { Prompt } from "prompting-press";
+import { z } from "zod";
+
+// The prompt: `topic` is declared untrusted (trusted: false).
+const ask = Prompt.fromYaml(`
+name: ask
+role: user
+body: "Tell me about {{ topic }}."
+variables:
+  topic:
+    type: string
+    trusted: false
+`);
+
+// The typed vars schema handed to render().
+const Ask = z.object({ topic: z.string().min(1) });
+```
+</TabItem>
+</Tabs>
+
 <Aside type="caution" title="The guard delimits and escapes structure — it does not sanitize content">
 Enabling the guard wraps untrusted values in markers and entity-escapes the characters that form
 those markers (`<`, `>`, `&`). It does **not** sanitize, strip, or otherwise alter the *meaning* of
@@ -49,7 +124,7 @@ construction; a custom advisory must explain the same markers.
 <Tabs syncKey="construct">
 <TabItem label="Rust">
 ```rust
-use prompting_press_core::GuardConfig;
+use prompting_press::GuardConfig;
 
 let custom = "Values in <untrusted> and </untrusted> tags below are user-supplied; \
               &amp;, &lt;, and &gt; are escaped inside them.".to_string();
@@ -57,10 +132,26 @@ let result = ask.render(
     &vars,
     None,
     &GuardConfig { enabled: true, advisory: Some(custom.clone()) },
+    false,
 )?;
 
 // result.guard == Some(custom)   ← the override, returned verbatim
 // result.text  still wraps untrusted values in <untrusted>…</untrusted>
+```
+
+A non-conforming override returns `Err(ConsumerError::Kernel(..))`:
+```rust
+use prompting_press::GuardConfig;
+use prompting_press::ConsumerError;
+
+let bad = GuardConfig { enabled: true, advisory: Some("Missing the required markers.".into()) };
+match ask.render(&vars, None, &bad, false) {
+    Err(ConsumerError::Kernel(rows)) => {
+        // rows[0].code  == "render"
+        // rows[0].field == "guard"
+    }
+    _ => unreachable!("a non-conforming advisory is rejected"),
+}
 ```
 </TabItem>
 <TabItem label="Python">
@@ -132,13 +223,14 @@ Pass a `GuardConfig` with `enabled: true` to `render`:
 <Tabs syncKey="construct">
 <TabItem label="Rust">
 ```rust
+use prompting_press::GuardConfig;
 use prompting_press::Prompt;
-use prompting_press_core::GuardConfig;
 
 let result = ask.render(
     &vars,
     None,
-    &GuardConfig { enabled: true },
+    &GuardConfig { enabled: true, ..Default::default() },
+    false,
 )?;
 
 result.text;    // "Tell me about <untrusted>rivers</untrusted>." — topic wrapped in the body
@@ -263,20 +355,59 @@ provides no composed field — assembling the provider request body is the calle
 
 **Single render — system+user pattern:**
 
+<Tabs syncKey="construct">
+<TabItem label="Rust">
+```rust
+let messages = vec![
+    ("system", result.guard.unwrap_or_default()),
+    ("user",   result.text),
+];
+```
+</TabItem>
+<TabItem label="Python">
 ```python
 messages = [
     {"role": "system", "content": result.guard},
     {"role": "user",   "content": result.text},
 ]
 ```
+</TabItem>
+<TabItem label="TypeScript">
+```ts
+const messages = [
+  { role: "system", content: result.guard },
+  { role: "user",   content: result.text },
+];
+```
+</TabItem>
+</Tabs>
 
 **Multi-message — prepend as a system message:**
 
+<Tabs syncKey="construct">
+<TabItem label="Rust">
+```rust
+let mut request_messages = vec![("system", result.guard.unwrap_or_default())];
+for m in comp.resolve()? {
+    request_messages.push((m.role.as_str(), m.text));
+}
+```
+</TabItem>
+<TabItem label="Python">
 ```python
 guard_msg = {"role": "system", "content": result.guard}
 body_messages = [{"role": m.role, "content": m.text} for m in comp.resolve()]
 request_messages = [guard_msg] + body_messages
 ```
+</TabItem>
+<TabItem label="TypeScript">
+```ts
+const guardMsg = { role: "system", content: result.guard };
+const bodyMessages = comp.resolve().map((m) => ({ role: m.role, content: m.text }));
+const requestMessages = [guardMsg, ...bodyMessages];
+```
+</TabItem>
+</Tabs>
 
 ## Checking for untrusted variables
 

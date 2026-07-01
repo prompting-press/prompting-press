@@ -96,6 +96,26 @@ description: "Task list for spec 012 — native docs versioning, snapshot-per-re
 
 ---
 
+## Phase 7: Convergence — per-version whole-site builds + redirect-at-root + banner (2026-06-30 iteration)
+
+**Goal**: satisfy FR-004/FR-017/FR-019/FR-020 via the per-version-build model — every version is an independent full native Starlight build under its own `base` prefix (`next` → `/next/`, released minors → `/vX.Y/`); the bare root `/` is a thin manifest-driven redirect to the latest released version; the dropdown links across prefixes to the equivalent page; non-latest builds bake in an old-version banner. No new dependency, no platform migration, no third-party plugin (research R9/R10/R11).
+
+**Independent test**: run the multi-build; confirm `dist/v0.1/` and `dist/next/` are each a complete native Starlight site (sidebar, ToC, own Pagefind search), `dist/index.html` redirects to `/v{latest}/` with a canonical link, the dropdown on any page links to the equivalent slug under another version's prefix (degrading to that version's index when absent), non-latest builds show the "old version → latest X.Y" banner + carry noindex, and the api-ref freshness gate still passes.
+
+- [ ] TC01 [P7] Parameterize the Astro/Starlight build by version: make `astro.config.mjs` read a build-target (env var, e.g. `PP_DOCS_BASE` / `PP_DOCS_VERSION`) to set `base` (`/next/` or `/vX.Y/`) and the page `<title>`/version context. Default (unset) keeps the current dev behavior. **GATE**: `PP_DOCS_BASE=/v0.1/ astro build` emits pages+assets under `/v0.1/`.
+- [ ] TC02 [P7] Build-orchestration script `docs/site/scripts/build-versions.mjs`: read `versions.json`; for each version (`next` + every released minor) STAGE its tree into `src/content/docs/` (copy `src/versions/vX.Y/` for releases; the working tree is already there for `next`), run `astro build` with that version's `base` + `--outDir dist/<prefix>`, then RESTORE `src/content/docs/`. Assemble all under one `dist/`. Deterministic + restores cleanly on failure. **GATE**: one run produces `dist/next/` + `dist/v0.1/`, each a full site; `src/content/docs/` restored afterward.
+- [ ] TC03 [P7] Root redirect: a root build (or a post-step) emits `dist/index.html` = `src/pages/index.astro`-style meta-refresh + `<link rel="canonical" href="/v{latest}/">` + `<noscript>` link + `location.replace()`, with `{latest}` read from `versions.json` (no hardcode). **GATE**: opening `dist/index.html` redirects to `/v{latest}/`; canonical tag present; target tracks the manifest.
+- [ ] TC04 [P7] Cross-prefix dropdown (FR-002/FR-003): rewrite `VersionSelect.astro` `hrefFor` for the uniform prefix scheme — each entry links to `/{targetPrefix}/{currentSlug}/` when the slug is in that version's `slugs[]`, else `/{targetPrefix}/` (graceful degradation). Drop the old bare-path/`isLatest`+`next`-collapse logic. Current version highlighted; newest-first; `next` labeled distinctly. The dropdown is baked from the CURRENT manifest in EVERY version's build (rebuild-all-every-deploy, decided 2026-06-30), so an older version's frozen pages list newer versions released later — no runtime fetch / JS needed. **GATE**: from `/v0.1/reference/rust/`, selecting `next` → `/next/reference/rust/` (or `/next/` if absent); three entries → three distinct prefixed URLs; a simulated newer version appears in an older version's rebuilt dropdown.
+- [ ] TC05 [P7] Old-version banner (FR-020): a component baked into every non-latest build (`next` + non-latest pinned) renders a Starlight `<Aside>` "You are looking at an old version; `<a href=/v{latest}/{slug-or-index}>X.Y</a>` is the latest version", label + href from the manifest. Absent on the latest build. **GATE**: banner present in `dist/next/` + `dist/v<old>/` pages, absent in `dist/v{latest}/`.
+- [ ] TC06 [P7] noindex + canonical (FR-017/SC-008): non-latest builds (`next` + non-latest pinned) emit `<meta name="robots" content="noindex">`; the latest-release build is indexable and its pages carry a self-canonical; the root redirect carries the canonical to `/v{latest}/`. **GATE**: built HTML reflects this per version.
+- [ ] TC07 [P7] Populate `next.slugs` (cross-link degradation): the build enumerates the `next` tree's slugs into the manifest's `next` entry so the dropdown can land cross-version links on the equivalent `/next/` page (today `next.slugs=[]`). **GATE**: `next` entry lists its page slugs; dropdown to `/next/` preserves the slug where present. (Rebuild-all-every-deploy means every build sees the current manifest, so this only needs the `next` slug set kept current — no per-build staleness.)
+- [ ] TC08 [P7] Re-snapshot v0.1 from corrected content: `node docs/site/scripts/snapshot-docs.mjs --version 0.1.0` so `src/versions/v0.1/` carries the audit's Tier-1/Tier-2 doc corrections. **GATE**: idempotent (twice-run zero diff); v0.1 tree reflects corrected docs.
+- [ ] TC09 [P7] Verify (SC-009/SC-010): `node docs/site/scripts/build-versions.mjs` green; `dist/{index.html, next/, v0.1/}` present; each version full native chrome + own search; root redirects; dropdown cross-links; banner + noindex correct; `check-api-refs-fresh.sh` passes; wire `build-versions.mjs` into `docs.yml` (replacing the single `astro build`). **GATE**: all checks green; CI build path updated.
+
+**Checkpoint (Phase 7)**: every version is an independent full Starlight build under its prefix; root redirects to the latest released version; the dropdown links across prefixes; non-latest builds carry the old-version banner + noindex — FR-004/FR-017/FR-019/FR-020 + SC-002/SC-008/SC-009/SC-010 satisfied.
+
+---
+
 ## Dependencies & order
 
 - **Phase 1 blocks all** (structure + manifest + version helper).
@@ -103,6 +123,7 @@ description: "Task list for spec 012 — native docs versioning, snapshot-per-re
 - The snapshot task (Phase 4) needs version.mjs + manifest; it's what populates versions for the route/dropdown to show.
 - Release wiring (Phase 5) needs the snapshot task.
 - Phase 6 is final verification.
+- Phase 7 (2026-06-30 iteration) builds on the shipped route/manifest/snapshot: TC01 (compiled content) blocks TC02; TC02/TC03 (StarlightPage render + root/next routing) block TC04/TC05/TC06; TC07 (re-snapshot) needs the corrected docs content; TC08 verifies all.
 
 ## MVP scope
 

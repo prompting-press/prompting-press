@@ -1,5 +1,4 @@
-//! The Node agreement + provenance lint — [`CheckReport`] and [`Finding`] napi types
-//! (spec 003 US3 / FR-016..020; constitution Principle IV / C-04/C-09; US3).
+//! The Node agreement + provenance lint — [`CheckReport`] and [`Finding`] napi types.
 //!
 //! ## Zero engine logic (C-01 / Principle I)
 //!
@@ -32,11 +31,11 @@ use napi_derive::napi;
 
 use prompting_press::FindingKind;
 
-/// The output of [`check`]: an ordered, read-only list of [`Finding`]s. Empty ⇒ the lint passed.
+/// The output of a lint check: an ordered, read-only list of [`Finding`]s. Empty ⇒ the lint passed.
 ///
-/// The Node mirror of the consumer's [`prompting_press::CheckReport`] (data-model §CheckReport;
-/// FR-020). Surfaced **1:1** — the binding adds nothing and interprets nothing. Read-only class
-/// with read-only accessors; a report is produced by [`check`], never constructed from JS.
+/// The Node mirror of the consumer's [`prompting_press::CheckReport`]. Surfaced **1:1** — the
+/// binding adds nothing and interprets nothing. Read-only class with read-only accessors; a report
+/// is produced by `prompt.check()`, never constructed from JS.
 #[napi]
 pub struct CheckReport {
     findings: Vec<Finding>,
@@ -52,7 +51,7 @@ impl CheckReport {
     }
 
     /// `report.passed()` — `true` iff there are no findings (the lint passed). Reads clearly at a
-    /// CI gate (`if (!check(reg).passed()) process.exit(1)`).
+    /// CI gate (`if (!prompt.check().passed()) process.exit(1)`).
     #[napi]
     #[must_use]
     pub fn passed(&self) -> bool {
@@ -84,18 +83,17 @@ impl CheckReport {
     }
 }
 
-/// One actionable lint finding, read-only from JS (FR-020).
+/// One actionable lint finding, read-only from JS.
 ///
-/// The Node mirror of the consumer's [`prompting_press::Finding`]. It names the `prompt`, the
-/// `variant` where applicable (`null` for a prompt-level provenance finding), the failure `kind`
-/// (a stable snake_case discriminant string — see the module docs), and a human-readable `detail`.
-/// The `detail` carries no bound-value content (SEC-004 — it is built by the consumer from names
-/// only). Surfaced as a plain JS object with all four fields
+/// Names the `prompt`, the `variant` where applicable (`null` for a prompt-level finding), the
+/// failure `kind` (a stable snake_case discriminant string — see the module docs), and a
+/// human-readable `detail`. The `detail` carries no bound-value content (it is built by the
+/// consumer from prompt/field names only). Surfaced as a plain JS object with all four fields
 /// (the natural shape for the `findings` array the TS facade iterates / matches on).
 #[derive(Clone)]
 #[napi(object)]
 pub struct Finding {
-    /// The prompt's registry name.
+    /// The prompt's name.
     pub prompt: String,
     /// The variant the finding pertains to; `None` (`undefined` in JS) for a prompt-level
     /// provenance finding.
@@ -104,7 +102,7 @@ pub struct Finding {
     /// Currently always `"untrusted_without_guard"`. The kind's inner datum is echoed in
     /// [`detail`](Self::detail).
     pub kind: String,
-    /// A human-readable, actionable description (FR-020). Carries no bound-value content.
+    /// A human-readable, actionable description. Carries no bound-value content.
     pub detail: String,
 }
 

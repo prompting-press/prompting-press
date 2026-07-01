@@ -15,21 +15,20 @@
 //!
 //! 1. **Prompt** ([`Prompt`]) — an immutable, validating facade over a [`PromptDefinition`].
 //!    Construct from YAML, JSON, TOML, or a built object; every construction path enforces
-//!    shape validity, template parseability, and template↔variables agreement (FR-020 /
-//!    Principle IV). Post-reshape there is no Registry; prompts are self-contained values.
+//!    shape validity, template parseability, and template↔variables agreement. Prompts are
+//!    self-contained values; no Registry lookup table is needed.
 //! 2. **Validate-then-render** ([`Prompt::render`]) — pass a typed Vars value to a `Prompt`;
 //!    the vars are validated **once** (before any templating), serialized, and handed to the
-//!    kernel, which returns a [`RenderResult`] (text + provenance hashes). Byte-identical
-//!    output to the pre-reshape path (FR-016).
+//!    kernel, which returns a [`RenderResult`] (text + provenance hashes). Hashes are
+//!    byte-identical across Rust, Python, and TypeScript because all three share the same kernel.
 //! 3. **The agreement + origin lint** ([`Prompt::check`]) — a pure advisory pass on a single
-//!    `Prompt` that reports untrusted-input-without-guard findings. Agreement / parse /
-//!    reserved-name hard arms are enforced at construction; `check()` is advisory-only
-//!    post-reshape.
+//!    `Prompt` that reports untrusted-input-without-guard findings. Agreement, parse, and
+//!    reserved-name invariants are enforced at construction; `check()` is advisory-only.
 //! 4. **Composition** ([`Composition`] / [`Message`]) — an explicit, ordered `Vec` of
 //!    `(Prompt, vars, variant)` entries (`append`, never `.chain()`) that resolves to an
-//!    ordered list of `{role, text}` [`Message`]s (FR-012/013). No Registry needed.
+//!    ordered list of `{role, text}` [`Message`]s. No Registry needed.
 //!
-//! ## Error normalization boundary (roadmap decision C-06)
+//! ## Error normalization boundary
 //!
 //! Every fallible call surfaces exactly one error type: [`ConsumerError`], carrying the
 //! common structured shape `[{field, code, message}]` ([`FieldError`]). The two **native**
@@ -38,9 +37,9 @@
 //! small, **closed vocabulary** (see [`error::code`]) — `validation`, `unknown_variant`,
 //! `undefined_variable`, `parse`, `render`, `excluded_feature`, `load` — so a consumer can
 //! `match` on `code` stably. Error messages are scrubbed: raw bound-value content never
-//! reaches a message or a log derived from it (FR-014/015).
+//! reaches a message or a log derived from it.
 //!
-//! ## This crate wraps the kernel — no logic is duplicated (roadmap decision C-01)
+//! ## This crate wraps the kernel — no logic is duplicated
 //!
 //! Rendering, the agreement analysis, variant resolution, and SHA-256 hashing live **once**,
 //! in [`prompting_press_core`]; this crate adds **none** of them. [`Prompt::render`] delegates
@@ -50,17 +49,16 @@
 //! idiomatic render/compose ergonomics, and error normalization. Cross-language byte-identity
 //! is therefore a structural property of the shared core (constitution Principle I).
 //!
-//! ## Boundary: no I/O, no token counting, output-model is metadata only (roadmap decision C-03)
+//! ## Boundary: no I/O, no token counting, output-model is metadata only
 //!
 //! - **No I/O.** The crate reads no files and opens no sockets. The caller hands in
 //!   already-read YAML/JSON/TOML **text** ([`Prompt::from_yaml`] / [`from_json`](Prompt::from_json) /
 //!   [`from_toml`](Prompt::from_toml)) or a constructed [`PromptDefinition`] ([`Prompt::new`]).
 //! - **`output_model` is carried as metadata only.** If a definition names an output model,
 //!   it is echoed through and **never parsed or resolved** by this crate.
-//! - **No token counting.** The token-count hook was dropped (spec 003, F4) and deferred to
-//!   a later spec; the crate ships no token counter and exposes no token-count seam.
+//! - **No token counting.** The crate ships no token counter and exposes no token-count seam.
 //!
-//! ## The three-sets invariant (spec Assumptions / critique E1)
+//! ## The three-sets invariant
 //!
 //! Three field-name sets are in play for any one prompt, and the caller is responsible for
 //! keeping the **third** aligned with the first two:
@@ -76,10 +74,10 @@
 //! value map missing the referenced root, so the kernel's strict-undefined environment fires
 //! and surfaces as a loud [`ConsumerError::Kernel`] carrying an
 //! [`undefined_variable`](error::code::UNDEFINED_VARIABLE) row — never an empty render.
-//! Closing this gap in-library would require per-prompt type registration, which clarify Q3
-//! deliberately rejected for v1.
+//! Closing this gap in-library would require per-prompt type registration, which v1 deliberately
+//! defers.
 //!
-//! ## The `check()` trust/guard convention (roadmap decision C-09)
+//! ## The `check()` trust/guard convention
 //!
 //! A prompt that declares one or more `trusted: false` variables is expected to carry a
 //! top-level `"guard"` key in its `meta` (or `metadata`) map. If such a prompt declares a
@@ -99,7 +97,7 @@
 //! use prompting_press::{Prompt, CheckReport};
 //!
 //! // In CI, `prompt_doc` would be the text of a repo YAML file the caller already read
-//! // (this crate does no I/O — roadmap decision C-03). Here it is inline.
+//! // (this crate does no I/O). Here it is inline.
 //! let prompt_doc = r#"
 //! name: greet
 //! role: user
@@ -163,9 +161,6 @@
 //! assert_eq!(result.template_hash.len(), 64); // lowercase SHA-256 hex
 //! ```
 
-/// Re-export of the kernel, so consumers can reach core types through one entry point.
-pub use prompting_press_core as core;
-
 /// Re-export the generated `PromptDefinition` shape and its supporting types from the
 /// kernel, so consumers reach them through this crate's public surface rather than
 /// depending on the kernel directly. This crate re-exports but NEVER hand-edits the
@@ -175,18 +170,20 @@ pub use prompting_press_core::generated::prompt_definition::{
     PromptDefinition, PromptVariable, PromptVariant,
 };
 
-/// Re-export the kernel's `RenderResult` (library-owned render output; FR-009). The
-/// consumer surfaces it 1:1 rather than redefining a parallel shape (C-01).
-pub use prompting_press_core::RenderResult;
+/// Re-export the kernel's `RenderResult` (the render output) and `GuardConfig` (the render
+/// option) at the crate root. The consumer surfaces them 1:1 rather than redefining parallel
+/// shapes — and re-exporting both at the root keeps the public surface consistent (every type a
+/// caller needs for `render` — `Prompt`, `GuardConfig`, `RenderResult`, `ConsumerError` — is
+/// reachable directly from `prompting_press::`, matching the Python/TypeScript top-level exports).
+pub use prompting_press_core::{GuardConfig, RenderResult};
 
 /// The normalized error surface: [`ConsumerError`] + [`FieldError`], the ONLY error type on
 /// this crate's public API. garde `Report` / kernel `KernelError` are normalized here and
-/// never leak (Principle VI / C-06; FR-014/FR-015).
+/// never leak onto the public signature.
 pub mod error;
 
 /// Validate-then-render + `get_source` + advisory lint: all operations are methods on
-/// [`Prompt`] (spec 008 reshape). The free-fn entry points (`render`, `get_source`, `check`)
-/// and the `Registry` lookup table are removed; the `Prompt` is now the primary type.
+/// [`Prompt`]. The `Prompt` is the primary type.
 pub mod prompt;
 
 /// The advisory lint types: [`CheckReport`], [`Finding`], [`FindingKind`]. The lint itself
@@ -195,7 +192,7 @@ pub mod prompt;
 pub mod check;
 
 /// Multi-message composition: an explicit ordered `Vec` of `(Prompt, vars, variant)` entries
-/// (`append`, never `.chain()`) resolving to `[{role, text}]` messages (FR-012/013).
+/// (`append`, never `.chain()`) resolving to `[{role, text}]` messages.
 /// No Registry — each entry holds an owned `Prompt`.
 pub mod compose;
 
@@ -210,10 +207,7 @@ pub use check::{CheckReport, Finding, FindingKind};
 /// `prompting_press::{Composition, Message}`.
 pub use compose::{Composition, Message};
 
-/// Returns the underlying kernel version.
-///
-/// Trivial placeholder that calls into the kernel, making the dependency edge
-/// load-bearing rather than declarative-only.
+/// Returns the version string of the underlying rendering kernel.
 #[must_use]
 pub fn core_version() -> &'static str {
     prompting_press_core::version()

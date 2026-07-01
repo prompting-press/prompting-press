@@ -27,7 +27,7 @@ types, Rust serde structs) are **code-generated** from it at build time and neve
 | `name` | `string` | Yes | Logical prompt name; the caller's reference key. |
 | `role` | `"system" \| "user" \| "assistant"` | Yes | Conversational role; first-class metadata the caller reads. Shared across all variants. |
 | `body` | `string` | Yes | The DEFAULT variant's template source. The root body IS the default arm; surfaced under reserved name 'default' with is_default=true. |
-| `variables` | `object` | No | Declared input variables, shared across all variants. Each entry declares the variable's type and input-trust origin. Default: `{}`. |
+| `variables` | `object` | No | Declared input variables, shared across all variants. Each entry declares the variable's type and input-trust flag. Default: `{}`. |
 | `variants` | `object` | No | Named alternative arms. Absent => the prompt has only the default (root body) arm. Each arm differs ONLY in body (+ optional opaque metadata). |
 | `output_model` | `string` | No | Optional OPAQUE reference to the caller's output model (e.g. 'NodeOutput'). Stored and echoed; never resolved, loaded, or parsed. Shared across variants. |
 | `metadata` | `object` | No | Arbitrary prompt-level metadata; library-OPAQUE (may include uninterpreted model/param hints, selection labels like weight/group/tags, or a `guard` key). Stored and echoed; never interpreted by the library. The prompt and each variant each carry exactly one `metadata` bag. |
@@ -43,7 +43,7 @@ per-language validator (Zod / Pydantic / garde) and are not part of this shape.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `type` | `"string" \| "integer" \| "number" \| "boolean" \| "array" \| "object" \| array` | Yes | JSON-Schema type keyword(s) for the variable. |
-| `trusted` | `boolean` | Yes | Per-field input-trust flag. `true` ⇒ a trusted input (never delimited). `false` ⇒ untrusted input: when the opt-in guard is enabled, the variable's interpolated value is wrapped in injection-resistant `<untrusted>…</untrusted>` delimiters in the rendered body, and the guard advisory references the markers. Replaces the former `origin` enum (trusted\\\|untrusted\\\|external) — with one fixed delimiter the untrusted/external distinction was no longer meaningful. Use `check()` to detect untrusted variables (`trusted: false`) that lack a declared guard. |
+| `trusted` | `boolean` | Yes | Per-field input-trust flag. `true` ⇒ a trusted input (never delimited). `false` ⇒ untrusted input: when the opt-in guard is enabled, the variable's interpolated value is wrapped in injection-resistant `<untrusted>…</untrusted>` delimiters in the rendered body, and the guard advisory references the markers. Use `check` to detect untrusted variables (`trusted: false`) that lack a declared guard. |
 | `validation_required` | `boolean` | No | When true, a validator covering this variable MUST be supplied when the Prompt is constructed. Orthogonal to `trusted` — it MAY mark any variable, trusted or not. Declarative metadata; enforcement is per-language: TypeScript (Zod) and Python (Pydantic) introspect the supplied validator and throw/raise at construction if this variable is uncovered, while Rust guarantees coverage structurally at compile time. The kernel never reads this field (validation-blind). Default: `false`. |
 | `description` | `string` | No | Optional human-readable description of the variable. |
 

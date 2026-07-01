@@ -70,8 +70,15 @@ jobs:
       - name: 'Install Python codegen deps (uv)'
         run: mise exec -- uv sync --project packages/python --group codegen --no-install-project --frozen
 
-      - name: Build
-        run: mise exec -- pnpm -C docs/site build
+      # TC09 (spec 012 Phase 7): build every version as an independent Starlight
+      # site and assemble them into one dist/.  build-versions.mjs:
+      #   - runs the full prebuild (gen-shape-table + gen-api-refs) for `next`
+      #   - stages each frozen tree, builds with the correct PP_DOCS_BASE prefix,
+      #     restores src/content/docs/ in a finally block
+      #   - emits dist/index.html → root redirect to /v{latest}/
+      # The deploy job force-pushes the assembled dist/ unchanged (no change needed there).
+      - name: Build (multi-version)
+        run: mise exec -- node docs/site/scripts/build-versions.mjs
 
       # Hand the built site to the deploy job. On PRs the deploy job is skipped,
       # so this is just a build-success check; on main it carries dist/ forward.

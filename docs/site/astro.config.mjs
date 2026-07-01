@@ -2,13 +2,38 @@
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 
+// ---------------------------------------------------------------------------
+// TC01: Per-version build parameterisation (Phase 7).
+//
+// The multi-build script (scripts/build-versions.mjs) sets these env vars to
+// produce a self-contained Starlight site for each version prefix:
+//
+//   PP_DOCS_BASE     — Astro `base`, e.g. "/next/" or "/v0.1/". Defaults to
+//                      "/" so that the normal dev / single-build experience is
+//                      unchanged when neither var is set.
+//   PP_DOCS_VERSION  — human-visible version label baked into the page title,
+//                      e.g. "v0.1" or "next". Defaults to "" (bare "Prompting
+//                      Press" title).
+//
+// Unset → current dev/single-build behaviour is preserved (base="/").
+// ---------------------------------------------------------------------------
+const docsBase    = process.env.PP_DOCS_BASE    ?? "/";
+const docsVersion = process.env.PP_DOCS_VERSION ?? "";
+
+// Normalize base: must start and end with "/" for Astro.
+const normalizedBase = docsBase.startsWith("/") ? docsBase : `/${docsBase}`;
+
+const siteTitle = docsVersion
+  ? `Prompting Press ${docsVersion}`
+  : "Prompting Press";
+
 // GitHub Pages root site: the repo is named `prompting-press.github.io`, so it
 // is served at the org root https://prompting-press.github.io/ (no subpath).
-// `site` is the canonical origin; `base` is "/" because there is no project
-// subpath. Adjust `site` if a custom domain is configured later.
+// `site` is the canonical origin; `base` is set per version for multi-builds.
+// Adjust `site` if a custom domain is configured later.
 export default defineConfig({
   site: "https://prompting-press.github.io",
-  base: "/",
+  base: normalizedBase,
   integrations: [
     starlight({
       components: {
@@ -16,8 +41,12 @@ export default defineConfig({
         SiteTitle: "./src/components/overrides/SiteTitle.astro",
         // T010: inject freshness footer ("docs current as of X.Y.Z") into every page
         Footer: "./src/components/overrides/Footer.astro",
+        // TC06: noindex + self-canonical meta injected into <head> per build
+        Head: "./src/components/overrides/Head.astro",
+        // TC05: server-rendered old-version banner prepended to article body
+        MarkdownContent: "./src/components/overrides/MarkdownContent.astro",
       },
-      title: "Prompting Press",
+      title: siteTitle,
       description:
         "A typed, versioned, variant-aware prompt-template library for Rust, Python, and TypeScript.",
       social: [

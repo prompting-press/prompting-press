@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://prompting-press.dev/schemas/prompt-definition.schema.json",
   "title": "PromptDefinition",
-  "description": "The single source of truth for a prompt's shape (constitution Principle VII / C-07). Per-language shapes (Pydantic v2 / TypeScript types / Rust serde structs) are code-generated from THIS document; it is never hand-mirrored. The library authors, generates, and round-trips this shape; it does not render, validate, or resolve it (Principle III — that lives in specs 002+). $id is a stable identity, not a live endpoint (research D5).",
+  "description": "The single source of truth for a prompt's shape. Per-language shapes (Pydantic v2 / TypeScript types / Rust serde structs) are code-generated from this document; it is never hand-mirrored. The library parses, generates, and round-trips this shape; it does not render, validate, or resolve it. The $id is a stable identity URI, not a live endpoint.",
   "type": "object",
   "additionalProperties": false,
   "required": ["name", "role", "body"],
@@ -23,7 +23,7 @@
     },
     "variables": {
       "type": "object",
-      "description": "Declared input variables, shared across all variants. Each entry declares the variable's type and input-trust origin.",
+      "description": "Declared input variables, shared across all variants. Each entry declares the variable's type and input-trust flag.",
       "additionalProperties": { "$ref": "#/$defs/PromptVariable" },
       "default": {}
     },
@@ -61,7 +61,7 @@
         },
         "trusted": {
           "type": "boolean",
-          "description": "Per-field input-trust flag (spec 015). `true` ⇒ a trusted input (never delimited). `false` ⇒ untrusted input: when the opt-in guard is enabled, the variable's interpolated value is wrapped in injection-resistant `<untrusted>…</untrusted>` delimiters in the rendered body, and the guard advisory references the markers. Replaces the former `origin` enum (trusted|untrusted|external) — with one fixed delimiter the untrusted/external distinction was no longer meaningful. Use `check()` to detect untrusted variables (`trusted: false`) that lack a declared guard."
+          "description": "Per-field input-trust flag. `true` ⇒ a trusted input (never delimited). `false` ⇒ untrusted input: when the opt-in guard is enabled, the variable's interpolated value is wrapped in injection-resistant `<untrusted>…</untrusted>` delimiters in the rendered body, and the guard advisory references the markers. Use `check()` to detect untrusted variables (`trusted: false`) that lack a declared guard."
         },
         "validation_required": {
           "type": "boolean",

@@ -1,0 +1,61 @@
+---
+/**
+ * MarkdownContent override — prepends a server-rendered old-version banner
+ * for non-latest builds (TC05 / FR-020), then delegates to the default
+ * Starlight MarkdownContent for the article body.
+ *
+ * Why MarkdownContent (not Head, PageTitle, or ContentPanel):
+ *   - It wraps exactly the article body — the right visual position.
+ *   - It is overridable in Starlight 0.41.1 (in the components schema).
+ *   - Injecting here means the banner is in the static HTML (zero JS required),
+ *     satisfying FR-020's "prominent banner" requirement for no-JS readers and
+ *     search-engine snapshots.
+ *
+ * PP_DOCS_IS_LATEST (env, set by build-versions.mjs):
+ *   "true"  → latest released build: no banner rendered.
+ *   "false" → non-latest build (next or any older pinned): banner rendered.
+ *   unset   → dev / single-build: no banner (preserve existing behaviour).
+ *
+ * The banner uses Starlight's own aside CSS classes (starlight-aside--caution)
+ * so it looks native without importing the MDX-only <Aside> component.
+ * The aside CSS is always loaded by Starlight's Page.astro (style/asides.css).
+ */
+import DefaultMarkdownContent from "@astrojs/starlight/components/MarkdownContent.astro";
+import versionsData from "../../data/versions.json";
+
+// process.env is available in Astro component frontmatter at SSG build time.
+const isLatestEnv = process.env.PP_DOCS_IS_LATEST; // "true" | "false" | undefined
+const isNonLatest = isLatestEnv === "false";        // only render banner when explicitly non-latest
+
+// Latest released version metadata (from the manifest — no hardcoded version).
+const latestEntry  = versionsData.versions.find((v) => v.isLatest);
+const latestMinor  = latestEntry?.minor ?? versionsData.latest;
+const latestHref   = `/v${latestMinor}/`;
+const latestLabel  = `v${latestMinor}`;
+---
+
+<DefaultMarkdownContent {...Astro.props}>
+  {isNonLatest && (
+    <aside
+      aria-label="Old version notice"
+      class="starlight-aside starlight-aside--caution old-version-banner"
+      data-pagefind-ignore
+    >
+      <p class="starlight-aside__title">
+        ⚠ You are viewing an older version of the docs
+      </p>
+      <div class="starlight-aside__content">
+        <a href={latestHref}>{latestLabel} is the latest version.</a>
+        {" "}Switch to it for up-to-date documentation.
+      </div>
+    </aside>
+  )}
+  <slot />
+</DefaultMarkdownContent>
+
+<style>
+  .old-version-banner {
+    /* Slight extra bottom margin to separate from the first heading */
+    margin-bottom: 1.5rem;
+  }
+</style>

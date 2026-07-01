@@ -24,20 +24,34 @@
  */
 export function stripJargon(str) {
 	let s = String(str ?? "");
-	// Drop parenthetical citation clusters: "(FR-010a)", "(constitution Principle VI v1.2.0)",
-	// "(spec 008)", "(Principle III)", "(roadmap decision C-09 ...)", "(C-07)".
-	s = s.replace(
-		/\s*\((?:constitution\s+|roadmap\s+decision\s+)?(?:Principle\s+[IVXLC]+|FR-[0-9A-Za-z]+|SC-[0-9]+|SEC-[0-9]+|C-[0-9]+|spec\s+[0-9]+)[^)]*\)/gi,
-		"",
+	// The internal-ID vocabulary that has no meaning to a docs reader. Kept as one
+	// alternation reused by the parenthetical, bracketed, and bare passes below.
+	//   FR-/SC-/SEC-/C-NN/TY-/CR-  IDs · spec NNN · constitution Principle X ·
+	//   roadmap decision · task IDs (T036) · decision/critique/finding IDs
+	//   (D2, E1/critique E1) · clarification/requirement tags (Q1, R7, F5, US3) ·
+	//   "data-model §Foo" citations.
+	const ID =
+		"(?:constitution\\s+|roadmap\\s+decision\\s+)?(?:Principle\\s+[IVXLC]+(?:\\s+v[0-9]+(?:\\.[0-9]+)*)?|FR-[0-9A-Za-z]+|SC-[0-9]+|SEC-[0-9]+|C-[0-9]+|CR-[0-9]+|TY-[0-9]+|spec\\s+[0-9]+|spec-[0-9]+|T[0-9]{2,}|critique\\s+E[0-9]+|decision\\s+D[0-9]+|D[0-9]+|US[0-9]+(?:\\s+scenario\\s+[0-9]+)?|[FQR][0-9]+|data-model\\s+§[A-Za-z]+)";
+	// 1. Parenthetical citation clusters, possibly multiple slash/comma-separated IDs:
+	//    "(FR-010a)", "(spec 008)", "(critique E1 / C-01)", "(US3 / F5; FR-022)", "(T045)".
+	const paren = new RegExp(
+		`\\s*\\((?:${ID})(?:\\s*[/,;&]\\s*(?:${ID}|[^)]*?))*\\)`,
+		"gi",
 	);
-	// Drop inline " (renamed from `provenance` in spec 008)" style notes that name specs.
+	s = s.replace(paren, "");
+	// 2. Bracketed trailing tags: "[FR-015]", "[FR-022]", "[n]".
+	s = s.replace(new RegExp(`\\s*\\[(?:${ID})\\]`, "gi"), "");
+	// 3. Inline " (renamed from `provenance` in spec 008)" style notes that name specs.
 	s = s.replace(/\s*\(renamed from `provenance` in spec [0-9]+\)/gi, "");
-	// Drop bare trailing/inline references like "per roadmap decision C-09" / "constitution Principle IV".
+	// 4. Bare trailing/inline references: "per roadmap decision C-09", "constitution Principle IV".
 	s = s.replace(
-		/\s*(?:per\s+)?(?:roadmap decision\s+C-[0-9]+|constitution Principle\s+[IVXLC]+)\b[^.]*/gi,
+		/\s*(?:per\s+)?(?:roadmap decision\s+C-[0-9]+|constitution Principle\s+[IVXLC]+(?:\s+v[0-9]+(?:\.[0-9]+)*)?)\b[^.]*/gi,
 		"",
 	);
-	// Collapse any doubled spaces the removals leave behind.
+	// Clean up punctuation/space the removals leave behind: " ." → ".", " ;" → ";",
+	// "( )" leftovers, and doubled spaces.
+	s = s.replace(/\(\s*\)/g, "");
+	s = s.replace(/\s+([.,;)])/g, "$1");
 	return s.replace(/\s{2,}/g, " ").trim();
 }
 

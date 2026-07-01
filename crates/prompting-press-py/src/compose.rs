@@ -34,7 +34,7 @@
 //! ## Eager validation at `append` — option (a) (no partial state)
 //!
 //! Each entry is validated + marshaled **eagerly at `append`**: the Pydantic vars are validated
-//! NOW via the US1 Python-validation path ([`render::validate_in_python`](crate::render)), the
+//! NOW via the Python-validation path ([`render::validate_in_python`](crate::render)), the
 //! validated payload is marshaled to the kernel's [`minijinja::Value`], and only then is the
 //! entry stored. On a validation failure the call raises
 //! [`PromptValidationError`](crate::error) and **stores nothing** — the composition is left
@@ -69,10 +69,9 @@ use crate::render::validate_in_python;
 
 /// One resolved message in a composition's output: a role-tagged rendered string.
 ///
-/// The Python mirror of the consumer's `Message` (data-model §Message). `role` is the prompt
-/// definition's role stringified (`"system"` / `"user"` / `"assistant"`); `text` is that prompt
-/// rendered with the entry's own validated vars. Read-only (`frozen`): a message is produced by
-/// [`Composition::resolve`], never constructed from Python.
+/// `role` is the prompt definition's role stringified (`"system"` / `"user"` / `"assistant"`);
+/// `text` is that prompt rendered with the entry's own validated vars. Read-only (`frozen`): a
+/// message is produced by [`Composition::resolve`], never constructed from Python.
 // `skip_from_py_object`: output-only — Python reads the getters, never passes a `Message` *in* —
 // so opt out of the implicit `FromPyObject` derive PyO3 0.29 would otherwise pull in.
 #[pyclass(
@@ -100,24 +99,24 @@ impl Message {
     }
 }
 
-/// One appended entry, captured after eager validation + marshaling (option (a)).
+/// One appended entry, captured after eager validation + marshaling.
 ///
 /// The vars are already marshaled into a [`minijinja::Value`] (the same type the kernel
 /// renders against). The `Prompt` is cloned via its `Py<Prompt>` reference — the pyclass
 /// is not `Clone`, but `Py<T>` is (it holds a reference-counted Python object pointer).
 struct Entry {
-    /// The bound `Prompt` object (the phase-4 replacement for a prompt name + registry lookup).
+    /// The bound `Prompt` object.
     prompt: Py<Prompt>,
-    /// The pre-validated, marshaled vars (the FFI bridge value — FR-003a), ready for the kernel.
+    /// The pre-validated, marshaled vars (the FFI bridge value), ready for the kernel.
     values: minijinja::Value,
     /// The selected variant (`None` ⇒ the reserved `default` / root body).
     variant: Option<String>,
 }
 
 /// An explicit, ordered sequence of `(Prompt, vars, variant?)` entries that resolves to a
-/// `list[Message]` in append order (FR-012). Built with `Composition()` +
+/// `list[Message]` in append order. Built with `Composition()` +
 /// [`append`](Self::append) or [`from_messages`](Self::from_messages); there is **no** fluent
-/// `.chain()` (FR-013).
+/// `.chain()`.
 #[pyclass(name = "Composition", module = "prompting_press")]
 pub struct Composition {
     /// Entries in append order — the resolved-message order (FR-012).
@@ -166,13 +165,13 @@ impl Composition {
     /// `append(prompt, vars, *, variant=None)` — eager-validate + marshal + store one entry.
     ///
     /// `prompt` is a `Prompt` object; `vars` is a constructed Pydantic model **instance**
-    /// (see module docs); it is validated **now** via the US1 Python-validation path and
+    /// (see module docs); it is validated **now** via the Python-validation path and
     /// marshaled to the kernel's value type before the entry is stored. On a validation failure
     /// this raises [`PromptValidationError`](crate::error::PromptValidationError) and **stores
     /// nothing** — the composition is left exactly as it was (no partial state).
     ///
     /// Takes `&mut self` and returns `None` (not `self`): the builder is intentionally **not**
-    /// fluent/chainable (FR-013).
+    /// fluent/chainable.
     ///
     /// # Errors
     /// [`PromptValidationError`](crate::error::PromptValidationError) — Pydantic rejected
@@ -206,14 +205,14 @@ impl Composition {
         format!("Composition(entries={}, names={:?})", names.len(), names)
     }
 
-    /// `resolve()` — resolve the composition to an ordered `list[Message]` (FR-012), rendering
+    /// `resolve()` — resolve the composition to an ordered `list[Message]`, rendering
     /// each entry — in append order — through the kernel.
     ///
-    /// For each entry, in order: call the kernel **directly** (critique E1 / C-01) with the
-    /// entry's bound `Prompt` definition and **pre-validated** value (vars were validated at
-    /// [`append`](Self::append)). The render result becomes
-    /// `Message { role: <def.role stringified>, text: result.text }`. Composition uses no
-    /// guard expansion — a default [`GuardConfig`] is passed, which leaves `text` unchanged.
+    /// For each entry, in order: calls the kernel directly with the entry's bound `Prompt`
+    /// definition and **pre-validated** value (vars were validated at [`append`](Self::append)).
+    /// The render result becomes `Message { role: <def.role stringified>, text: result.text }`.
+    /// Composition uses no guard expansion — a default [`GuardConfig`] is passed, which leaves
+    /// `text` unchanged.
     ///
     /// One entry's render failure (unknown variant, a strict-undefined reference, a parse/render
     /// error) propagates as the mapped Python exception and the partial result built so far is
@@ -222,7 +221,7 @@ impl Composition {
     /// # Errors
     /// - [`PromptRenderError`](crate::error::PromptRenderError) — the kernel rejected an
     ///   entry's render (unknown variant, a strict-undefined reference, a parse/render failure).
-    ///   `parse`/`render` detail is scrubbed (SEC-004).
+    ///   `parse`/`render` detail is scrubbed.
     fn resolve(&self, py: Python<'_>) -> PyResult<Vec<Message>> {
         let mut messages = Vec::with_capacity(self.entries.len());
 
@@ -258,7 +257,7 @@ impl Composition {
     /// The shared eager-validate + marshal + store step behind both [`append`](Self::append) and
     /// [`from_messages`](Self::from_messages).
     ///
-    /// Validates `vars` (a Pydantic model instance) via the US1 Python-validation path
+    /// Validates `vars` (a Pydantic model instance) via the Python-validation path
     /// ([`validate_in_python`] with `data = None` — the instance path:
     /// `type(vars).model_validate(vars.model_dump(mode="json"))`), marshals the validated
     /// payload to the kernel's value type, and only then pushes the entry. On any failure

@@ -3,7 +3,16 @@ title: "Variants"
 description: "Declare named alternative bodies that share a prompt's variables, and select one at render."
 ---
 
-import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside, Code, Tabs, TabItem } from '@astrojs/starlight/components';
+import constructInlineRust from '../../../../samples/rust/examples/guides_variants_construct_inline.rs?raw';
+import constructInlinePy from '../../../../samples/python/examples/guides_variants_construct_inline.py?raw';
+import constructInlineTs from '../../../../samples/typescript/examples/guides_variants_construct_inline.ts?raw';
+import selectRust from '../../../../samples/rust/examples/guides_variants_select.rs?raw';
+import selectPy from '../../../../samples/python/examples/guides_variants_select.py?raw';
+import selectTs from '../../../../samples/typescript/examples/guides_variants_select.ts?raw';
+import discoverRust from '../../../../samples/rust/examples/guides_variants_discover.rs?raw';
+import discoverPy from '../../../../samples/python/examples/guides_variants_discover.py?raw';
+import discoverTs from '../../../../samples/typescript/examples/guides_variants_discover.ts?raw';
 
 A **variant** is a named alternative *body* for a prompt that shares the same declared `variables`,
 `role`, and `output_model`. Variants are the mechanism for parallel, coexisting wordings of the same
@@ -105,120 +114,33 @@ The same three-arm prompt can be built directly from a typed shape object — no
 
 <Tabs syncKey="construct">
 <TabItem label="Rust">
-```rust
-use prompting_press::{Prompt, PromptDefinition};
-
-let def: PromptDefinition = serde_json::from_value(serde_json::json!({
-    "name": "summary",
-    "role": "user",
-    "body": "Summarise the following article in {{ max_words }} words:\n\n{{ article }}",
-    "variables": {
-        "article":   { "type": "string",  "trusted": false },
-        "max_words": { "type": "integer", "trusted": true }
-    },
-    "variants": {
-        "concise":    { "body": "In one sentence, summarise: {{ article }}" },
-        "structured": {
-            "body": "Summarise {{ article }} as a title, three bullets, and a one-line conclusion.",
-            "metadata": { "group": "experiment-q4" }
-        }
-    }
-}))?;
-
-let summary = Prompt::new(def)?;   // same validation as Prompt::from_yaml
-summary.variants().contains_key("concise");   // true
-```
+<Code code={constructInlineRust} lang="rust" title="guides_variants_construct_inline.rs" />
 </TabItem>
 <TabItem label="Python">
-```python
-from prompting_press import Prompt
-
-summary = Prompt({
-    "name": "summary",
-    "role": "user",
-    "body": "Summarise the following article in {{ max_words }} words:\n\n{{ article }}",
-    "variables": {
-        "article":   {"type": "string",  "trusted": False},
-        "max_words": {"type": "integer", "trusted": True},
-    },
-    "variants": {
-        "concise":    {"body": "In one sentence, summarise: {{ article }}"},
-        "structured": {
-            "body": "Summarise {{ article }} as a title, three bullets, and a one-line conclusion.",
-            "metadata": {"group": "experiment-q4"},
-        },
-    },
-})   # same validation as Prompt.from_yaml
-list(summary.variants)   # ["concise", "structured"]
-```
+<Code code={constructInlinePy} lang="python" title="guides_variants_construct_inline.py" />
 </TabItem>
 <TabItem label="TypeScript">
-```ts
-import { Prompt, type PromptDefinition } from "prompting-press";
-
-const definition: PromptDefinition = {
-  name: "summary",
-  role: "user",
-  body: "Summarise the following article in {{ max_words }} words:\n\n{{ article }}",
-  variables: {
-    article: { type: "string", trusted: false },
-    max_words: { type: "integer", trusted: true },
-  },
-  variants: {
-    concise: { body: "In one sentence, summarise: {{ article }}" },
-    structured: {
-      body: "Summarise {{ article }} as a title, three bullets, and a one-line conclusion.",
-      metadata: { group: "experiment-q4" },
-    },
-  },
-};
-
-const summary = new Prompt(definition);   // same validation as Prompt.fromYaml
-Object.keys(summary.variants);            // ["concise", "structured"]
-```
+<Code code={constructInlineTs} lang="ts" title="guides_variants_construct_inline.ts" />
 </TabItem>
 </Tabs>
 
 ## Selecting a variant at render
 
 Pass the variant name at render; omit it (or pass `None` / no `variant`) for the default arm. The
-resolved name comes back on `RenderResult.variant`.
+resolved name comes back on `RenderResult.variant`, and `RenderResult.text` is that arm's rendered
+body — selecting a different variant produces a different `text`.
 
-<Tabs>
+<Tabs syncKey="construct">
 <TabItem label="Rust">
-```rust
-let summary = Prompt::from_yaml(yaml_text)?;
-
-let def = summary.render(&vars, None, &GuardConfig::default())?;          // default (root body)
-let concise = summary.render(&vars, Some("concise"), &GuardConfig::default())?;
-
-def.variant;     // => "default"
-concise.variant; // => "concise"
-```
+<Code code={selectRust} lang="rust" title="guides_variants_select.rs" />
 An unknown variant name returns `Err(ConsumerError::Kernel(..))` with code `"unknown_variant"`.
 </TabItem>
 <TabItem label="Python">
-```python
-summary = Prompt.from_yaml(yaml_text)
-
-default = summary.render(Vars, data=data)                    # default (root body)
-concise = summary.render(Vars, data=data, variant="concise")
-
-default.variant   # => "default"
-concise.variant   # => "concise"
-```
+<Code code={selectPy} lang="python" title="guides_variants_select.py" />
 An unknown variant name raises `PromptRenderError` with code `"unknown_variant"`.
 </TabItem>
 <TabItem label="TypeScript">
-```ts
-const summary = Prompt.fromYaml(yamlText);
-
-const def = summary.render(Vars, data);                       // default (root body)
-const concise = summary.render(Vars, data, { variant: "concise" });
-
-def.variant;     // => "default"
-concise.variant; // => "concise"
-```
+<Code code={selectTs} lang="ts" title="guides_variants_select.ts" />
 An unknown variant name throws `PromptRenderError` with code `"unknown_variant"`.
 </TabItem>
 </Tabs>
@@ -234,22 +156,13 @@ The `variants` accessor returns the declared variant map; read its keys to see w
 
 <Tabs>
 <TabItem label="Rust">
-```rust
-summary.variants().keys().collect::<Vec<_>>();   // ["concise", "structured"]
-summary.variants().contains_key("concise");      // true
-```
+<Code code={discoverRust} lang="rust" title="guides_variants_discover.rs" />
 </TabItem>
 <TabItem label="Python">
-```python
-list(summary.variants)              # ["concise", "structured"]
-"concise" in summary.variants       # True
-```
+<Code code={discoverPy} lang="python" title="guides_variants_discover.py" />
 </TabItem>
 <TabItem label="TypeScript">
-```ts
-Object.keys(summary.variants);      // ["concise", "structured"]
-"concise" in summary.variants;      // true
-```
+<Code code={discoverTs} lang="ts" title="guides_variants_discover.ts" />
 </TabItem>
 </Tabs>
 

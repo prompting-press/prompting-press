@@ -1,0 +1,32 @@
+---
+/**
+ * Head override — adds per-build SEO meta tags (TC06 / FR-017 / SC-008).
+ *
+ * PP_DOCS_IS_LATEST (env, set by build-versions.mjs):
+ *   "true"  → latest released build: indexable, emits self-canonical.
+ *   "false" → non-latest build (next or older pinned): emits noindex.
+ *   unset   → dev / single-build: no extra meta (preserve existing behaviour).
+ *
+ * The old-version banner (TC05 / FR-020) is handled by the MarkdownContent
+ * override (server-rendered static HTML, zero JS required).
+ */
+import DefaultHead from "@astrojs/starlight/components/Head.astro";
+
+// process.env is available in Astro component frontmatter at SSG build time.
+const isLatestEnv   = process.env.PP_DOCS_IS_LATEST; // "true" | "false" | undefined
+const isLatest      = isLatestEnv === "true";
+const isBuildTagged = isLatestEnv !== undefined && isLatestEnv !== "";
+const isNonLatest   = isBuildTagged && !isLatest;
+---
+
+<DefaultHead {...Astro.props}><slot /></DefaultHead>
+
+{/* TC06: noindex for non-latest builds (next + older pinned) */}
+{isNonLatest && (
+  <meta name="robots" content="noindex" />
+)}
+
+{/* TC06: self-canonical for the latest released build */}
+{isLatest && (
+  <link rel="canonical" href={Astro.url.href} />
+)}

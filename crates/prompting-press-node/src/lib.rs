@@ -40,10 +40,7 @@ pub mod marshal;
 pub mod prompt;
 pub mod render;
 
-/// Returns the kernel version, reached through the Rust consumer surface.
-///
-/// Retained from the spec-001 stub so the addon exports a trivial callable and the dependency
-/// edges onto `prompting-press`/`prompting-press-core` stay load-bearing. Surfaces as
+/// Returns the version string of the underlying rendering kernel. Surfaces as
 /// `coreVersion` in JS (napi renames snake_case → camelCase).
 #[napi]
 #[must_use]

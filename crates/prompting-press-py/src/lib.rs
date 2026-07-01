@@ -38,10 +38,7 @@ pub mod marshal;
 pub mod prompt;
 pub mod render;
 
-/// Returns the kernel version, reached through the Rust consumer surface.
-///
-/// Retained from the spec-001 stub so the extension module exports a trivial callable and the
-/// dependency edge onto `prompting-press`/`prompting-press-core` stays load-bearing.
+/// Returns the version string of the underlying rendering kernel.
 #[pyfunction]
 fn core_version() -> &'static str {
     prompting_press::core_version()

@@ -101,6 +101,67 @@ release-please oracle, CI glue, minor=new/patch=rollup) is pre-decided; research
   engines don't surface/duplicate stale versions. Latest is always the indexed, canonical surface.
 - **Rationale**: standard versioned-docs SEO hygiene (matches Docusaurus default behavior) without leaving
   Starlight.
+- **Refined (2026-06-30 iteration)**: the canonical/indexable surface is the latest **released** version at
+  the bare path; both `/next/…` (main) and older pinned `/vX.Y/…` carry `noindex`.
+
+## R9 — Per-version whole-site builds under Astro `base` prefixes (FR-019; added 2026-06-30 iteration)
+
+- **Decision**: build each documentation version as an **independent, complete native Starlight site** under
+  its own Astro `base` prefix, then assemble all builds into one deploy directory:
+  - `next` → `astro build` with `base:/next/`, content = the working tree `src/content/docs/` → `dist/next/`.
+  - each released minor `vX.Y` → `astro build` with `base:/vX.Y/`, content = the frozen `src/versions/vX.Y/`
+    tree → `dist/vX.Y/`.
+  - the bare root `dist/index.html` = a thin redirect to `/v{latest}/` (see R11).
+  Every page of every version is therefore rendered by Starlight's own native pipeline — full chrome (theme,
+  sidebar, ToC) **and a per-version Pagefind search index** (each build indexes its own output dir), with no
+  bespoke render route.
+- **Mechanism**: Astro `base` prefixes the WHOLE site (pages + assets), verified in the installed
+  `astro@7.0.3` config types; `astro build --outDir <dir>` targets each version's output. `docsLoader()` is
+  hardcoded to `src/content/docs/`, so an orchestration script STAGES each version's tree into
+  `src/content/docs/` (copy frozen tree in, build, restore), looping over the manifest. The existing
+  `docs.yml` publish step force-publishes the assembled `dist/` unchanged.
+- **Why this over the StarlightPage-custom-route idea (briefly considered, dropped)**: a custom route +
+  `StarlightPage` works, but forces every page through a bespoke render route, needs the versioned MDX
+  compiled out-of-collection, hand-threads the sidebar prop, and makes per-version search awkward. Building
+  the whole native site per version gives native sidebar + native per-version search + native routing for
+  free, and is simpler to reason about. R1's old objection to "N independent Starlight sites" (duplicates
+  config, breaks one shared dropdown) does not apply: config is NOT duplicated — it is ONE `astro.config`
+  parameterized by `base` + content source per build; the dropdown computes cross-prefix links from the
+  manifest, baked into each build.
+- **Cost**: zero new dependencies, no Starlight/Astro upgrade, no third-party plugin, no platform migration.
+  Build time scales ×N versions (acceptable for a handful of kept minors). The one moving part is the
+  stage-build-restore orchestration over `src/content/docs/`.
+- **Alternatives**: keep the `<pre>` dump (rejected — fails FR-019); StarlightPage custom routes (rejected —
+  more surface, awkward search, no native sidebar); a single build serving all trees (impossible — Starlight
+  owns one `docs` collection at the bare root, cannot host multiple full trees in one build).
+
+## R11 — Root redirect to latest released (FR-004/FR-017; added 2026-06-30 iteration)
+
+- **Decision**: the bare root build emits a thin `index.html` that redirects to `/v{latest}/`, with `latest`
+  read from `versions.json` at build time (auto-tracks the highest released minor — no hardcoded version).
+  Use a hand-written `src/pages/index.astro` (in the root build) emitting `<meta http-equiv="refresh">` +
+  `<link rel="canonical" href="/v{latest}/">` + a `<noscript>` fallback link + a `location.replace()` JS
+  path. (Astro's `redirects: { "/": "/v{latest}/" }` config is the simpler alternative but gives no canonical
+  tag / no-JS fallback; the hand-written page is preferred for SEO + graceful degradation.)
+- **Constraint**: GitHub Pages is a static host with no adapter, so a real 301 is impossible — Astro emits a
+  **client-side meta-refresh** regardless of mechanism (verified in `astro` config type docs). The canonical
+  link is what makes crawlers consolidate onto the latest version. This is the static-host ceiling and is
+  acceptable for a root→latest hop.
+- **Note**: this is the Docusaurus-style "no canonical content at root; root redirects to latest" model. It
+  reverses FR-017's original "bare path serves latest content" intent — recorded as the 2026-06-30 iteration
+  decision; every version (including the latest release) lives under a prefix.
+
+## R10 — starlight-versions reconsidered (still rejected; added 2026-06-30 iteration)
+
+- **Decision**: do NOT adopt the `starlight-versions` plugin; keep the in-repo manifest + snapshot + route
+  machinery and the R9 `StarlightPage` render.
+- **Re-evaluation**: the plugin has matured (0.0.x → 0.9.0; full-chrome archives via copy-into-`src/content/docs/<slug>/`;
+  clean peer-dep on Starlight ≥0.39 + Node ≥22.12), so spec 012's original *capability* objection no longer
+  holds. But two objections stand: (a) the maintainer still self-describes it as "early development" (a 0.x,
+  single-maintainer dependency) — the recorded stability objection; (b) its model serves the *current/unreleased*
+  docs at `/` and releases under slugs — the **inverse** of this project's required root=released. Adopting it
+  would also discard the already-built, already-tested machinery and would **reverse** spec 012's recorded
+  "no third-party plugin" clarify decision (which would itself require a documented decision reversal).
 
 ## Decisions summary
 
@@ -113,4 +174,6 @@ release-please oracle, CI glue, minor=new/patch=rollup) is pre-decided; research
 | R5 | snapshot/route use stable Node APIs; align/ document the 22↔25 skew | portable across deploy + local toolchains |
 | R6 | compute minor-vs-patch from prev-tag comparison; loud-fail on ambiguity | portable trigger; no silent wrong snapshot |
 | R7 | adapter seam to spec-011 generator; soft-coordinate, not hard-block | both specs progress independently |
-| R8 | non-latest noindex; latest canonical | versioned-docs SEO hygiene |
+| R8 | non-latest noindex; latest **released** canonical (`/next/` + pinned noindex) | versioned-docs SEO hygiene |
+| R9 | render versioned pages via Starlight `StarlightPage` (full chrome) | fixes the `<pre>` drift vs R1; no new dep / no upgrade |
+| R10 | keep in-repo machinery; do NOT adopt starlight-versions | stability + root=released model + no spec-decision reversal |

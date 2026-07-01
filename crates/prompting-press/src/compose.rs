@@ -1,28 +1,24 @@
-//! Multi-message composition (spec 008, T031; FR-012/FR-013).
+//! Multi-message composition.
 //!
 //! A [`Composition`] is an **explicit, ordered** sequence of `(Prompt, vars, variant)`
 //! entries that [`resolve`](Composition::resolve)s — in append order — to a `Vec<Message>`,
 //! where each [`Message`] is that `Prompt` rendered with its own validated vars and tagged
-//! with that prompt definition's role (FR-012). It is the few-shot / system+user sequence
-//! builder (US4).
+//! with that prompt definition's role. It is the few-shot / system+user sequence builder.
 //!
-//! ## Prompt-as-object, no Registry (spec 008 reshape)
+//! ## Prompt-as-object, no Registry
 //!
-//! Pre-reshape, `Composition` aggregated `(name, vars, variant)` entries and resolved
-//! names against a `Registry` passed to `resolve`. Post-reshape, each entry holds an owned
-//! (or borrowed-by-clone) `Prompt` — construction invariants are already enforced on the
-//! `Prompt`, so resolution never hits an "unknown prompt" path (the definition is right
-//! there). No `Registry` is required.
+//! Each entry holds an owned (or borrowed-by-clone) `Prompt` — construction invariants are
+//! already enforced on the `Prompt`, so resolution never hits an "unknown prompt" path (the
+//! definition is right there). No `Registry` is required.
 //!
-//! ## No `.chain()` (FR-013)
+//! ## No `.chain()`
 //!
 //! Construction is `new()` + [`append`](Composition::append) only — a plain ordered builder.
 //! There is deliberately **no** fluent `.chain()` API: it would collide with
-//! [`Iterator::chain`] and cannot cross the PyO3 / napi FFI boundary the later bindings need
-//! (constitution Principle VI). `append` takes `&mut self` and returns `Result<(), …>`, not
-//! `Self`, so it is not chainable.
+//! [`Iterator::chain`] and cannot cross the PyO3 / napi FFI boundary the later bindings need.
+//! `append` takes `&mut self` and returns `Result<(), …>`, not `Self`, so it is not chainable.
 //!
-//! ## Where validation happens — eager, at `append` (decision: option (a))
+//! ## Where validation happens — eager, at `append`
 //!
 //! The typing challenge is that each entry carries a *different* typed Vars type
 //! (`V: Serialize + Validate`), yet all entries live in one homogeneous `Vec`. Two shapes
@@ -41,7 +37,7 @@
 //! entries.
 //!
 //! `append` is therefore **fallible**: a garde failure surfaces immediately as a normalized
-//! [`ConsumerError::Validation`] naming the offending field (FR-014), and the composition is
+//! [`ConsumerError::Validation`] naming the offending field, and the composition is
 //! left exactly as it was before the call (the bad entry is not stored).
 //!
 //! ## resolve: render in order, no Registry
@@ -49,11 +45,11 @@
 //! [`resolve`](Composition::resolve) walks the stored entries in append order. For each it
 //! calls [`prompting_press_core::render`] directly on the entry's `Prompt`'s definition with
 //! the pre-validated value — reusing the same kernel call path (no rendering logic is
-//! duplicated here — FR-011 / C-01). Each result maps to
+//! duplicated here). Each result maps to
 //! `Message { role: <def.role stringified>, text: result.text }`. One entry's failure
 //! (unknown variant, a strict-undefined reference, a parse/render error) propagates as the
-//! normalized [`ConsumerError`]; the partial result is **not** returned as success (US4
-//! scenario 3). An empty composition resolves to `Ok(vec![])` (edge case F7).
+//! normalized [`ConsumerError`]; the partial result is **not** returned as success. An empty
+//! composition resolves to `Ok(vec![])` (edge case).
 
 use garde::Validate;
 use minijinja::Value;
@@ -63,8 +59,8 @@ use serde::Serialize;
 use crate::prompt::Prompt;
 use crate::ConsumerError;
 
-/// One resolved message in a composition's output: a role-tagged rendered string (data-model
-/// §Message). `role` is the prompt definition's role stringified (`"system"` / `"user"` /
+/// One resolved message in a composition's output: a role-tagged rendered string.
+/// `role` is the prompt definition's role stringified (`"system"` / `"user"` /
 /// `"assistant"`); `text` is that prompt rendered with the entry's own validated vars.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Message {
@@ -74,7 +70,7 @@ pub struct Message {
     pub text: String,
 }
 
-/// One appended entry, captured after eager validation + serialization (option (a)).
+/// One appended entry, captured after eager validation + serialization.
 ///
 /// The vars are already type-erased into a [`minijinja::Value`] (the same type the kernel
 /// renders against), so the `Vec` of entries is homogeneous despite each entry's source Vars
@@ -90,8 +86,8 @@ struct Entry {
 }
 
 /// An explicit, ordered sequence of `(Prompt, vars, variant)` entries that resolves to a
-/// `Vec<Message>` in append order (FR-012). Built with [`new`](Self::new) +
-/// [`append`](Self::append); there is no fluent `.chain()` (FR-013). No `Registry` needed.
+/// `Vec<Message>` in append order. Built with [`new`](Self::new) +
+/// [`append`](Self::append); there is no fluent `.chain()`. No `Registry` needed.
 #[derive(Debug, Clone, Default)]
 pub struct Composition {
     /// Entries in append order — the resolved-message order (FR-012).
@@ -99,7 +95,7 @@ pub struct Composition {
 }
 
 impl Composition {
-    /// Create an empty composition. An empty composition resolves to `Ok(vec![])` (F7).
+    /// Create an empty composition. An empty composition resolves to `Ok(vec![])`.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -118,21 +114,20 @@ impl Composition {
     }
 
     /// Append one `(prompt, vars, variant)` entry, **validating + serializing `vars` eagerly**
-    /// (option (a) — see module docs).
+    /// (see module docs).
     ///
     /// `vars` is validated **once** via garde *now*; on success it is serialized to the
-    /// kernel's value type ([`minijinja::Value::from_serialize`], FR-003a) and the entry is
-    /// stored (alongside a clone of `prompt`). On failure the garde report is normalized to
-    /// [`ConsumerError::Validation`] (FR-014) and **nothing is stored** — the composition is
+    /// kernel's value type ([`minijinja::Value::from_serialize`]) and the entry is stored
+    /// (alongside a clone of `prompt`). On failure the garde report is normalized to
+    /// [`ConsumerError::Validation`] and **nothing is stored** — the composition is
     /// unchanged, so a later [`resolve`](Self::resolve) never sees a half-validated entry.
     ///
     /// Takes `&mut self` and returns `Result<(), ConsumerError>` (not `Self`): the builder is
-    /// intentionally **not** fluent/chainable (FR-013).
+    /// intentionally **not** fluent/chainable.
     ///
     /// `V::Context: Default` so the whole-struct [`Validate::validate`] convenience applies
     /// (one validation pass over the entry's entire input set). Context-carrying validation
-    /// is intentionally out of v1 scope (scope discipline — TY-4 / one concrete path per
-    /// concern).
+    /// is intentionally out of v1 scope (one concrete path per concern).
     ///
     /// # Errors
     ///
@@ -147,12 +142,12 @@ impl Composition {
         V: Serialize + Validate,
         V::Context: Default,
     {
-        // Validate the entry's whole input set ONCE, eagerly (FR-002 semantics at append).
+        // Validate the entry's whole input set ONCE, eagerly (at append).
         // On failure the entry is NOT stored — the composition is left untouched.
         vars.validate().map_err(ConsumerError::from)?;
 
-        // Bridge the now-validated struct to the kernel's value type (FR-003a).
-        // `from_serialize` is infallible (ER-2): a custom-Serialize failure surfaces
+        // Bridge the now-validated struct to the kernel's value type.
+        // `from_serialize` is infallible: a custom-Serialize failure surfaces
         // downstream as a strict-undefined kernel error, never silently here.
         let values = Value::from_serialize(vars);
 
@@ -164,7 +159,7 @@ impl Composition {
         Ok(())
     }
 
-    /// Resolve the composition to an ordered `Vec<Message>` (FR-012), rendering each entry —
+    /// Resolve the composition to an ordered `Vec<Message>`, rendering each entry —
     /// in append order — through the kernel.
     ///
     /// For each entry, in order: call [`prompting_press_core::render`] on the entry's
@@ -172,31 +167,31 @@ impl Composition {
     /// [`append`](Self::append)). The render result becomes
     /// `Message { role: <def.role stringified>, text: result.text }`. Composition uses no
     /// guard expansion — a default [`GuardConfig`] is passed (guard text is never
-    /// concatenated into `text`; spec 002).
+    /// concatenated into `text`).
     ///
     /// One entry's render failure (unknown variant, strict-undefined reference,
     /// parse/render error) propagates as the normalized [`ConsumerError`]; the partial
-    /// result built so far is **discarded**, never returned as success (US4 scenario 3).
-    /// An empty composition returns `Ok(vec![])` (F7).
+    /// result built so far is **discarded**, never returned as success.
+    /// An empty composition returns `Ok(vec![])`.
     ///
     /// `resolve` does not mutate `self` (it takes `&self`); it reuses the kernel's render
-    /// path rather than duplicating any rendering logic (FR-011 / C-01).
+    /// path rather than duplicating any rendering logic.
     ///
     /// # Errors
     ///
     /// [`ConsumerError::Kernel`] — the kernel rejected an entry's render (unknown variant,
     /// strict-undefined reference, parse/render failure). `Parse`/`Render` detail is
-    /// scrubbed (FR-015).
+    /// scrubbed.
     pub fn resolve(&self) -> Result<Vec<Message>, ConsumerError> {
         let mut messages = Vec::with_capacity(self.entries.len());
 
         for entry in &self.entries {
             let def = entry.prompt.definition();
 
-            // Delegate rendering to the kernel with the already-validated value (FR-011).
+            // Delegate rendering to the kernel with the already-validated value.
             // Composition does no guard expansion; a default GuardConfig leaves `text` as-is.
             // `?` propagates a kernel failure as the normalized error and DISCARDS `messages`
-            // built so far — no partial-as-success (US4 scenario 3).
+            // built so far — no partial-as-success.
             let result = prompting_press_core::render(
                 def,
                 entry.variant.as_deref(),

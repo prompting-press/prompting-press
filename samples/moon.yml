@@ -1,0 +1,60 @@
+# moon.yml — samples project (spec 014 WU-C / T017).
+#
+# The `samples:test` gate builds + tests all three consumer sample apps on their
+# in-repo (local/workspace/path) dependencies. A public-API change that an app
+# consumes fails this gate, citing the app (SC-010). The three legs are
+# independent (FR-017) and can be run individually.
+#
+# Not a language-homed project (the apps span Rust/Python/TS), so the inherited
+# Rust build/test tasks are excluded; each leg drives its own toolchain.
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+# Polyglot aggregator project (no single language) — there is no samples/Cargo.toml
+# or samples/package.json at this root; each app under samples/<lang>/ owns its
+# toolchain. Declare 'unknown' so moon does not infer Rust from nested Cargo files
+# and try to run the inherited cargo build/test at this root.
+language: 'unknown'
+
+workspace:
+  inheritedTasks:
+    exclude: ['build', 'test']
+
+tasks:
+  test-rust:
+    description: 'Spec 014 WU-C — build + test the Rust consumer sample app (path dep on the in-repo crate).'
+    command: 'cargo test -p prompting-press-greeter-cli'
+    inputs:
+      - '/samples/rust/**/*.rs'
+      - '/samples/rust/**/Cargo.toml'
+      - '/crates/prompting-press/src/**'
+    options:
+      runFromWorkspaceRoot: true
+
+  test-python:
+    description: 'Spec 014 WU-C — sync + pytest the Python consumer sample app (editable dep on packages/python).'
+    command: 'bash -c "cd samples/python/greeter-cli && uv sync && uv run pytest -q"'
+    inputs:
+      - '/samples/python/**/*.py'
+      - '/samples/python/**/pyproject.toml'
+      - '/packages/python/**'
+    options:
+      runFromWorkspaceRoot: true
+
+  test-typescript:
+    description: 'Spec 014 WU-C — typecheck + node:test the TypeScript consumer sample app (workspace dep on packages/typescript).'
+    command: 'bash -c "pnpm -C samples/typescript/greeter-cli install && pnpm -C samples/typescript/greeter-cli test"'
+    inputs:
+      - '/samples/typescript/**/*.ts'
+      - '/samples/typescript/**/*.mjs'
+      - '/samples/typescript/**/package.json'
+      - '/packages/typescript/src/**'
+    options:
+      runFromWorkspaceRoot: true
+
+  # Aggregate gate: all three language legs (SC-010 / T017).
+  test:
+    description: 'Spec 014 WU-C — build + test all three consumer sample apps (the samples:test gate).'
+    deps:
+      - 'samples:test-rust'
+      - 'samples:test-python'
+      - 'samples:test-typescript'

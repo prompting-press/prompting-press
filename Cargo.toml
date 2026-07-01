@@ -3,7 +3,10 @@
 # live under crates/* and are active workspace members.
 
 [workspace]
-members = ["crates/*"]
+# crates/* = the shared core + binding crates. samples/rust/* = consumer sample
+# apps (spec 014, WU-C) that depend on the consumer crate via a path dep and prove
+# the library works end-to-end for an external Rust consumer (publish = false).
+members = ["crates/*", "samples/rust/*"]
 resolver = "2"
 
 # Shared metadata inherited by member crates via `field.workspace = true`.
