@@ -34,6 +34,22 @@ cd "${REPO_ROOT}"
 CONFIG="${REPO_ROOT}/about.toml"
 TEMPLATE="${REPO_ROOT}/ci/about.hbs"
 
+# Resolve cargo-about's ABSOLUTE path via mise. The `cargo about` SUBCOMMAND form
+# only works when cargo-about is on PATH (as cargo-deny is, in ~/.cargo/bin), but
+# mise installs cargo-about into its own tool dir which is NOT on the base PATH —
+# and moon does not propagate mise's shim PATH into task subprocesses, so a bare
+# `cargo about` inside this script fails with "no such command: about" under
+# `moon run` (that broke the ci:check-third-party-licenses gate on every runner).
+# `mise which` gives the concrete binary path, which we invoke directly; this works
+# under moon, under `mise exec`, and standalone. Falls back to `cargo-about` on PATH
+# if mise can't resolve it (e.g. a non-mise environment).
+CARGO_ABOUT="$(mise which cargo-about 2>/dev/null || command -v cargo-about || true)"
+if [ -z "${CARGO_ABOUT}" ]; then
+  echo "ERROR: cargo-about not found (mise which cargo-about / PATH both empty)." >&2
+  echo "Install it: mise install 'cargo:cargo-about'" >&2
+  exit 1
+fi
+
 # artifact-crate:output-path pairs — the two bundled bindings.
 generate() {
   local crate="$1" out="$2"
@@ -42,18 +58,22 @@ generate() {
   # lookups. This makes the output DETERMINISTIC (network state can't change it), so
   # the ci:check-third-party-licenses freshness diff is stable across machines/CI.
   # Requires crate sources in the cargo cache; CI runs `cargo fetch --locked` first.
-  cargo about generate \
+  "${CARGO_ABOUT}" generate \
     --offline \
     -c "${CONFIG}" \
     "${TEMPLATE}" \
     --manifest-path "${REPO_ROOT}/crates/${crate}/Cargo.toml" \
     -o "${REPO_ROOT}/${out}"
-  # cargo about's Handlebars template output has no final newline; the repo's
-  # end-of-file-fixer pre-commit hook adds one. Without matching it here, the
-  # hook and the freshness gate (which regenerates + diffs) fight forever:
-  # gen strips the newline → hook re-adds it → next gen strips it again. Append
-  # a single trailing newline if the file lacks one so both agree.
-  [ -n "$(tail -c1 "${REPO_ROOT}/${out}")" ] && printf '\n' >> "${REPO_ROOT}/${out}"
+  # Normalize the trailing newlines to EXACTLY ONE, matching what the repo's
+  # end-of-file-fixer pre-commit hook enforces. cargo-about's Handlebars output
+  # ends with a blank line ("...\n\n"); the hook collapses that to a single "\n".
+  # If gen leaves the doubled newline, the committed (hook-normalized) file and a
+  # fresh regen differ by one blank line and the ci:check-third-party-licenses
+  # freshness diff fails forever. Strip all trailing newlines, then re-add one.
+  # perl -0777 slurps the whole file; s/\n+\z/\n/ replaces the final run of
+  # newlines with a single one (portable, no in-place-sed newline quirks).
+  local abs="${REPO_ROOT}/${out}"
+  perl -0777 -i -pe 's/\n+\z/\n/' "${abs}"
 }
 
 echo "Generating third-party license attribution (cargo-about)..."
