@@ -61,3 +61,11 @@ jobs:
         uses: github/codeql-action/analyze@dd903d2e4f5405488e5ef1422510ee31c8b32357  # v3
         with:
           category: "/language:${{ matrix.language }}"
+          # Do NOT upload SARIF on merge_group runs. The merge queue builds on an
+          # ephemeral ref (refs/heads/gh-readonly-queue/…) that no longer exists by
+          # the time CodeQL uploads, so the upload fails with "ref not found →
+          # configuration error", failing this REQUIRED queue check and ejecting the
+          # PR (even though the analysis itself passed). The analysis still runs here
+          # to satisfy the required `Analyze (*)` check; results are uploaded to the
+          # Security tab on the push/pull_request/schedule runs, which have real refs.
+          upload: ${{ github.event_name == 'merge_group' && 'never' || 'always' }}
