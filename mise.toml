@@ -37,19 +37,18 @@ jq = "1.8.1"
 # License-attribution generator: renders the bundled THIRD-PARTY-LICENSES.md files
 # for the Python wheel + npm addon (Rust graph is statically linked). Drives
 # ci:check-third-party-licenses.
-# MUST NOT set `features`: mise skips cargo-binstall whenever features are given
-# ("not using cargo-binstall because features are specified") and falls back to a
-# source `cargo install`. That source build silently produces NO binary here —
-# cargo-about's executable is behind the `cli` feature, but mise's cargo backend
-# does not forward the feature to the build, so `cargo about` ends up "installed
-# but not activated" and every runner (main included) fails `no such command:
-# about`. Dropping features lets mise binstall the PREBUILT release binary, which
-# already includes the CLI.
-# Pinned to 0.9.0 (NOT 0.9.1): 0.9.1 was published to crates.io but has NO GitHub
-# release, so cargo-binstall finds no prebuilt binary and falls back to the same
-# broken source build. 0.9.0 is the latest version WITH a GitHub release
-# (binstall-able). Bump only to a version that has a GitHub release.
-"cargo:cargo-about" = { version = "0.9.0" }
+#
+# Installed via the `ubi:` backend (prebuilt GitHub release binary), NOT `cargo:`.
+# The `cargo:` backend was intractable here: its cli-gated binary either needs
+# `features=["cli"]` (which forces a source build that mise doesn't pass the
+# feature to → empty binary) or, without features, binstall needs a GitHub release
+# (0.9.1 is crates.io-only). Worse, the mise cache could hold a poisoned
+# "installed-but-empty" entry that `mise install` skips, and cargo-about landed in
+# mise's tool dir (not ~/.cargo/bin), so a bare `cargo about` failed under moon.
+# `ubi:` sidesteps all of it: it downloads the prebuilt release tarball (which
+# includes the CLI) and mise puts `cargo-about` on PATH like any pinned tool.
+# Pinned 0.9.0 = latest version WITH a GitHub release (ubi needs a release asset).
+"ubi:EmbarkStudios/cargo-about" = { version = "0.9.0", exe = "cargo-about" }
 
 # --- Dead-code / unused-dependency lints ---
 # cargo-machete flags unused Rust dependencies (deps declared in a Cargo.toml but

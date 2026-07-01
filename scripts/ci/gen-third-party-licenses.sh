@@ -34,41 +34,15 @@ cd "${REPO_ROOT}"
 CONFIG="${REPO_ROOT}/about.toml"
 TEMPLATE="${REPO_ROOT}/ci/about.hbs"
 
-# Resolve the cargo-about BINARY (absolute path). This tool is uniquely painful to
-# get onto PATH in CI:
-#   - `cargo about` (subcommand form) needs cargo-about on PATH, but mise installs
-#     it into its own tool dir (NOT ~/.cargo/bin), and moon does not propagate
-#     mise's tool PATH into task subprocesses → bare `cargo about` fails.
-#   - `mise which` only QUERIES; and the runner's mise cache can hold a poisoned
-#     "installed-but-empty" cargo-about entry (a leftover from the earlier
-#     features=["cli"] source-build that produced no binary), so `mise install`
-#     no-ops against it and `mise which` returns a path to nothing.
-# So: try mise/PATH first, and if that yields no WORKING binary, self-heal by
-# binstalling the prebuilt release binary into ~/.cargo/bin (fast, no source
-# build; ~/.cargo/bin is on PATH like cargo-deny). Version-pinned to match
-# mise.toml. This resolves under moon, mise exec, and standalone.
-CARGO_ABOUT_VERSION="0.9.0"
-resolve_cargo_about() {
-  local c
-  c="$(mise which cargo-about 2>/dev/null || true)"
-  [ -n "${c}" ] && [ -x "${c}" ] && { echo "${c}"; return 0; }
-  c="$(command -v cargo-about 2>/dev/null || true)"
-  [ -n "${c}" ] && { echo "${c}"; return 0; }
-  return 1
-}
-CARGO_ABOUT="$(resolve_cargo_about || true)"
+# Resolve the cargo-about BINARY. cargo-about is installed via the `ubi:` backend
+# (see mise.toml) — a prebuilt release binary that mise puts on PATH like any
+# pinned tool, so `cargo-about` resolves directly. `mise which` gives the concrete
+# path (the moon task runs under `mise exec`, so mise + the tool dirs are on PATH);
+# fall back to a plain PATH lookup for non-mise environments.
+CARGO_ABOUT="$(mise which cargo-about 2>/dev/null || command -v cargo-about || true)"
 if [ -z "${CARGO_ABOUT}" ] || ! "${CARGO_ABOUT}" --version >/dev/null 2>&1; then
-  echo "cargo-about not resolvable; binstalling prebuilt ${CARGO_ABOUT_VERSION} into ~/.cargo/bin..." >&2
-  if command -v cargo-binstall >/dev/null 2>&1; then
-    cargo-binstall -y "cargo-about@${CARGO_ABOUT_VERSION}" >&2
-  elif command -v mise >/dev/null 2>&1; then
-    mise exec -- cargo-binstall -y "cargo-about@${CARGO_ABOUT_VERSION}" >&2
-  fi
-  CARGO_ABOUT="$(command -v cargo-about 2>/dev/null || resolve_cargo_about || true)"
-fi
-if [ -z "${CARGO_ABOUT}" ] || ! "${CARGO_ABOUT}" --version >/dev/null 2>&1; then
-  echo "ERROR: cargo-about not found and could not be installed." >&2
-  echo "Install it: cargo-binstall cargo-about@${CARGO_ABOUT_VERSION}  (or mise install 'cargo:cargo-about')" >&2
+  echo "ERROR: cargo-about not found. Install it: mise install (it is pinned as" >&2
+  echo "'ubi:EmbarkStudios/cargo-about' in mise.toml)." >&2
   exit 1
 fi
 
