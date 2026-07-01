@@ -36,10 +36,20 @@ jq = "1.8.1"
 "cargo:cargo-deny" = { version = "0.19.9", locked = true }   # Advisory scan (ci:check-advisories) + license gate (ci:check-licenses); reads deny.toml
 # License-attribution generator: renders the bundled THIRD-PARTY-LICENSES.md files
 # for the Python wheel + npm addon (Rust graph is statically linked). Drives
-# ci:check-third-party-licenses. --locked pins its own transitive deps.
-# `features = ["cli"]` is REQUIRED: cargo-about >=0.8 gates its binary behind the
-# `cli` feature, so a bare install builds no `cargo-about` binary.
-"cargo:cargo-about" = { version = "0.9.1", locked = true, features = ["cli"] }
+# ci:check-third-party-licenses.
+# MUST NOT set `features`: mise skips cargo-binstall whenever features are given
+# ("not using cargo-binstall because features are specified") and falls back to a
+# source `cargo install`. That source build silently produces NO binary here —
+# cargo-about's executable is behind the `cli` feature, but mise's cargo backend
+# does not forward the feature to the build, so `cargo about` ends up "installed
+# but not activated" and every runner (main included) fails `no such command:
+# about`. Dropping features lets mise binstall the PREBUILT release binary, which
+# already includes the CLI.
+# Pinned to 0.9.0 (NOT 0.9.1): 0.9.1 was published to crates.io but has NO GitHub
+# release, so cargo-binstall finds no prebuilt binary and falls back to the same
+# broken source build. 0.9.0 is the latest version WITH a GitHub release
+# (binstall-able). Bump only to a version that has a GitHub release.
+"cargo:cargo-about" = { version = "0.9.0" }
 
 # --- Dead-code / unused-dependency lints ---
 # cargo-machete flags unused Rust dependencies (deps declared in a Cargo.toml but

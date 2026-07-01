@@ -48,6 +48,12 @@ generate() {
     "${TEMPLATE}" \
     --manifest-path "${REPO_ROOT}/crates/${crate}/Cargo.toml" \
     -o "${REPO_ROOT}/${out}"
+  # cargo about's Handlebars template output has no final newline; the repo's
+  # end-of-file-fixer pre-commit hook adds one. Without matching it here, the
+  # hook and the freshness gate (which regenerates + diffs) fight forever:
+  # gen strips the newline → hook re-adds it → next gen strips it again. Append
+  # a single trailing newline if the file lacks one so both agree.
+  [ -n "$(tail -c1 "${REPO_ROOT}/${out}")" ] && printf '\n' >> "${REPO_ROOT}/${out}"
 }
 
 echo "Generating third-party license attribution (cargo-about)..."
