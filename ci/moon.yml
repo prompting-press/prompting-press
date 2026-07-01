@@ -38,6 +38,20 @@ tasks:
       runFromWorkspaceRoot: true
       cache: false
 
+  check-unused-deps:
+    description: 'Dead-dependency lint (Rust) — cargo-machete flags dependencies declared in a Cargo.toml but never referenced in that crate. Caught a genuinely-orphaned serde_yaml_ng in prompting-press-py. Runs over the whole workspace; false positives (a dep used only via macro/cfg) go in [package.metadata.cargo-machete].ignored.'
+    command: 'cargo machete'
+    options:
+      runFromWorkspaceRoot: true
+      cache: false
+
+  check-scripts:
+    description: 'Shell-script lint — shellcheck over the repo bash scripts (scripts/**/*.sh). Catches quoting/word-splitting/unset-var bugs in the CI + codegen scripts before they misbehave on a runner. shellcheck is mise-pinned (aqua:koalaman/shellcheck).'
+    command: "bash -c 'shellcheck $(find scripts -name \"*.sh\")'"
+    options:
+      runFromWorkspaceRoot: true
+      cache: false
+
   check-floating-versions:
     description: 'T030a — Lint manifests for floating version specifiers (^, ~, latest, *) per SEC-003.'
     command: 'bash scripts/ci/check-floating-versions.sh'

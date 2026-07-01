@@ -48,10 +48,6 @@ minijinja = { workspace = true }
 # `HashMap<String, T>` to a Python dict via `serde_json::to_value`).
 serde = { workspace = true }
 
-# `serde_yaml_ng` is the YAML parser used by the backward-compat registry shim
-# (registry.rs `load_yaml`). Same version pin as the consumer crate.
-serde_yaml_ng = "0.10"
-
 # `serde_json` is the lossless serde intermediate for the marshaling bridge: a Python
 # object is `depythonize`d into a `serde_json::Value`, then re-serialized into a
 # `minijinja::Value` via `from_serialize` (the same primitive the Rust consumer uses).

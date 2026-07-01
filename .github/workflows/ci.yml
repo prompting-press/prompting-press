@@ -121,6 +121,16 @@ jobs:
         run: mise exec -- moon run ci:check-lint-py
       - name: 'Lint: Node/TS (biome)'
         run: mise exec -- moon run prompting-press-typescript:lint
+      - name: 'Lint: GitHub workflows (actionlint)'
+        run: mise exec -- moon run ci:check-workflows
+      - name: 'Lint: shell scripts (shellcheck)'
+        run: mise exec -- moon run ci:check-scripts
+
+      # --- dead code / unused dependencies (static analysis, no compile) ---
+      - name: 'Unused deps: Rust (cargo-machete)'
+        run: mise exec -- moon run ci:check-unused-deps
+      - name: 'Dead code: Node/TS (knip)'
+        run: mise exec -- moon run prompting-press-typescript:knip
 
       # --- license policy: Apache-2.0 compatibility (one gate per ecosystem) ---
       - name: 'License gate: Rust (cargo-deny)'

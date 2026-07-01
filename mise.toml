@@ -40,6 +40,15 @@ jq = "1.8.1"
 # `features = ["cli"]` is REQUIRED: cargo-about >=0.8 gates its binary behind the
 # `cli` feature, so a bare install builds no `cargo-about` binary.
 "cargo:cargo-about" = { version = "0.9.1", locked = true, features = ["cli"] }
+
+# --- Dead-code / unused-dependency lints ---
+# cargo-machete flags unused Rust dependencies (deps declared in a Cargo.toml but
+# never referenced). Drives ci:check-unused-deps. shellcheck lints the repo's
+# bash CI scripts (scripts/ci/*.sh) — drives ci:check-scripts. Both pinned exact
+# per SEC-003. (Node/TS dead-export detection is knip, a pnpm devDep in
+# packages/typescript; Python unused imports/locals are covered by ruff F401/F841.)
+"cargo:cargo-machete" = "0.9.1"
+"aqua:koalaman/shellcheck" = "0.11.0"
 # NOTE (pip-audit / pip-licenses): the Python advisory + license gates pin their
 # tools inline via `uv run --with pip-audit==2.9.0` / `--with pip-licenses==5.5.5`
 # (exact versions, invisible to the SEC-003 floating-version gate). They are NOT

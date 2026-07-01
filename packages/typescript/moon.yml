@@ -21,6 +21,17 @@ tasks:
     options:
       runFromWorkspaceRoot: true
 
+  knip:
+    description: 'Dead-code lint (TS) — knip flags unused files, exports, and dependencies in the facade. Config (knip.json) ignores the napi-generated loader (index.js) + the codegen shape (src/generated) + the per-platform optionalDependencies the loader references but the bundled build omits.'
+    command: 'pnpm -C packages/typescript knip'
+    inputs:
+      - '/packages/typescript/src/**'
+      - '/packages/typescript/test/**'
+      - '/packages/typescript/knip.json'
+      - '/packages/typescript/package.json'
+    options:
+      runFromWorkspaceRoot: true
+
   codegen:
     description: 'T026 — Regenerate TypeScript types from JSON Schema (FR-016).'
     command: 'pnpm -C packages/typescript codegen'
