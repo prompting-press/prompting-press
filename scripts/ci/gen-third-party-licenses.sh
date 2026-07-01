@@ -50,11 +50,16 @@ fi
 generate() {
   local crate="$1" out="$2"
   echo "  ${crate} -> ${out}"
-  # --offline: crawl ONLY local crate sources for license info — no clearlydefined.io
-  # lookups. This makes the output DETERMINISTIC (network state can't change it), so
-  # the ci:check-third-party-licenses freshness diff is stable across machines/CI.
-  # Requires crate sources in the cargo cache; CI runs `cargo fetch --locked` first.
+  # --locked: resolve the dependency graph strictly from Cargo.lock. WITHOUT it,
+  # cargo-about re-resolves versions and picks the NEWEST semver-compatible release
+  # (the crate specs are caret by default, e.g. napi = "3.9.4" allows 3.10.0), so a
+  # runner whose registry cache has newer patch releases than the committed lock
+  # produces a DIFFERENT attribution → the freshness diff fails only on CI. --locked
+  # pins to the lock (napi 3.9.4 etc.) so output matches everywhere.
+  # --offline: crawl ONLY local crate sources — no clearlydefined.io network lookups
+  # (deterministic; requires the cargo cache, which CI populates via `cargo fetch`).
   "${CARGO_ABOUT}" generate \
+    --locked \
     --offline \
     -c "${CONFIG}" \
     "${TEMPLATE}" \
