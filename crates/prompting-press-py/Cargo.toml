@@ -10,8 +10,14 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
 authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
 description = "Python binding (PyO3) for Prompting Press."
+
+[lints]
+workspace = true
 
 # cdylib: the artifact loaded by the Python interpreter as a native extension module.
 # `rlib` is added so `cargo test` can build a test harness that links libpython and runs the
@@ -41,10 +47,6 @@ minijinja = { workspace = true }
 # `serde` is the trait bound used in `prompt.rs`'s `map_to_pydict` helper (serializing
 # `HashMap<String, T>` to a Python dict via `serde_json::to_value`).
 serde = { workspace = true }
-
-# `serde_yaml_ng` is the YAML parser used by the backward-compat registry shim
-# (registry.rs `load_yaml`). Same version pin as the consumer crate.
-serde_yaml_ng = "0.10"
 
 # `serde_json` is the lossless serde intermediate for the marshaling bridge: a Python
 # object is `depythonize`d into a `serde_json::Value`, then re-serialized into a

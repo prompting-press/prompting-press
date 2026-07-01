@@ -10,7 +10,25 @@
     "url": "https://github.com/prompting-press/prompting-press.git",
     "directory": "packages/typescript"
   },
-  "private": true,
+  "homepage": "https://prompting-press.github.io/",
+  "bugs": {
+    "url": "https://github.com/prompting-press/prompting-press/issues"
+  },
+  "keywords": [
+    "prompt",
+    "prompting",
+    "prompt-template",
+    "prompt-engineering",
+    "llm",
+    "genai",
+    "ai",
+    "template",
+    "zod",
+    "typed"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "packageManager": "pnpm@10.33.2",
   "engines": {
     "node": ">=20"
@@ -47,16 +65,18 @@
     "test": "node --test \"test/*.test.mjs\"",
     "prepublishOnly": "napi prepublish -t npm",
     "format": "biome format --write .",
-    "check": "biome check ."
+    "check": "biome check .",
+    "knip": "knip"
   },
   "peerDependencies": {
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.1",
     "@napi-rs/cli": "3.7.2",
     "fast-check": "4.8.0",
     "json-schema-to-typescript": "15.0.4",
-    "@biomejs/biome": "2.5.1",
+    "knip": "6.23.0",
     "typescript": "5.9.2",
     "zod": "4.4.3"
   }

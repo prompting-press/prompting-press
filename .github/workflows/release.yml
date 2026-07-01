@@ -1,7 +1,7 @@
 # Release workflow for Prompting Press.
 #
-# Uses release-please to manage a single lockstep release PR across all three
-# publishable units (Cargo workspace root, packages/python, packages/typescript).
+# Uses release-please to manage a single lockstep release PR across all
+# publishable units (the Cargo crates, packages/python, packages/typescript).
 # Conventional Commit messages drive version bumps; linked-versions ensures all
 # components move to the SAME version on every release.
 #
@@ -9,12 +9,21 @@
 #   googleapis/release-please-action pinned to 45996ed1f6d02564a971a2fa1b5860e934307cf7
 #   (tag v5.0.0, published 2026-04-22 — verified against the repo's git ref).
 #
-# Publishing: intentionally disabled. See the `publish` job below.
+# Publishing: on an actual release (releases_created == true), the publish jobs
+# below push full multi-platform artifacts to crates.io, PyPI, and npm via
+# Trusted Publishers (OIDC) — no long-lived registry tokens. See the publish
+# section for the per-registry build matrix + architecture notes.
 
 on:
   push:
     branches:
       - main
+  # Manual build-only smoke test. Dispatching this runs the full cross-platform
+  # BUILD matrix (wheels + sdist + node addon across every target) WITHOUT
+  # publishing anything — a way to exercise the musl/zig/aarch64 targets on demand
+  # before betting a real release on them. Only the build-* jobs honor this event;
+  # every publish/gate/finalize job stays gated on an actual release-please release.
+  workflow_dispatch:
 
 # release-please needs write access to open/update the release PR and to
 # create GitHub Releases + version tags on merge.
@@ -22,8 +31,10 @@ permissions:
   contents: write
   pull-requests: write
 
-# Serialize release runs on main and NEVER cancel one in flight — a half-finished
-# publish is far worse than a queued run, so cancel-in-progress is false (queue).
+# Serialize release runs. Two pushes to main in quick succession must not race
+# on the draft releases / tags: a second run waits for the first rather than
+# concurrently building + flipping the same draft set. Never cancel a run in
+# flight — a half-finished publish is worse than a queued one.
 concurrency:
   group: release-please-${{ github.ref }}
   cancel-in-progress: false
@@ -240,30 +251,151 @@ jobs:
   # OIDC identity (id-token: write) against a Trusted Publisher registered on the
   # registry for THIS repo + THIS workflow file (+ the `release` environment).
   #
-  # One-time prerequisites (done out-of-band, see samples/README + PR notes):
+  # ARCHITECTURE — full multi-platform native artifacts:
+  #   crates.io  → publish-crates            (pure source; one Linux job)
+  #   PyPI       → build-wheels ▸ publish-python
+  #                  build-wheels: maturin-action matrix (manylinux + musllinux
+  #                  x86_64/aarch64, macOS x86_64/aarch64, Windows x64) builds one
+  #                  abi3-py312 wheel per platform + an sdist; publish-python
+  #                  gathers every wheel and uploads them in one Trusted-Publisher
+  #                  call so `pip install` resolves on every OS.
+  #   npm        → build-node ▸ publish-npm
+  #                  build-node: napi-rs matrix builds one prebuilt .node per triple;
+  #                  publish-npm downloads them ALL into the single package dir and
+  #                  publishes ONE `prompting-press` package with every binary
+  #                  bundled. The napi loader resolves `./prompting-press.<plat>.node`
+  #                  locally first, so a single package covers every platform — no
+  #                  per-platform optionalDependencies packages to register a
+  #                  Trusted Publisher for (OIDC can't first-publish names that
+  #                  don't exist yet). One package ⇒ one npm Trusted Publisher.
+  #
+  # One-time prerequisites (done out-of-band, see PR notes):
   #   - crates.io: `prompting-press-core` + `prompting-press` names claimed (a
   #     new crate name cannot be first-published via OIDC), then Trusted
   #     Publishing registered per crate.
   #   - PyPI: a Pending Publisher registered for `prompting-press` (supports
   #     first publish via OIDC).
   #   - npm: Trusted Publisher registered for `prompting-press`.
-  #
-  # KNOWN SCOPE: this single Linux runner publishes the Rust crates (pure source)
-  # correctly, and produces Linux artifacts for the Python wheel + Node addon.
-  # FULL multi-platform native artifacts (manylinux/macOS/Windows wheels +
-  # prebuilt napi binaries) need a per-OS build matrix — tracked as a follow-up;
-  # 0.1.0 ships Linux + source distributions.
   # ---------------------------------------------------------------------------
-  publish:
-    name: Publish (crates.io / PyPI / npm via OIDC)
+
+  # ===========================================================================
+  # release-tests — unit + integration tests, re-run on the tagged commit.
+  #
+  # ci.yml already ran these on the release PR, but a workflow cannot depend on
+  # another workflow's result, so we re-run them here as a hard pre-publish gate
+  # (the mise tasks are the SAME ones ci.yml calls — one source of truth). If any
+  # fail, release-gate below fails and NOTHING publishes; the drafts are cleaned
+  # up by finalize-release.
+  # ===========================================================================
+  release-tests:
+    name: Release tests (${{ matrix.suite.name }})
     needs: release-please
+    if: ${{ needs.release-please.outputs.releases_created == 'true' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Exactly the suites ci.yml runs on the PR (one source of truth). The
+        # core Rust `cargo test` runs inside test-python + test-node + conformance
+        # (each drives cargo test), so there is no separate rust-unit task.
+        suite:
+          - name: python-binding
+            task: ci:test-python
+          - name: node-binding
+            task: ci:test-node
+          - name: conformance
+            task: ci:conformance
+          - name: consumer-samples
+            task: samples:test
+          # Publishability dry-run for the two crates.io crates — catches a
+          # bad/invalid manifest before the release tries to `cargo publish`.
+          - name: crate-package
+            task: ci:check-package
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
+      # setup-python mirrors ci.yml's conformance job (its legs want a 3.12 on
+      # PATH); harmless for the other suites. Kept unconditional so the matrix
+      # stays uniform.
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Install mise toolchain
+        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac  # v2
+        with:
+          experimental: true
+      - name: Ensure rust components (rustfmt/clippy)
+        run: mise exec -- rustup component add rustfmt clippy
+      - name: Install TS deps (pnpm)
+        run: mise exec -- pnpm -C packages/typescript install --frozen-lockfile
+      - name: Run ${{ matrix.suite.task }}
+        run: mise exec -- moon run ${{ matrix.suite.task }}
+
+  # ===========================================================================
+  # release-gate — THE single go/no-go gate. Every publish job depends on this
+  # and this alone; it depends on every build matrix + the test matrix. It runs
+  # `if: always()` and then asserts each dependency's `result == 'success'`, so a
+  # single failed/cancelled build or test suite fails the gate → no publish job
+  # runs → finalize-release leaves the drafts unpublished. This is the one place
+  # that answers "did EVERYTHING pass?".
+  # ===========================================================================
+  release-gate:
+    name: Release gate (all builds + tests green)
+    needs: [release-please, release-tests, build-wheels, build-sdist, build-node]
+    if: ${{ always() && needs.release-please.outputs.releases_created == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assert every build + test suite succeeded
+        env:
+          R_TESTS: ${{ needs.release-tests.result }}
+          R_WHEELS: ${{ needs.build-wheels.result }}
+          R_SDIST: ${{ needs.build-sdist.result }}
+          R_NODE: ${{ needs.build-node.result }}
+        run: |
+          set -euo pipefail
+          echo "release-tests=$R_TESTS build-wheels=$R_WHEELS build-sdist=$R_SDIST build-node=$R_NODE"
+          fail=0
+          for pair in "release-tests:$R_TESTS" "build-wheels:$R_WHEELS" "build-sdist:$R_SDIST" "build-node:$R_NODE"; do
+            name="${pair%%:*}"; res="${pair##*:}"
+            if [ "$res" != "success" ]; then
+              echo "::error::$name did not succeed (result=$res) — blocking all publishes"
+              fail=1
+            fi
+          done
+          if [ "$fail" -ne 0 ]; then
+            echo "Release gate FAILED — no package will be published; draft releases stay unpublished."
+            exit 1
+          fi
+          echo "Release gate PASSED — all builds + tests green; publishing may proceed."
+
+      # SBOM (CycloneDX) covering the whole workspace — Rust + Python + npm deps.
+      # Generated in the gate (after the green assertion, before any publish) so a
+      # failure blocks every registry cleanly rather than leaving a published-but-
+      # unattested artifact. Uploaded as a workflow artifact (promoting it to a
+      # durable GitHub Release asset is a follow-up). Preserved from PR #232, moved
+      # here from the old monolithic publish job when publishing was split per-OS.
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
+      - name: Generate SBOM (Syft / CycloneDX)
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610  # v0
+        with:
+          path: .
+          format: cyclonedx-json
+          artifact-name: prompting-press-sbom.cdx.json
+
+  # --- Rust → crates.io (OIDC via rust-lang/crates-io-auth-action) ---
+  # Depends on the single release-gate: no registry sees an artifact until every
+  # build AND every test suite has gone green.
+  publish-crates:
+    name: Publish Rust crates (crates.io via OIDC)
+    needs: [release-please, release-gate]
     if: ${{ needs.release-please.outputs.releases_created == 'true' }}
     runs-on: ubuntu-latest
     environment: release
     permissions:
       contents: read
-      id-token: write # REQUIRED for OIDC trusted publishing on all three registries
-      attestations: write # REQUIRED for actions/attest-build-provenance (wheel + sdist)
+      id-token: write # OIDC → crates.io Trusted Publisher
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
@@ -273,19 +405,6 @@ jobs:
         with:
           experimental: true
 
-      # SBOM (CycloneDX) covering the whole workspace — Rust + Python + npm deps.
-      # Generated BEFORE any publish so a failure blocks the release cleanly rather
-      # than leaving a published-but-unattested artifact. Uploaded as a workflow
-      # artifact (promoting it to a durable GitHub Release asset is a follow-up —
-      # that needs contents: write + the release tag).
-      - name: Generate SBOM (Syft / CycloneDX)
-        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610  # v0
-        with:
-          path: .
-          format: cyclonedx-json
-          artifact-name: prompting-press-sbom.cdx.json
-
-      # --- Rust → crates.io (OIDC via rust-lang/crates-io-auth-action) ---
       # Publish order matters: the kernel first, then the consumer crate that
       # depends on it (`prompting-press-core = { version = "0.1", path = ... }`;
       # cargo strips the path and uses the crates.io version on publish).
@@ -300,35 +419,337 @@ jobs:
           CARGO_TOKEN: ${{ steps.crates-auth.outputs.token }}
           CARGO_TERM_COLOR: always
 
-      # --- Python → PyPI (OIDC via pypa/gh-action-pypi-publish) ---
-      # Build the abi3 wheel + sdist with maturin, then upload with the PyPI
-      # trusted-publisher action (consumes the OIDC id-token; no PYPI token).
-      - name: Build Python wheel + sdist (maturin)
-        run: |
-          mise exec -- uvx maturin build --release --manifest-path crates/prompting-press-py/Cargo.toml --out dist
-          mise exec -- uvx maturin sdist --manifest-path crates/prompting-press-py/Cargo.toml --out dist
-      # Build-provenance attestation for the wheel + sdist. Runs BEFORE the PyPI
-      # upload so an attestation failure blocks the release rather than leaving an
+  # ===========================================================================
+  # Python → PyPI: build one abi3-py312 wheel per platform, then upload all.
+  # ===========================================================================
+  build-wheels:
+    name: Build wheel (${{ matrix.platform.target }})
+    needs: release-please
+    # Runs on a real release OR a manual build-only smoke test (workflow_dispatch).
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || needs.release-please.outputs.releases_created == 'true') }}
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          # Native runner wherever one is free (public repo ⇒ ubuntu-24.04-arm is
+          # free). maturin-action builds musllinux inside its own musl container
+          # automatically (no QEMU, no zig needed on the Python side), so musl is
+          # covered here too.
+          # Linux glibc (manylinux 2_28) — x86_64 + aarch64 native.
+          - runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            manylinux: '2_28'
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            manylinux: '2_28'
+          # Linux musl (Alpine/musl libc) — x86_64 + aarch64, built in-container.
+          - runner: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            manylinux: musllinux_1_2
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+            manylinux: musllinux_1_2
+          # macOS — Intel + Apple Silicon.
+          - runner: macos-13
+            target: x86_64-apple-darwin
+            manylinux: 'off'
+          - runner: macos-14
+            target: aarch64-apple-darwin
+            manylinux: 'off'
+          # Windows x64.
+          - runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            manylinux: 'off'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
+
+      # abi3-py312 ⇒ one wheel per platform serves CPython 3.12+; 3.12 is the floor.
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: '3.12'
+
+      - name: Build abi3 wheel (maturin-action)
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b  # v1.51.0
+        with:
+          target: ${{ matrix.platform.target }}
+          manylinux: ${{ matrix.platform.manylinux }}
+          # Working dir = packages/python so maturin reads its [tool.maturin]
+          # (module-name, python-source, manifest-path → the py crate).
+          working-directory: packages/python
+          # No `-i`: the crate is abi3-py312 (pyo3 feature), so maturin auto-
+          # discovers any available interpreter and always tags the wheel
+          # cp312-abi3. Avoids relying on a `python3.12`-named executable, which
+          # the Windows host runner does not provide (it ships `python`).
+          args: --release --out dist
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: wheel-${{ matrix.platform.target }}
+          path: packages/python/dist/*.whl
+          if-no-files-found: error
+
+  build-sdist:
+    name: Build Python sdist
+    needs: release-please
+    # Runs on a real release OR a manual build-only smoke test (workflow_dispatch).
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || needs.release-please.outputs.releases_created == 'true') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
+      - name: Build sdist (maturin-action)
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b  # v1.51.0
+        with:
+          command: sdist
+          working-directory: packages/python
+          args: --out dist
+      - name: Upload sdist artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: sdist
+          path: packages/python/dist/*.tar.gz
+          if-no-files-found: error
+
+  publish-python:
+    name: Publish to PyPI (Trusted Publisher)
+    # Needs release-please (for the release-created output referenced in `if`),
+    # the wheel/sdist artifacts, AND the single gate (all builds + tests).
+    needs: [release-please, release-gate, build-wheels, build-sdist]
+    # Explicit release-only guard: a workflow_dispatch smoke test builds wheels
+    # but must NEVER publish, even though build-wheels succeeds on dispatch.
+    if: ${{ needs.release-please.outputs.releases_created == 'true' }}
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write # OIDC → PyPI Trusted Publisher
+      attestations: write # actions/attest-build-provenance for every wheel + sdist
+    steps:
+      # This job's only `needs` are build-wheels + build-sdist, so downloading
+      # every artifact yields exactly the per-platform wheels + the sdist.
+      # merge-multiple flattens them all into one dist/ dir for the upload.
+      - name: Download all wheels + sdist
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        with:
+          path: dist
+          merge-multiple: true
+      - name: List distribution files
+        run: ls -la dist
+      # Build-provenance attestation for EVERY wheel + the sdist. Runs BEFORE the
+      # PyPI upload so an attestation failure blocks publish rather than leaving an
       # unattested published artifact. (npm is covered by `npm publish
-      # --provenance` below; crates.io has no OIDC provenance path yet.)
-      - name: Attest build provenance (wheel + sdist)
+      # --provenance`; crates.io has no OIDC provenance path yet.)
+      - name: Attest build provenance (wheels + sdist)
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be  # v2
         with:
           subject-path: 'dist/*'
-      - name: Publish to PyPI (Trusted Publisher)
+      - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # release/v1
         with:
           packages-dir: dist
 
-      # --- TypeScript → npm (OIDC trusted publisher; npm CLI >= 11.5.1) ---
+  # ===========================================================================
+  # TypeScript → npm: build one prebuilt .node per triple, then bundle + publish
+  # a SINGLE package with every binary (loader resolves ./*.node locally first).
+  # ===========================================================================
+  build-node:
+    name: Build node addon (${{ matrix.settings.target }})
+    needs: release-please
+    # Runs on a real release OR a manual build-only smoke test (workflow_dispatch).
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || needs.release-please.outputs.releases_created == 'true') }}
+    runs-on: ${{ matrix.settings.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          # Native runner wherever one is free (public repo ⇒ ubuntu-24.04-arm is
+          # free) — no QEMU. The two musl targets have no native runner, so they
+          # cross-compile with zig (cargo-zigbuild, the `-x` flag) from the x64/arm
+          # Ubuntu runners. Native everywhere it's free; zig only where it isn't.
+          - runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+          - runner: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+          - runner: macos-13
+            target: x86_64-apple-darwin
+          - runner: macos-14
+            target: aarch64-apple-darwin
+          - runner: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
+
+      - name: Install mise toolchain
+        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac  # v2
+        with:
+          experimental: true
+
+      # The build target's Rust std must be present (native for glibc/macOS/
+      # Windows; the cross std for musl). Add it explicitly so napi resolves it.
+      - name: Add Rust target
+        run: mise exec -- rustup target add ${{ matrix.settings.target }}
+
+      # musl has no native runner → cross-compile with zig. napi's `-x` flag
+      # routes the build through cargo-zigbuild; these two steps supply the tools.
+      - name: Set up zig (musl only)
+        if: ${{ contains(matrix.settings.target, 'musl') }}
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29  # v2.2.1
+        with:
+          version: 0.14.1
+      - name: Install cargo-zigbuild (musl only)
+        if: ${{ contains(matrix.settings.target, 'musl') }}
+        uses: taiki-e/install-action@16b05812d776ae1dfaabc8277e421fb6d2506419  # v2
+        with:
+          tool: cargo-zigbuild
+
+      - name: Install TS deps
+        run: mise exec -- pnpm -C packages/typescript install --frozen-lockfile
+
+      # `-x` (zig cross-build) only for musl; native build for everything else.
+      # The target comes in via env (never interpolate ${{ }} into the script).
+      - name: Build native addon
+        working-directory: packages/typescript
+        env:
+          TARGET: ${{ matrix.settings.target }}
+        run: |
+          if [ "${TARGET#*musl}" != "$TARGET" ]; then
+            mise exec -- pnpm build:addon -- --target "$TARGET" -x
+          else
+            mise exec -- pnpm build:addon -- --target "$TARGET"
+          fi
+        shell: bash
+
+      # Upload the platform binary PLUS the napi loader (index.js/index.d.ts).
+      # The loader is platform-independent (dispatches by process.platform at
+      # runtime), so every job produces an identical copy; publish-npm downloads
+      # them all with merge-multiple (last-writer-wins on the identical loader,
+      # all distinct .node files land side by side in the one package).
+      - name: Upload addon artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: node-${{ matrix.settings.target }}
+          path: |
+            packages/typescript/index.js
+            packages/typescript/index.d.ts
+            packages/typescript/*.node
+          if-no-files-found: error
+
+  publish-npm:
+    name: Publish to npm (Trusted Publisher)
+    # Needs release-please (for the release-created output referenced in `if`),
+    # the prebuilt .node artifacts, AND the single gate (all builds + tests).
+    needs: [release-please, release-gate, build-node]
+    # Explicit release-only guard: a workflow_dispatch smoke test builds the addon
+    # but must NEVER publish, even though build-node succeeds on dispatch.
+    if: ${{ needs.release-please.outputs.releases_created == 'true' }}
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write # OIDC → npm Trusted Publisher (npm CLI >= 11.5.1)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
+
+      - name: Install mise toolchain
+        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac  # v2
+        with:
+          experimental: true
+
       - name: Set up Node for npm OIDC
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
         with:
           node-version: '22.14.0'
           registry-url: 'https://registry.npmjs.org'
-      - name: Build + publish the TS package
+
+      - name: Install TS deps + build the facade (dist/)
+        run: |
+          mise exec -- pnpm -C packages/typescript install --frozen-lockfile
+          mise exec -- pnpm -C packages/typescript run build:facade
+
+      # Pull every prebuilt binary into the package dir. The napi loader tries
+      # ./prompting-press.<platform>.node FIRST, so bundling all of them into the
+      # one package makes it install everywhere with no platform sub-packages.
+      - name: Download all prebuilt addons
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        with:
+          path: packages/typescript
+          pattern: node-*
+          merge-multiple: true
+
+      - name: List bundled binaries
+        run: ls -la packages/typescript/*.node
+
+      - name: Publish the TS package
+        working-directory: packages/typescript
         run: |
           npm install -g npm@latest        # OIDC trusted publishing needs npm >= 11.5.1
-          mise exec -- pnpm -C packages/typescript install --frozen-lockfile
-          mise exec -- pnpm -C packages/typescript run build
-          npm publish --provenance --access public -w packages/typescript || (cd packages/typescript && npm publish --provenance --access public)
+          npm publish --provenance --access public
+
+  # ===========================================================================
+  # finalize-release — flip the DRAFT GitHub Releases to public, but ONLY when
+  # every registry publish succeeded. This is the announcement-integrity step:
+  # a release is not "announced" (public, in the feed) until crates.io + PyPI +
+  # npm all have the artifacts. If any publish failed, the drafts stay drafts and
+  # this job fails loudly so the release is visibly incomplete and can be retried.
+  #
+  # release-please cut 6 component draft releases in lockstep (linked-versions),
+  # tagged `<component>-v<version>`. We derive <version> from the manifest (with
+  # no root '.' component, release-please's `version` output can be empty; the
+  # manifest is the reliable lockstep source, same fallback docs-snapshot uses)
+  # and flip every draft release whose tag ends in `-v<version>`.
+  # ===========================================================================
+  finalize-release:
+    name: Finalize release (flip drafts → public)
+    needs: [release-please, publish-crates, publish-python, publish-npm]
+    if: ${{ always() && needs.release-please.outputs.releases_created == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # edit (publish) the draft GitHub Releases
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
+
+      - name: Verify every registry published
+        env:
+          R_CRATES: ${{ needs.publish-crates.result }}
+          R_PYPI: ${{ needs.publish-python.result }}
+          R_NPM: ${{ needs.publish-npm.result }}
+        run: |
+          set -euo pipefail
+          echo "publish-crates=$R_CRATES publish-python=$R_PYPI publish-npm=$R_NPM"
+          if [ "$R_CRATES" != "success" ] || [ "$R_PYPI" != "success" ] || [ "$R_NPM" != "success" ]; then
+            echo "::error::A registry publish did not succeed — leaving GitHub Releases as DRAFTS (not announced)."
+            echo "Re-run the failed publish job(s); once all are green, re-run this workflow to finalize."
+            exit 1
+          fi
+
+      - name: Flip all draft releases for this version to public
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Lockstep version = any manifest value (all 6 share it via linked-versions).
+          VERSION="$(node -e "const m=require('./.release-please-manifest.json');console.log(Object.values(m)[0])")"
+          echo "Finalizing releases for version: $VERSION"
+          # List every draft release whose tag ends in -v<version> and publish it.
+          mapfile -t TAGS < <(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName,isDraft \
+            --jq ".[] | select(.isDraft and (.tagName | endswith(\"-v${VERSION}\"))) | .tagName")
+          if [ "${#TAGS[@]}" -eq 0 ]; then
+            echo "No draft releases matching -v${VERSION} found (already finalized?). Nothing to do."
+            exit 0
+          fi
+          for tag in "${TAGS[@]}"; do
+            echo "Publishing draft release: $tag"
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false
+          done
+          echo "Finalized ${#TAGS[@]} release(s) for v${VERSION}."

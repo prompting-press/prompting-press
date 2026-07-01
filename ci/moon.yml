@@ -24,6 +24,34 @@ tasks:
       runFromWorkspaceRoot: true
       cache: false
 
+  check-workflows:
+    description: 'Static-lint .github/workflows/*.yml with actionlint (syntax, ${{ }} expression errors, shellcheck on run: blocks, action-input typos). Catches a release.yml/ci.yml mistake pre-merge instead of on release day. actionlint is mise-pinned (aqua:rhysd/actionlint).'
+    command: 'actionlint'
+    options:
+      runFromWorkspaceRoot: true
+      cache: false
+
+  check-package:
+    description: 'Publishability dry-run — `cargo package` the two crates that actually ship to crates.io (prompting-press-core + prompting-press), asserting each produces a valid .crate with a crates.io-valid manifest (all deps versioned, required metadata present). Scoped to the published crates only: the FFI binding crates and samples/rust/* are NOT published and have path-only deps that cargo package rejects. `--no-verify` skips the compile (the consumer would false-fail resolving the not-yet-published core from the index); this checks packaging/manifest validity, which is what a publish-time surprise looks like.'
+    command: 'cargo package -p prompting-press-core -p prompting-press --no-verify --locked'
+    options:
+      runFromWorkspaceRoot: true
+      cache: false
+
+  check-unused-deps:
+    description: 'Dead-dependency lint (Rust) — cargo-machete flags dependencies declared in a Cargo.toml but never referenced in that crate. Caught a genuinely-orphaned serde_yaml_ng in prompting-press-py. Runs over the whole workspace; false positives (a dep used only via macro/cfg) go in [package.metadata.cargo-machete].ignored.'
+    command: 'cargo machete'
+    options:
+      runFromWorkspaceRoot: true
+      cache: false
+
+  check-scripts:
+    description: 'Shell-script lint — shellcheck over the repo bash scripts (scripts/**/*.sh). Catches quoting/word-splitting/unset-var bugs in the CI + codegen scripts before they misbehave on a runner. shellcheck is mise-pinned (aqua:koalaman/shellcheck).'
+    command: "bash -c 'shellcheck $(find scripts -name \"*.sh\")'"
+    options:
+      runFromWorkspaceRoot: true
+      cache: false
+
   check-floating-versions:
     description: 'T030a — Lint manifests for floating version specifiers (^, ~, latest, *) per SEC-003.'
     command: 'bash scripts/ci/check-floating-versions.sh'
@@ -100,7 +128,13 @@ tasks:
 
   check-third-party-licenses:
     description: 'Third-party attribution freshness gate — regenerates the bundled packages/*/THIRD-PARTY-LICENSES.md via cargo-about and fails if git diff is dirty (the wheel + .node addon statically link the Rust graph, so their notices must be shipped and current).'
-    command: 'bash scripts/ci/check-third-party-licenses.sh'
+    # Wrapped in `mise exec` so the script bash runs with mise FULLY ACTIVATED:
+    # cargo-about lives ONLY in mise''s install dir (not ~/.cargo/bin like cargo-deny),
+    # and moon does not propagate mise''s tool PATH into a plain task subprocess — so a
+    # bare `bash ...` here leaves `cargo about` / `cargo-about` / even `mise` itself off
+    # PATH on CI. `mise exec --` prepends the mise tool dirs, so the script resolves
+    # cargo-about like any other pinned tool.
+    command: 'mise exec -- bash scripts/ci/check-third-party-licenses.sh'
     options:
       runFromWorkspaceRoot: true
       cache: false
