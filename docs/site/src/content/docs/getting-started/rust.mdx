@@ -3,7 +3,7 @@ title: "Getting started — Rust"
 description: "Install prompting-press and render a first prompt in Rust."
 ---
 
-import { Aside, Code, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 ## Install
 
@@ -11,26 +11,13 @@ Add the crate to `Cargo.toml`:
 
 ```toml
 [dependencies]
-prompting-press = "1"
+prompting-press = "0.1"
 garde = { version = "0.23", features = ["derive", "serde"] }
 serde = { version = "1", features = ["derive"] }
 ```
 
 `garde` is the Rust validator crate; `serde` is required so the Vars struct can be serialized
 across the FFI bridge.
-
-<Aside type="note" title="Pre-release: install from source">
-Prompting Press is not published to crates.io yet. Until the first release, depend on the
-latest `main` directly via a git dependency:
-
-```toml
-[dependencies]
-prompting-press = { git = "https://github.com/prompting-press/prompting-press" }
-```
-
-Add `rev = "<commit>"` for a reproducible pin. Switch to the version range above once the
-crate is published.
-</Aside>
 
 ## Write a prompt definition
 
@@ -159,7 +146,7 @@ use prompting_press::GuardConfig;
 
 let vars = GreetVars { name: "Ada".into(), count: 3 };
 
-let result = greet.render(&vars, None, &GuardConfig::default())?;
+let result = greet.render(&vars, None, &GuardConfig::default(), false)?;
 
 result.text;          // => "Hi Ada, you have 3 messages."
 result.variant;       // => "default"
@@ -167,9 +154,11 @@ result.template_hash; // => e.g. "9f2c…" (64-char lowercase-hex SHA-256 of the
 result.render_hash;   // => e.g. "1ab4…" (64-char lowercase-hex SHA-256 of result.text)
 ```
 
-`render::<V>(&self, vars: &V, variant: Option<&str>, guard: &GuardConfig)`:
+`render::<V>(&self, vars: &V, variant: Option<&str>, guard: &GuardConfig, reveal_render_detail: bool)`:
 - `variant = None` selects the default (root body) arm — the same arm `greet.body()` showed in Step 1.
 - `guard = &GuardConfig::default()` opts out of the advisory guard text (so `result.guard` is `None`).
+- `reveal_render_detail = false` keeps render-error detail scrubbed; pass `false` in all production
+  call sites.
 
 The generic `V` is resolved at the **call site**, so "this prompt has a validator for `count`" is a
 compile-time guarantee — no runtime validator object is stored on the `Prompt`. This is the Rust side
@@ -179,7 +168,8 @@ of the per-language validator model.
 
 ```rust
 use garde::Validate;
-use prompting_press::{GuardConfig, Prompt};
+use prompting_press::GuardConfig;
+use prompting_press::Prompt;
 use serde::Serialize;
 
 #[derive(Serialize, Validate)]
@@ -197,7 +187,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 2 + 3. Render with typed, garde-validated vars.
     let vars = GreetVars { name: "Ada".into(), count: 3 };
-    let result = greet.render(&vars, None, &GuardConfig::default())?;
+    let result = greet.render(&vars, None, &GuardConfig::default(), false)?;
 
     println!("{}", result.text);          // Hi Ada, you have 3 messages.
     println!("{}", result.template_hash); // 64-char hex
@@ -222,7 +212,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 use prompting_press::{ConsumerError, error::code};
 
 // ConsumerError is a closed three-variant enum — the match is exhaustive.
-match greet.render(&vars, None, &GuardConfig::default()) {
+match greet.render(&vars, None, &GuardConfig::default(), false) {
     Ok(result) => { /* ... */ }
     Err(ConsumerError::Validation(rows)) => {
         for row in &rows {

@@ -504,6 +504,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "prompting-press-greeter-cli"
+version = "0.0.0"
+dependencies = [
+ "garde",
+ "prompting-press",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "prompting-press-node"
 version = "0.1.0"
 dependencies = [

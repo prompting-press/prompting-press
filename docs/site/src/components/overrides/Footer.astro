@@ -3,28 +3,47 @@
  * Footer override — renders the default Starlight Footer plus a
  * "docs current as of X.Y.Z" freshness line (FR-018 / T010).
  *
- * Version detection:
- *   - Versioned pages (/v/X.Y/...): look up the minor in the manifest to get lastPatch.
- *   - Latest/next pages (bare path):  show the latest entry's label (e.g. "next (main)").
+ * Version detection (Phase 7 per-version build model):
+ *   Primary:  BASE_URL (set per build via PP_DOCS_BASE) — e.g. "/v0.1/" or "/next/".
+ *   Fallback: URL path (legacy dynamic-route /v/X.Y/... for dev/single-build compat).
+ *
+ *   - "/v0.1/" build → look up minor "0.1" in manifest → show lastPatch.
+ *   - "/next/"  build → show "next (main)" label.
+ *   - dev/bare-path  → show the isLatest entry's label.
  */
 import DefaultFooter from "@astrojs/starlight/components/Footer.astro";
 import versionsData from "../../data/versions.json";
 
-const pathname = Astro.url.pathname;
-const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+// BASE_URL is the Astro built-in, set per build (e.g. "/v0.1/" or "/next/").
+const buildBase = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
-// Detect version from URL
-const versionMatch = pathname.match(new RegExp(`^${base}/v/([^/]+)`));
-const currentMinor = versionMatch ? versionMatch[1] : null;
+// Derive current minor from the build base (per-version builds).
+const baseMinorMatch = buildBase.match(/^\/v(\d+\.\d+)$/);
+const isNextBuild    = buildBase === "/next";
 
 let freshnessLabel = "";
-if (currentMinor) {
-  const entry = versionsData.versions.find((v) => v.minor === currentMinor);
-  freshnessLabel = entry ? entry.lastPatch : currentMinor;
+
+if (baseMinorMatch) {
+  // Released minor build (e.g. base="/v0.1/").
+  const minor = baseMinorMatch[1];
+  const entry = versionsData.versions.find((v) => v.minor === minor);
+  freshnessLabel = entry ? entry.lastPatch : minor;
+} else if (isNextBuild) {
+  // next build.
+  freshnessLabel = "next (main)";
 } else {
-  // Latest/next pages: find the isLatest entry
-  const latestEntry = versionsData.versions.find((v) => v.isLatest);
-  freshnessLabel = latestEntry ? latestEntry.label : versionsData.latest;
+  // Dev / single-build fallback: also try path-based detection for legacy compat.
+  const pathname = Astro.url.pathname;
+  const legacyMatch = pathname.match(/\/v\/([^/]+)/);
+  if (legacyMatch) {
+    const minor = legacyMatch[1];
+    const entry = versionsData.versions.find((v) => v.minor === minor);
+    freshnessLabel = entry ? entry.lastPatch : minor;
+  } else {
+    // Latest/bare path: show the isLatest entry's label.
+    const latestEntry = versionsData.versions.find((v) => v.isLatest);
+    freshnessLabel = latestEntry ? latestEntry.label : versionsData.latest;
+  }
 }
 ---
 

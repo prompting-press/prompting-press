@@ -1,4 +1,4 @@
-//! The immutable [`Prompt`] value object and its [`PromptOverlay`] (spec 008, T026–T030).
+//! The immutable [`Prompt`] value object and its [`PromptOverlay`].
 //!
 //! [`Prompt`] is the library's primary public type: a validated, immutable facade over a
 //! [`PromptDefinition`]. Construction (`new`, `from_yaml`, `from_json`, `from_toml`) is
@@ -7,27 +7,27 @@
 //! 1. **Shape-valid** — the document parsed to a `PromptDefinition` (serde layer).
 //! 2. **Template-parseable and analyzable** — every variant body (including the root body)
 //!    is parseable by the kernel and free of excluded features; construction FAILS on an
-//!    un-analyzable body (R7/Q4).
+//!    un-analyzable body.
 //! 3. **Agreement-sound** — every variable a variant template references is declared in
-//!    `variables`; a referenced-but-undeclared variable is a construction failure (FR-020 /
-//!    Principle IV). The agreement check therefore moves ONTO construction; a constructed
-//!    `Prompt` carries no undeclared-variable agreements.
+//!    `variables`; a referenced-but-undeclared variable is a construction failure. The
+//!    agreement check therefore moves ONTO construction; a constructed `Prompt` carries no
+//!    undeclared-variable references.
 //! 4. **Reserved-name clean** — no variant is literally named `"default"` (the kernel's
-//!    reserved root-body alias); that is a construction failure (CR-1).
+//!    reserved root-body alias); that is a construction failure.
 //!
 //! After construction every operation is infallible with respect to the above invariants;
 //! `check()` is a pure advisory pass that can only surface the trust/guard finding (a prompt
 //! with `trusted: false` vars and no guard configured).
 //!
-//! ## `with` — the sole mutator (R6)
+//! ## `derive` — the sole mutator
 //!
 //! [`Prompt::derive`] shallow-replaces top-level fields via a [`PromptOverlay`] and routes the
 //! merged definition through `Prompt::new` (full re-validation). The original `Prompt` is
-//! untouched. In Rust the validator is generic `V` named at the `render` / `with` call site
+//! untouched. In Rust the validator is generic `V` named at the `render` call site
 //! (compile-time coverage); `PromptOverlay` therefore carries only data fields — no runtime
-//! validator object (the Rust asymmetry from constitution Principle VI v1.2.0).
+//! validator object (the Rust asymmetry from the constitution's per-language-idiom principle).
 //!
-//! ## No I/O (Principle III / C-03)
+//! ## No I/O
 //!
 //! The text-factory methods accept already-read text — the caller hands it in. This crate
 //! reads no files.
@@ -72,11 +72,11 @@ impl Prompt {
     /// Runs the construction invariants on `def`:
     /// 1. For each variant arm (root body + every named variant), asks the kernel for the
     ///    arm's [`required_roots`]. A kernel `Err` (parse failure or excluded feature) is a
-    ///    **construction failure** — the `Prompt` is not built (R7/Q4).
+    ///    **construction failure** — the `Prompt` is not built.
     /// 2. Each analyzable arm's referenced roots must be a subset of the declared `variables`.
-    ///    Any root not declared is an agreement violation (FR-020 / Principle IV).
-    /// 3. A variant named literally `"default"` is rejected (CR-1 — the kernel reserves that
-    ///    name for the root body; the declared arm would be unreachable).
+    ///    Any root not declared is an agreement violation.
+    /// 3. A variant named literally `"default"` is rejected — the kernel reserves that
+    ///    name for the root body; the declared arm would be unreachable.
     ///
     /// On success the `Prompt` is returned. On any violation a structured
     /// [`ConsumerError`] is returned — never a panic.
@@ -99,7 +99,7 @@ impl Prompt {
     /// Equivalent to `serde_yaml_ng::from_str(..)` + [`Prompt::new`]. A parse/shape error
     /// returns [`ConsumerError::Load`]; a validation error returns the same errors as `new`.
     ///
-    /// The crate reads no files — the caller supplies already-read text (C-03 / FR-024).
+    /// The crate reads no files — the caller supplies already-read text.
     ///
     /// # Errors
     ///
@@ -175,7 +175,7 @@ impl Prompt {
     }
 
     /// The output model reference, if declared (`output_model` field). Carried as metadata
-    /// only — never parsed or resolved by this library (Principle III).
+    /// only — never parsed or resolved by this library.
     #[must_use]
     pub fn output_model(&self) -> Option<&str> {
         self.def.output_model.as_deref()
@@ -191,26 +191,25 @@ impl Prompt {
 
     /// Validate-then-render this prompt.
     ///
-    /// 1. Validates `vars` once via garde, BEFORE any templating (FR-002). On failure returns
+    /// 1. Validates `vars` once via garde, BEFORE any templating. On failure returns
     ///    [`ConsumerError::Validation`] — the kernel is never reached.
     /// 2. Bridges the validated struct to the kernel's value type via
-    ///    [`minijinja::Value::from_serialize`] (FR-003a).
+    ///    [`minijinja::Value::from_serialize`].
     /// 3. Delegates to [`prompting_press_core::render`], normalizing any
     ///    [`KernelError`] to [`ConsumerError::Kernel`].
     ///
     /// `variant = None` selects the default (root body) arm. `guard` is plumbed straight
     /// through to the kernel; `RenderResult::guard` is surfaced unchanged (guard *expansion*
-    /// is the kernel's contract — spec 002 / F5).
+    /// is the kernel's contract).
     ///
     /// `V::Context: Default` so the whole-struct [`Validate::validate`] convenience applies
-    /// (one validation pass over the entire input set, FR-002). Context-carrying validation
-    /// is intentionally out of v1 scope (scope discipline — C-11 / one concrete path per
-    /// concern).
+    /// (one validation pass over the entire input set). Context-carrying validation
+    /// is intentionally out of v1 scope (one concrete path per concern).
     ///
-    /// ## Byte-identical output (FR-016)
+    /// ## Byte-identical output
     ///
-    /// The kernel path is identical to the pre-reshape `render(reg, name, …)` path. The
-    /// `RenderResult` hashes are therefore byte-identical.
+    /// The `RenderResult` hashes are byte-identical across Rust, Python, and TypeScript for
+    /// the same template and inputs, because all three bindings share this kernel render path.
     ///
     /// ## `reveal_render_detail` — unsafe, off-by-default render-error detail opt-in
     ///
@@ -222,15 +221,14 @@ impl Prompt {
     /// secrets — into the returned error message and into any log line or stack trace
     /// derived from it. Use only in a controlled debug context where you own the log
     /// destination and deliberately accept that exposure. Never set `true` by default or
-    /// in ambient/global configuration (FR-003 / SEC-004 carve-out D3).
+    /// in ambient/global configuration.
     ///
     /// # Errors
     ///
     /// - [`ConsumerError::Validation`] — garde rejected `vars`.
     /// - [`ConsumerError::Kernel`] — the kernel rejected the render (unknown variant,
     ///   strict-undefined reference, parse/render failure). `Render` detail scrubbed
-    ///   unless `reveal_render_detail = true` (SEC-004 / decision D3). `Parse` detail
-    ///   always preserved (decision D2).
+    ///   unless `reveal_render_detail = true`. `Parse` detail always preserved.
     pub fn render<V>(
         &self,
         vars: &V,
@@ -242,20 +240,20 @@ impl Prompt {
         V: Serialize + Validate,
         V::Context: Default,
     {
-        // 1. Validate once, BEFORE any templating (FR-002).
+        // 1. Validate once, BEFORE any templating.
         //    Validation errors use the plain From scrubber — never from_kernel_revealing
-        //    (validation is not a kernel render error; SEC-004 applies to Render detail only).
+        //    (validation is not a kernel render error; error scrubbing applies to Render detail only).
         vars.validate().map_err(ConsumerError::from)?;
 
-        // 2. Bridge the validated struct to the kernel's value type (FR-003a).
-        //    `from_serialize` is infallible (ER-2): a custom-Serialize failure would
-        //    surface downstream as a strict-undefined kernel error, never silently here.
+        // 2. Bridge the validated struct to the kernel's value type.
+        //    `from_serialize` is infallible: a custom-Serialize failure would surface
+        //    downstream as a strict-undefined kernel error, never silently here.
         let values = minijinja::Value::from_serialize(vars);
 
         // 3. Delegate to the kernel; normalize KernelError via the per-call opt-in.
         //    When reveal_render_detail=false this is byte-for-byte the same as From.
-        //    The kernel receives ONLY already-validated values (FR-003); the consumer adds
-        //    no render/agreement/variant/hash logic of its own (FR-011).
+        //    The kernel receives ONLY already-validated values; the consumer adds
+        //    no render/agreement/variant/hash logic of its own.
         prompting_press_core::render(&self.def, variant, values, guard)
             .map_err(|e| ConsumerError::from_kernel_revealing(e, reveal_render_detail))
     }
@@ -280,7 +278,7 @@ impl Prompt {
     /// `check()` can surface is [`FindingKind::UntrustedWithoutGuard`] — a prompt declaring
     /// `trusted: false` vars but carrying no `"guard"` key in `metadata`.
     ///
-    /// Pure: takes `&self`, never renders, never mutates (FR-019).
+    /// Pure: takes `&self`, never renders, never mutates.
     #[must_use]
     pub fn check(&self) -> CheckReport {
         let mut findings = Vec::new();
@@ -298,9 +296,9 @@ impl Prompt {
     /// so an overlay that introduces an agreement violation or a reserved variant name is
     /// rejected.
     ///
-    /// In Rust the validator is the generic `V` named at the `render` call site (Principle
-    /// VI compile-time coverage); `derive` takes `&self` and carries no runtime validator.
-    /// `PromptOverlay` therefore contains only data fields (R6 — the Rust asymmetry).
+    /// In Rust the validator is the generic `V` named at the `render` call site (garde
+    /// covers all fields at compile time); `derive` takes `&self` and carries no runtime
+    /// validator. `PromptOverlay` therefore contains only data fields.
     ///
     /// # Errors
     ///
@@ -341,8 +339,8 @@ impl Prompt {
     /// directly for render/get_source (their validation is owned in the binding layer, not
     /// in Rust garde, so the consumer's generic `render<V>` is not usable there). Bindings
     /// call `prompting_press_core::render(prompt.definition(), ...)` directly after doing
-    /// their own validation — the same zero-engine-logic pattern as the registry render
-    /// paths (critique E1 / C-01). Also used by `Composition::resolve` within this crate.
+    /// their own validation — the same zero-engine-logic pattern as the `Prompt::render`
+    /// path. Also used by `Composition::resolve` within this crate.
     pub fn definition(&self) -> &PromptDefinition {
         &self.def
     }
@@ -387,12 +385,12 @@ pub struct PromptOverlay {
 /// violated invariant returns the structured `ConsumerError`.
 ///
 /// Invariants (in order):
-/// 1. Reserved variant name (`"default"` in `variants`) → rejected (CR-1).
+/// 1. Reserved variant name (`"default"` in `variants`) → rejected.
 /// 2. For each variant arm: kernel `required_roots` must not `Err` (parse / excluded
-///    feature → construction failure, R7/Q4).
-/// 3. Referenced roots must be a subset of declared `variables` (agreement, FR-020).
+///    feature → construction failure).
+/// 3. Referenced roots must be a subset of declared `variables` (agreement check).
 fn validate_prompt_def(def: &PromptDefinition) -> Result<(), ConsumerError> {
-    // 1. Reject a variant literally named "default" (CR-1).
+    // 1. Reject a variant literally named "default" (reserved name for the root body).
     if def.variants.contains_key(DEFAULT) {
         return Err(ConsumerError::Kernel(vec![FieldError {
             field: "variant".to_string(),
@@ -415,7 +413,7 @@ fn validate_prompt_def(def: &PromptDefinition) -> Result<(), ConsumerError> {
     for variant_opt in arms {
         let variant_label = variant_opt.unwrap_or(DEFAULT);
 
-        // 2. Parse + required_roots (construction fails on Err — R7/Q4).
+        // 2. Parse + required_roots (construction fails on Err).
         let agreement = required_roots(def, variant_opt).map_err(|e| {
             let (field, msg, c) = kernel_analysis_error_to_field(&e);
             ConsumerError::Kernel(vec![FieldError {
@@ -425,7 +423,7 @@ fn validate_prompt_def(def: &PromptDefinition) -> Result<(), ConsumerError> {
             }])
         })?;
 
-        // 3. Agreement check: referenced roots ⊆ declared variables (FR-020).
+        // 3. Agreement check: referenced roots ⊆ declared variables.
         for root in &agreement.required_roots {
             if !declared.contains(root.as_str()) {
                 return Err(ConsumerError::Kernel(vec![FieldError {
@@ -444,7 +442,7 @@ fn validate_prompt_def(def: &PromptDefinition) -> Result<(), ConsumerError> {
 }
 
 /// Map a kernel analysis error to `(field, message, code)` for a construction-failure
-/// `ConsumerError`. Scrubbed — no bound-value content (SEC-004 / FR-015).
+/// `ConsumerError`. Scrubbed — no bound-value content.
 fn kernel_analysis_error_to_field(err: &KernelError) -> (&'static str, String, &'static str) {
     match err {
         KernelError::UnknownVariant { requested } => (
@@ -457,7 +455,7 @@ fn kernel_analysis_error_to_field(err: &KernelError) -> (&'static str, String, &
             format!("undefined variable at render: `{name}`"),
             code::UNDEFINED_VARIABLE,
         ),
-        // SEC-004: detail may embed bound-value content — DO NOT copy it.
+        // detail may embed bound-value content — DO NOT copy it.
         KernelError::Parse { detail: _ } => {
             ("template", "template parse error".to_string(), code::PARSE)
         }
@@ -467,7 +465,7 @@ fn kernel_analysis_error_to_field(err: &KernelError) -> (&'static str, String, &
             "template uses an excluded feature".to_string(),
             code::EXCLUDED_FEATURE,
         ),
-        // spec-015: only raised when a caller supplies an invalid advisory override.
+        // Only raised when a caller supplies an invalid guard advisory override.
         // The detail names the missing element(s) — no bound value content.
         KernelError::GuardAdvisoryInvalid { detail } => (
             "guard",

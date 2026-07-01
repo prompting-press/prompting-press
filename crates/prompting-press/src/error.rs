@@ -42,7 +42,7 @@ use prompting_press_core::KernelError;
 /// `row.code == code::UNKNOWN_VARIANT`) rather than on enum variants.
 pub mod code {
     /// A garde validation failure (the consumer synthesizes this; garde exposes no machine
-    /// code — research D3). One row per reported path.
+    /// code). One row per reported path.
     pub const VALIDATION: &str = "validation";
 
     /// The kernel was asked for a variant the definition does not declare
@@ -136,7 +136,7 @@ impl std::error::Error for ConsumerError {}
 /// Normalize a garde [`Report`](garde::Report) into [`ConsumerError::Validation`].
 ///
 /// garde 0.23's `Report` exposes `iter() -> impl Iterator<Item = &(Path, Error)>` (there is
-/// **no** `flatten()` — research D3). Each pair becomes one [`FieldError`]:
+/// **no** `flatten()`). Each pair becomes one [`FieldError`]:
 /// `field = path.to_string()` (`Path: Display` → dot-path), `message = error.message()`,
 /// and `code = code::VALIDATION` (garde carries no machine code, so the consumer
 /// synthesizes a stable one).

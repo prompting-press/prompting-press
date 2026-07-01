@@ -87,12 +87,16 @@ for m in &messages {
 `Result<(), ConsumerError>`. On a garde failure the entry is NOT stored.
 
 `Composition::resolve(&self)` returns `Result<Vec<Message>, ConsumerError>`. Each `Message`
-carries `role: String` and `text: String`.
+carries `role: String` and `text: String`. `Composition::len()` and `is_empty()` report the entry
+count.
+
+Rust builds a composition with `new()` + `append()` only — there is no bulk `from_messages`
+constructor (that is the Python/TypeScript idiom); push each entry explicitly, as above.
 </TabItem>
 <TabItem label="Python">
 ```python
 from prompting_press import Composition, Prompt
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class SysVars(BaseModel):
     instructions: str
@@ -105,13 +109,13 @@ sys_prompt = Prompt({
     "name": "system-preamble",
     "role": "system",
     "body": "{{ instructions }}",
-    "variables": {"instructions": {"type": "string", "trusted": true}},
+    "variables": {"instructions": {"type": "string", "trusted": True}},
 })
 user_prompt = Prompt({
     "name": "user-turn",
     "role": "user",
     "body": "{{ query }}",
-    "variables": {"query": {"type": "string", "trusted": false}},
+    "variables": {"query": {"type": "string", "trusted": False}},
 })
 
 comp = Composition()
@@ -147,14 +151,19 @@ except PromptValidationError as exc:
     # comp is unchanged — the failed entry was never stored
 ```
 
-Build a composition from a list of `(prompt, vars)` or `(prompt, vars, variant)` tuples:
+Build a composition from a list of `(prompt, vars)` or `(prompt, vars, variant)` tuples. The
+optional third element selects a variant of that entry's prompt (omit it for the default arm):
 
 ```python
 comp = Composition.from_messages([
     (sys_prompt,  SysVars(instructions="Be concise.")),
-    (user_prompt, UserVars(query="What is Rust?"), "detailed"),
+    (user_prompt, UserVars(query="What is Rust?")),
 ])
 messages = comp.resolve()
+for m in messages:
+    print(m.role, m.text)
+    # "system" "Be concise."
+    # "user"   "What is Rust?"
 ```
 </TabItem>
 <TabItem label="TypeScript">

@@ -53,28 +53,53 @@ def _strip_jargon(s: str | None) -> str:
     """Mirror of strip-jargon.mjs stripJargon()."""
     if s is None:
         return ""
-    # JS: /\s*\((?:constitution\s+|roadmap\s+decision\s+)?(?:Principle\s+[IVXLC]+|FR-[0-9A-Za-z]+|SC-[0-9]+|SEC-[0-9]+|C-[0-9]+|spec\s+[0-9]+)[^)]*\)/gi
-    s = re.sub(
-        r"\s*\((?:constitution\s+|roadmap\s+decision\s+)?(?:Principle\s+[IVXLC]+|FR-[0-9A-Za-z]+|SC-[0-9]+|SEC-[0-9]+|C-[0-9]+|spec\s+[0-9]+)[^)]*\)",
-        "",
-        s,
-        flags=re.IGNORECASE,
+    # The internal-ID vocabulary (JS: const ID = "...").
+    # Matches: FR-/SC-/SEC-/C-NN/TY-/CR- IDs · spec NNN · constitution Principle X ·
+    # roadmap decision · task IDs (T036) · decision/critique/finding IDs
+    # (D2, E1/critique E1) · clarification/requirement tags (Q1, R7, F5, US3) ·
+    # "data-model §Foo" citations.
+    ID = (
+        r"(?:constitution\s+|roadmap\s+decision\s+)?"
+        r"(?:Principle\s+[IVXLC]+(?:\s+v[0-9]+(?:\.[0-9]+)*)?"
+        r"|FR-[0-9A-Za-z]+"
+        r"|SC-[0-9]+"
+        r"|SEC-[0-9]+"
+        r"|C-[0-9]+"
+        r"|CR-[0-9]+"
+        r"|TY-[0-9]+"
+        r"|spec\s+[0-9]+"
+        r"|spec-[0-9]+"
+        r"|T[0-9]{2,}"
+        r"|critique\s+E[0-9]+"
+        r"|decision\s+D[0-9]+"
+        r"|D[0-9]+"
+        r"|US[0-9]+(?:\s+scenario\s+[0-9]+)?"
+        r"|[FQR][0-9]+"
+        r"|data-model\s+§[A-Za-z]+)"
     )
-    # JS: /\s*\(renamed from `provenance` in spec [0-9]+\)/gi
+    # JS step 1: parenthetical citation clusters, possibly multiple slash/comma-separated IDs.
+    paren_pat = r"\s*\((?:" + ID + r")(?:\s*[/,;&]\s*(?:" + ID + r"|[^)]*?))*\)"
+    s = re.sub(paren_pat, "", s, flags=re.IGNORECASE)
+    # JS step 2: bracketed trailing tags: "[FR-015]", "[FR-022]", "[n]".
+    s = re.sub(r"\s*\[(?:" + ID + r")\]", "", s, flags=re.IGNORECASE)
+    # JS step 3: inline "(renamed from `provenance` in spec NNN)" style notes.
     s = re.sub(
         r"\s*\(renamed from `provenance` in spec [0-9]+\)",
         "",
         s,
         flags=re.IGNORECASE,
     )
-    # JS: /\s*(?:per\s+)?(?:roadmap decision\s+C-[0-9]+|constitution Principle\s+[IVXLC]+)\b[^.]*/gi
+    # JS step 4: bare trailing/inline references.
     s = re.sub(
-        r"\s*(?:per\s+)?(?:roadmap decision\s+C-[0-9]+|constitution Principle\s+[IVXLC]+)\b[^.]*",
+        r"\s*(?:per\s+)?(?:roadmap decision\s+C-[0-9]+|constitution Principle\s+[IVXLC]+(?:\s+v[0-9]+(?:\.[0-9]+)*)?)\b[^.]*",
         "",
         s,
         flags=re.IGNORECASE,
     )
-    # JS: /\s{2,}/g   → " "
+    # Clean up punctuation/space the removals leave behind: " ." → ".", " ;" → ";",
+    # "( )" leftovers, and doubled spaces.
+    s = re.sub(r"\(\s*\)", "", s)
+    s = re.sub(r"\s+([.,;)])", r"\1", s)
     s = re.sub(r"\s{2,}", " ", s).strip()
     return s
 

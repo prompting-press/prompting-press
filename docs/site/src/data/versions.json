@@ -31,7 +31,24 @@
       "label": "next (main)",
       "lastPatch": "next",
       "minor": "next",
-      "slugs": []
+      "slugs": [
+        "",
+        "faq",
+        "getting-started/python",
+        "getting-started/rust",
+        "getting-started/typescript",
+        "guides/composition",
+        "guides/derive",
+        "guides/guard",
+        "guides/lint-in-ci",
+        "guides/metadata",
+        "guides/variants",
+        "reference/prompt-definition",
+        "reference/python",
+        "reference/rust",
+        "reference/typescript",
+        "templates"
+      ]
     }
   ]
 }

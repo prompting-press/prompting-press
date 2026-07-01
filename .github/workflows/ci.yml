@@ -286,3 +286,39 @@ jobs:
         run: mise exec -- cargo build --workspace --locked
         env:
           CARGO_TERM_COLOR: always
+
+  # ---------------------------------------------------------------------------
+  # samples-test — spec 014 (WU-C / T021): build + test all three consumer
+  # sample apps on their in-repo (path/workspace/editable) deps. A public-API
+  # change an app consumes fails this gate, citing the app (SC-010). The three
+  # legs span Rust/Python/TS, so this needs all three toolchains + the two built
+  # FFI extensions. One Linux leg: the apps' behavior is OS-independent (the FFI
+  # link itself is covered per-OS by the `build` matrix).
+  # ---------------------------------------------------------------------------
+  samples-test:
+    name: 'Consumer sample apps (ubuntu)'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          fetch-depth: 0  # let moon resolve the base branch on pull_request events
+
+      - name: Install mise toolchain
+        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac  # v2
+        with:
+          experimental: true
+
+      # The Python + TypeScript sample apps consume the built FFI extensions.
+      # Build the node addon (the TS app's workspace dep); the Python app's
+      # editable install builds the extension via maturin during `uv sync`.
+      - name: 'Install TS deps + build node addon'
+        run: |
+          mise exec -- pnpm -C packages/typescript install --frozen-lockfile
+          mise exec -- pnpm -C packages/typescript run build:addon
+
+      - name: 'T021: samples:test (all three consumer apps)'
+        run: mise exec -- moon run samples:test
+        env:
+          CARGO_TERM_COLOR: always

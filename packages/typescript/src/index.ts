@@ -73,7 +73,7 @@ export interface FieldError {
 	readonly field: string;
 	/** A stable code from the consumer's closed vocabulary (e.g. `"validation"`, `"render"`). */
 	readonly code: string;
-	/** A human-readable, SEC-004-scrubbed message safe to log (never the rejected value). */
+	/** A human-readable message safe to log (never the rejected value). */
 	readonly message: string;
 }
 
@@ -88,7 +88,7 @@ export interface FieldError {
  * concrete subclass (or on `err.errors[*].code`) and never see a `ZodError` or a native napi error.
  */
 export class PromptingPressError extends Error {
-	/** The structured, SEC-004-scrubbed failure rows (the cross-language contract). */
+	/** The structured failure rows (the cross-language contract). */
 	readonly errors: readonly FieldError[];
 
 	constructor(message: string, errors: readonly FieldError[]) {
@@ -173,7 +173,7 @@ function subclassForCode(
  *
  * The addon's thrown error carries the structured payload as JSON in its `.message` (napi sets
  * `message` from the Rust `reason`). We `JSON.parse` it, read `.code` to choose the subclass, and
- * surface `.errors`. The payload is already SEC-004-scrubbed in Rust, so no value content is read.
+ * surface `.errors`. The payload is already scrubbed in Rust, so no value content is read.
  *
  * If the thrown value is not the expected JSON shape (it always should be — every consumer error
  * path is exhaustively mapped in Rust), it is wrapped in the base `PromptingPressError` with a
@@ -321,17 +321,17 @@ export type ValidatorMap = ZodLikeSchema;
 // --------------------------------------------------------------------------------------
 
 /**
- * Options for {@link Prompt.render} (C-11: named-field options object over positional args).
+ * Options for {@link Prompt.render}.
  */
 export interface RenderOptions {
-	/** Select a named variant arm; absent ⇒ the reserved `default` arm (FR-009 / Principle V). */
+	/** Select a named variant arm; absent ⇒ the reserved `default` arm. */
 	variant?: string;
 	/** Opt-in guard config; absent / `{ enabled: false }` ⇒ a plain render (`RenderResult.guard === null`). */
 	guard?: GuardConfig | null;
 	/**
 	 * **Off by default.** When `true`, the full underlying render-error detail is surfaced in
 	 * the thrown {@link PromptRenderError}``.errors[0].message` instead of the fixed scrubbed
-	 * string (SEC-004 carve-out D3).
+	 * string.
 	 *
 	 * **Risk:** enabling this may place **bound-value content** — untrusted input, PII, secrets —
 	 * into the thrown error and into any log line or stack trace derived from it. Use only in a
@@ -416,7 +416,7 @@ function makeInternalArg(handle: NapiPrompt): InternalCtorArg {
  *
  * Wraps a `NapiPrompt` handle; all construction invariants (shape-valid, template-parseable,
  * agreement-sound, reserved-name clean) are enforced by the Rust consumer at construction time
- * (Principle I / T042). There are no setters; the sole mutator is {@link Prompt.derive} (T045).
+ * There are no setters; the sole mutator is {@link Prompt.derive}.
  *
  * ## Construction — four entry points, all throwing on invalid input (Q6)
  *
@@ -427,23 +427,23 @@ function makeInternalArg(handle: NapiPrompt): InternalCtorArg {
  * const p = Prompt.fromToml(text, validators?);   // TOML routed to Rust, no smol-toml dep
  * ```
  *
- * ## validators? — validation_required coverage check (T043 / R2)
+ * ## validators? — validation_required coverage check
  *
  * When supplied, any variable with `validation_required: true` must appear in `validators.shape`.
  * Construction throws a {@link PromptValidationError} if a required variable is uncovered.
  * When `validators.shape` is absent (non-`ZodObject` schema), the check is skipped.
  *
- * ## render() — validate-then-render (T044 / Q1)
+ * ## render() — validate-then-render
  *
  * ```ts
  * p.render(schema, data, opts?);   // schema form: safeParse before templating
  * p.render(data, opts?);           // static form (or uses bound validators when present)
  * ```
  *
- * ## derive(overlay, validators?) — sole mutator (T045 / R6)
+ * ## derive(overlay, validators?) — sole mutator
  *
  * Shallow-replaces top-level fields; re-validates the merged whole. Validators carry forward
- * from the source by default (R6); pass `validators` to override.
+ * from the source by default; pass `validators` to override.
  */
 export class Prompt {
 	/** The underlying napi handle. Private — never exposed outside this class. */
@@ -493,8 +493,8 @@ export class Prompt {
 	/**
 	 * Construct a `Prompt` from already-read **YAML** text.
 	 *
-	 * The text is routed to the Rust consumer's `Prompt::from_yaml` — no JS YAML parsing (Q3 /
-	 * Principle I). Error semantics mirror `new Prompt()`.
+	 * The text is routed to the Rust consumer's `Prompt::from_yaml` — no JS YAML parsing.
+	 * Error semantics mirror `new Prompt()`.
 	 *
 	 * @throws {LoadError}             malformed YAML or shape violation.
 	 * @throws {PromptRenderError}     template/agreement error.
@@ -533,7 +533,7 @@ export class Prompt {
 	 * Construct a `Prompt` from already-read **TOML** text.
 	 *
 	 * TOML parsing is done by the Rust consumer (`toml@1.1.2` via `Prompt::from_toml`). Raw text
-	 * is routed to the addon — no `smol-toml` or other JS TOML library needed (Q3 / Principle I).
+	 * is routed to the addon — no `smol-toml` or other JS TOML library needed.
 	 *
 	 * @throws {LoadError}             malformed TOML or shape violation.
 	 * @throws {PromptRenderError}     template/agreement error.
@@ -601,7 +601,7 @@ export class Prompt {
 	// ── operations ────────────────────────────────────────────────────────────────────────────
 
 	/**
-	 * Render this prompt's resolved variant with typed inputs, validating first (Q1).
+	 * Render this prompt's resolved variant with typed inputs, validating first.
 	 *
 	 * Three call forms, selected at runtime:
 	 *  - **Schema form:** `render(schema, data, opts?)` — `schema.safeParse(data)` runs here,
@@ -612,7 +612,7 @@ export class Prompt {
 	 *  - **Bound-validator form:** `render(data, opts?)` when the prompt was constructed with
 	 *    `validators` — the bound schema's `safeParse(data)` runs automatically.
 	 *
-	 * `opts` carries `{ variant?, guard? }` (C-11: named fields over positionals; Principle VI).
+	 * `opts` carries `{ variant?, guard? }` as named fields.
 	 *
 	 * @throws {PromptValidationError} validation failed (schema form or bound-validator form).
 	 * @throws {PromptRenderError}     the kernel rejected the render.
@@ -678,9 +678,9 @@ export class Prompt {
 	/**
 	 * The sole mutator: shallow-replace top-level fields from `overlay` onto a clone of this
 	 * prompt's definition, then re-validate the merged whole via the Rust consumer. The original
-	 * `Prompt` is untouched (SC-004).
+	 * `Prompt` is untouched (immutability guaranteed).
 	 *
-	 * Validators carry forward from the source by default (R6); pass `validators` to
+	 * Validators carry forward from the source by default; pass `validators` to
 	 * override/augment. Coverage is re-checked against the merged definition.
 	 *
 	 * @param overlay    A partial `PromptDefinition` object — any subset of top-level fields to replace.
@@ -724,9 +724,9 @@ export class Prompt {
 // --------------------------------------------------------------------------------------
 
 /**
- * One composition entry, as an **options object** (C-11: named fields over positional tuples).
+ * One composition entry, as a named-field options object.
  *
- *  - `prompt`  — the `Prompt` object to render (owned; Principle V: caller-owned selection).
+ *  - `prompt`  — the `Prompt` object to render.
  *  - `schema`  — optional Zod-like schema. Present ⇒ `schema.safeParse(data)` runs at append.
  *  - `data`    — the vars value (validated against `schema` when present).
  *  - `variant` — the selected variant arm (absent ⇒ the reserved `default`).
@@ -759,7 +759,7 @@ interface StoredEntry {
  * ordered `Message[]` (FR-012). Built with `new Composition()` + `append()` or
  * `Composition.fromMessages([...])`. No fluent `.chain()` (FR-013).
  *
- * **No Registry** (spec 008 T046): each entry holds an owned `Prompt` object. `resolve()`
+ * **No Registry**: each entry holds an owned `Prompt` object. `resolve()`
  * takes no arguments — it renders using each entry's stored `Prompt` handle directly.
  *
  * No-partial guarantee (FR-013): if any entry fails validation at `append`/`fromMessages`, the

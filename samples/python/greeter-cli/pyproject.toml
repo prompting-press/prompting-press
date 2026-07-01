@@ -1,0 +1,42 @@
+# Consumer sample app — Python greeter CLI (spec 014, WU-C / FR-013–FR-018).
+#
+# A realistic CLI that consumes prompting-press across its full public feature
+# surface, proving the library works end-to-end for an external Python consumer.
+# Pre-publish it depends on the in-repo package via a PATH/editable dependency (FR-015);
+# the launch-flip (FR-019) swaps this to `prompting-press>=0.1` (the published constraint).
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "prompting-press-greeter-cli"
+version = "0.0.0"
+description = "Python consumer sample app for prompting-press (spec 014, WU-C)."
+requires-python = ">=3.12"
+# publish = false equivalent: this package is never intended for PyPI.
+# Pre-publish: depend on the in-repo package via a path/editable dep (FR-015 / Q6).
+# At launch flip to: prompting-press>=0.1
+dependencies = [
+    "prompting-press",
+    "pydantic>=2,<3",
+]
+
+[tool.uv.sources]
+# Path dependency on the in-repo Python binding (pre-publish).
+# At launch flip to: prompting-press = { version = ">=0.1" } — see samples/README.md.
+"prompting-press" = { path = "../../../packages/python", editable = true }
+
+[project.scripts]
+greeter = "greeter_cli.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/greeter_cli"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

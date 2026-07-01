@@ -53,13 +53,79 @@ new map directly — there is nothing to preserve.)
 `.variants()` is a **read accessor** (it returns the current map; it never mutates). `derive` is the
 **only mutator**. The pattern below uses both together: read with `.variants()`, write with `derive`.
 
-<Tabs>
+The examples on this page start from a `greet` prompt (a `name` + `count` body) and a matching
+`GreetVars` — the same pair from **[Getting started](/getting-started/rust/)**:
+
+<Tabs syncKey="construct">
+<TabItem label="Rust">
+```rust
+use garde::Validate;
+use serde::Serialize;
+
+let greet_yaml = r#"
+name: greet
+role: user
+body: "Hi {{ name }}, you have {{ count }} messages."
+variables:
+  name: { type: string, trusted: true }
+  count: { type: integer, trusted: true }
+"#;
+
+#[derive(Serialize, Validate)]
+struct GreetVars {
+    #[garde(length(min = 1))]
+    name: String,
+    #[garde(range(min = 0))]
+    count: i64,
+}
+```
+</TabItem>
+<TabItem label="Python">
+```python
+greet_yaml = """
+name: greet
+role: user
+body: "Hi {{ name }}, you have {{ count }} messages."
+variables:
+  name: { type: string, trusted: true }
+  count: { type: integer, trusted: true }
+"""
+
+from pydantic import BaseModel, Field
+
+class GreetVars(BaseModel):
+    name: str = Field(min_length=1)
+    count: int = Field(ge=0)
+```
+</TabItem>
+<TabItem label="TypeScript">
+```ts
+import { z } from "zod";
+
+const greetYaml = `
+name: greet
+role: user
+body: "Hi {{ name }}, you have {{ count }} messages."
+variables:
+  name: { type: string, trusted: true }
+  count: { type: integer, trusted: true }
+`;
+
+const GreetVars = z.object({
+  name: z.string().min(1),
+  count: z.number().int().nonnegative(),
+});
+```
+</TabItem>
+</Tabs>
+
+<Tabs syncKey="construct">
 <TabItem label="Rust">
 ```rust
 use prompting_press::{Prompt, PromptOverlay};
 use serde_json::json;
 
-let greet = Prompt::from_yaml(yaml_text)?;
+let greet = Prompt::from_yaml(greet_yaml)?;
 
 // READ the current variants, then add to a clone — so existing arms survive.
 let mut variants = greet.variants().clone();
@@ -82,7 +148,7 @@ let formal_greet = greet.derive(PromptOverlay {
 ```python
 from prompting_press import Prompt
 
-greet = Prompt.from_yaml(yaml_text)
+greet = Prompt.from_yaml(greet_yaml)
 
 # READ the current variants (spread), then add one — so existing arms survive.
 derived = greet.derive({
@@ -100,7 +166,7 @@ accessor for the current map.
 ```ts
 import { Prompt } from "prompting-press";
 
-const greet = Prompt.fromYaml(yamlText);
+const greet = Prompt.fromYaml(greetYaml);
 
 // READ the current variants (spread), then add one — so existing arms survive.
 const derivedGreet = greet.derive({
@@ -216,7 +282,7 @@ After adding a variant, select it by name at render time:
 use prompting_press::GuardConfig;
 
 let vars = GreetVars { name: "Ada".into(), count: 3 };
-let result = formal_greet.render(&vars, Some("formal"), &GuardConfig::default())?;
+let result = formal_greet.render(&vars, Some("formal"), &GuardConfig::default(), false)?;
 result.text;     // "Good day, Ada. You have 3 messages."
 result.variant;  // "formal"
 ```

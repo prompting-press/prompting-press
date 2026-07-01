@@ -1,7 +1,7 @@
 //! The Node render path — marshal → kernel-direct render, plus the
-//! [`RenderResult`] / [`GuardConfig`] napi types (FR-002, FR-009..011; US1).
+//! [`RenderResult`] / [`GuardConfig`] napi types.
 //!
-//! ## Why the kernel is called DIRECTLY (critique E1 / C-01)
+//! ## Why the kernel is called directly
 //!
 //! The public render path is `NapiPrompt::render_prompt` (see `prompt.rs`). It does **not** call
 //! the Rust consumer's `prompting_press::render`. That entry point is generic over
@@ -14,16 +14,16 @@
 //! structural because the value handed to the kernel is built by the same
 //! `marshal::to_kernel_value` → `minijinja::Value::from_serialize` path the consumer uses.
 //!
-//! ## The marshal → render chain (Q1)
+//! ## The marshal → render chain
 //!
-//! Validation has **already happened** in the TS facade (`schema.safeParse(data)` — research D3 /
-//! Q1) before the addon is called, so the Rust side does **no** validation:
+//! Validation has **already happened** in the TS facade (`schema.safeParse(data)`) before the
+//! addon is called, so the Rust side does **no** validation:
 //!
 //! 1. **Marshal** the already-validated value through the single value bridge
-//!    [`crate::marshal::to_kernel_value`] (FR-003a).
+//!    [`crate::marshal::to_kernel_value`].
 //! 2. **Render** by calling [`prompting_press_core::render`] directly; map any returned
 //!    [`KernelError`](prompting_press_core::KernelError) through the consumer's tested scrubber via
-//!    [`crate::error::kernel_error_to_napi_err`] (preserves SEC-004 — critique E2). The raw
+//!    [`crate::error::kernel_error_to_napi_err`] (error detail scrubbed). The raw
 //!    `KernelError::detail` is never read here.
 
 use napi_derive::napi;
@@ -31,12 +31,12 @@ use napi_derive::napi;
 use prompting_press_core::{GuardConfig as KernelGuardConfig, RenderResult as KernelRenderResult};
 
 /// The opt-in guard-expansion config, accepted from JS as a plain object and **plumbed through**
-/// to the kernel (FR-009).
+/// to the kernel.
 ///
 /// A 1:1 mirror of the kernel's [`prompting_press_core::GuardConfig`]. This is **config only**;
-/// it carries no logic. The kernel owns guard *expansion* (spec 015 / FR-022..025); the binding
-/// only marshals fields across the boundary and surfaces whatever [`RenderResult::guard`] the
-/// kernel populates. Accepted from JS as a plain TS object `{ enabled, advisory? }`.
+/// it carries no logic. The kernel owns guard *expansion*; the binding only marshals fields across
+/// the boundary and surfaces whatever [`RenderResult::guard`] the kernel populates. Accepted from
+/// JS as a plain TS object `{ enabled, advisory? }`.
 ///
 /// ## Advisory override
 ///
@@ -67,10 +67,10 @@ impl From<GuardConfig> for KernelGuardConfig {
 
 /// A rendered prompt + its content-addressed provenance, read-only from JS.
 ///
-/// The Node mirror of the kernel's [`prompting_press_core::RenderResult`] (data-model
-/// §RenderResult; FR-015). Surfaced **1:1** — the binding adds nothing and interprets nothing. A
-/// Read-only class with camelCase JS accessors (`template_hash` → `templateHash`).
-/// A result is produced by [`render`], never constructed from JS.
+/// The Node mirror of the kernel's [`prompting_press_core::RenderResult`]. Surfaced **1:1** —
+/// the binding adds nothing and interprets nothing. Read-only class with camelCase JS accessors
+/// (`template_hash` → `templateHash`). A result is produced by `renderPrompt`, never constructed
+/// from JS.
 #[napi]
 pub struct RenderResult {
     text: String,

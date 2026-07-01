@@ -182,42 +182,79 @@ Object.keys(summary.variants);            // ["concise", "structured"]
 ## Selecting a variant at render
 
 Pass the variant name at render; omit it (or pass `None` / no `variant`) for the default arm. The
-resolved name comes back on `RenderResult.variant`.
+resolved name comes back on `RenderResult.variant`, and `RenderResult.text` is that arm's rendered
+body — selecting a different variant produces a different `text`.
 
-<Tabs>
+<Tabs syncKey="construct">
 <TabItem label="Rust">
 ```rust
-let summary = Prompt::from_yaml(yaml_text)?;
+use garde::Validate;
+use prompting_press::{GuardConfig, Prompt};
+use serde::Serialize;
 
-let def = summary.render(&vars, None, &GuardConfig::default())?;          // default (root body)
-let concise = summary.render(&vars, Some("concise"), &GuardConfig::default())?;
+#[derive(Serialize, Validate)]
+struct SummaryVars {
+    #[garde(length(min = 1))]
+    article: String,
+    #[garde(range(min = 1))]
+    max_words: i64,
+}
+
+let summary = Prompt::from_yaml(&summary_yaml)?;
+let vars = SummaryVars { article: "The Nile floods yearly.".into(), max_words: 20 };
+
+let def = summary.render(&vars, None, &GuardConfig::default(), false)?;            // default (root body)
+let concise = summary.render(&vars, Some("concise"), &GuardConfig::default(), false)?;
 
 def.variant;     // => "default"
+def.text;        // => "Summarise the following article in 20 words:\n\nThe Nile floods yearly."
 concise.variant; // => "concise"
+concise.text;    // => "In one sentence, summarise: The Nile floods yearly."
 ```
 An unknown variant name returns `Err(ConsumerError::Kernel(..))` with code `"unknown_variant"`.
 </TabItem>
 <TabItem label="Python">
 ```python
-summary = Prompt.from_yaml(yaml_text)
+from prompting_press import Prompt
+from pydantic import BaseModel, Field
 
-default = summary.render(Vars, data=data)                    # default (root body)
-concise = summary.render(Vars, data=data, variant="concise")
+class SummaryVars(BaseModel):
+    article: str = Field(min_length=1)
+    max_words: int = Field(ge=1)
+
+summary = Prompt.from_yaml(summary_yaml)
+data = {"article": "The Nile floods yearly.", "max_words": 20}
+
+default = summary.render(SummaryVars, data=data)                    # default (root body)
+concise = summary.render(SummaryVars, data=data, variant="concise")
 
 default.variant   # => "default"
+default.text      # => "Summarise the following article in 20 words:\n\nThe Nile floods yearly."
 concise.variant   # => "concise"
+concise.text      # => "In one sentence, summarise: The Nile floods yearly."
 ```
 An unknown variant name raises `PromptRenderError` with code `"unknown_variant"`.
 </TabItem>
 <TabItem label="TypeScript">
 ```ts
-const summary = Prompt.fromYaml(yamlText);
+import { Prompt } from "prompting-press";
+import { z } from "zod";
 
-const def = summary.render(Vars, data);                       // default (root body)
-const concise = summary.render(Vars, data, { variant: "concise" });
+const SummaryVars = z.object({
+  article: z.string().min(1),
+  max_words: z.number().int().min(1),
+});
+
+const summary = Prompt.fromYaml(summaryYaml);
+const data = { article: "The Nile floods yearly.", max_words: 20 };
+
+const def = summary.render(SummaryVars, data);                       // default (root body)
+const concise = summary.render(SummaryVars, data, { variant: "concise" });
 
 def.variant;     // => "default"
+def.text;        // => "Summarise the following article in 20 words:\n\nThe Nile floods yearly."
 concise.variant; // => "concise"
+concise.text;    // => "In one sentence, summarise: The Nile floods yearly."
 ```
 An unknown variant name throws `PromptRenderError` with code `"unknown_variant"`.
 </TabItem>

@@ -77,14 +77,13 @@ impl From<prompting_press::CheckReport> for CheckReport {
     }
 }
 
-/// One actionable lint finding, read-only from Python (FR-020).
+/// One actionable lint finding, read-only from Python.
 ///
-/// The Python mirror of the consumer's [`prompting_press::Finding`]. It names the `prompt`, the
-/// `variant` where applicable (`None` for a prompt-level provenance finding), the failure `kind`
-/// (a stable snake_case discriminant string — see the module docs), and a human-readable `detail`.
-/// The `detail` carries no bound-value content (SEC-004 — it is built by the consumer from names
-/// only). Read-only (`frozen`): a finding is produced by `prompt.check()`, never constructed from
-/// Python.
+/// Names the `prompt`, the `variant` where applicable (`None` for a prompt-level finding), the
+/// failure `kind` (a stable snake_case discriminant string — see the module docs), and a
+/// human-readable `detail`. The `detail` carries no bound-value content (it is built from prompt
+/// and field names only). Read-only (`frozen`): a finding is produced by `prompt.check()`, never
+/// constructed from Python.
 // `skip_from_py_object`: output-only — Python reads the getters, never passes a `Finding` *in*.
 #[pyclass(
     name = "Finding",

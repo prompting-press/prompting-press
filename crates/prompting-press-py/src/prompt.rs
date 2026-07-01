@@ -1,4 +1,4 @@
-//! The Python [`Prompt`] pyclass — the primary public type for spec 008 Phase 4 (T035–T038).
+//! The Python [`Prompt`] pyclass — the primary public type.
 //!
 //! ## Design
 //!
@@ -10,15 +10,14 @@
 //!
 //! - PyO3 extraction of the `shape` argument (Pydantic model OR dict → JSON → consumer
 //!   constructor, reusing the duck-typing path from `registry.rs`).
-//! - The `validators` coverage check (T036): if any `PromptVariable` carries
+//! - The `validators` coverage check: if any `PromptVariable` carries
 //!   `validation_required = true`, the supplied Pydantic model class must declare that
 //!   field (introspected via `model.model_fields`). This is the Python-specific
-//!   runtime enforcement of Principle VI v1.2.0.
+//!   runtime enforcement of the per-language-idiom principle.
 //! - Storing a bound Pydantic model class (or `None`) for `render`.
 //! - Marshaling validated Pydantic vars → [`to_kernel_value`] (reusing the same bridge
 //!   the old `render.rs` uses).
-//! - Wrapping errors via [`consumer_error_to_pyerr`] (SEC-004 scrub preserved throughout).
-//!   (SEC-004 scrub preserved throughout).
+//! - Wrapping errors via [`consumer_error_to_pyerr`] (error detail scrubbed throughout).
 //!
 //! ## validators kwarg — a single Pydantic model CLASS (not a map)
 //!
@@ -77,9 +76,9 @@ use crate::render::{validate_in_python, GuardConfig, RenderResult};
 ///
 /// Construction **raises** [`PromptValidationError`](crate::error::PromptValidationError)
 /// on any invariant violation (invalid shape, parse failure, agreement failure, reserved
-/// variant name, or uncovered `validation_required` variable — T036). Never panics.
+/// variant name, or uncovered `validation_required` variable). Never panics.
 ///
-/// ## SEC-004 scrub
+/// ## Error scrubbing
 ///
 /// Every error path routes through [`consumer_error_to_pyerr`] or the consumer's `From`
 /// scrubber (for `KernelError`). Raw kernel `Parse`/`Render`/`ExcludedFeature` detail is
@@ -104,15 +103,14 @@ impl Prompt {
     /// `shape` is a `PromptDefinition` Pydantic model instance (duck-typed: has
     /// `model_dump_json`) or a plain `dict` / Mapping. Either is reduced to a JSON string
     /// and handed to the Rust consumer's `Prompt::from_json` (the one accept/reject
-    /// contract — Q3). On any construction invariant violation a structured
+    /// contract). On any construction invariant violation a structured
     /// [`PromptValidationError`](crate::error::PromptValidationError) is raised; nothing
     /// is constructed (never a panic).
     ///
     /// `validators` is an optional Pydantic model class. When supplied, construction
     /// CHECKS that every `validation_required` variable in `shape.variables` is covered
     /// by a field in `validators.model_fields`. An uncovered variable raises
-    /// [`PromptValidationError`](crate::error::PromptValidationError) naming the variable
-    /// (T036 / FR-022..024 / constitution Principle VI v1.2.0).
+    /// [`PromptValidationError`](crate::error::PromptValidationError) naming the variable.
     ///
     /// # Errors
     ///
@@ -285,9 +283,6 @@ impl Prompt {
 
     /// Validate-then-render this prompt.
     ///
-    /// Mirrors the current module-level `render(reg, name, vars, *, data, variant, guard)`
-    /// signature, adapted for the object surface (C-11 keyword-only tail):
-    ///
     /// ```python
     /// p.render(model, *, data=None, variant=None, guard=None,
     ///          unsafe_reveal_render_detail=False)
@@ -301,14 +296,13 @@ impl Prompt {
     ///   construction is used as the model class (requires `data` to be provided in that
     ///   case since we don't have an instance of a type we didn't pass).
     ///
-    /// Validation is owned in Python (Q1 / FR-002), BEFORE any templating. On a
-    /// `pydantic.ValidationError`, raises
-    /// [`PromptValidationError`](crate::error::PromptValidationError) with one row per
-    /// offending field — **the kernel is never reached** on validation failure (SEC-004-PY
-    /// scrub: `msg` + `loc` only, never `input`/`ctx`).
+    /// Validation is owned in Python, BEFORE any templating. On a `pydantic.ValidationError`,
+    /// raises [`PromptValidationError`](crate::error::PromptValidationError) with one row per
+    /// offending field — **the kernel is never reached** on validation failure (`msg` + `loc`
+    /// only, never `input`/`ctx`).
     ///
     /// `variant = None` selects the default (root body) arm. `guard` is the opt-in
-    /// [`GuardConfig`] plumbed straight through to the kernel (FR-009).
+    /// [`GuardConfig`] plumbed straight through to the kernel.
     ///
     /// ## `unsafe_reveal_render_detail` — off-by-default render-error detail opt-in
     ///
@@ -320,16 +314,16 @@ impl Prompt {
     /// secrets — into the raised exception and into any log line or traceback derived from
     /// it. Use only in a controlled debug context with a trusted log destination and only
     /// after deliberately accepting that exposure. Never set `True` by default or via
-    /// ambient configuration (SEC-004 carve-out D3).
+    /// ambient configuration.
     ///
     /// # Errors
     ///
     /// - [`PromptValidationError`](crate::error::PromptValidationError) — Pydantic rejected
-    ///   the vars. Raised **before** any templating (FR-002).
+    ///   the vars. Raised **before** any templating.
     /// - [`PromptRenderError`](crate::error::PromptRenderError) — the kernel rejected the
     ///   render (unknown variant, strict-undefined reference, parse/render failure). `Render`
-    ///   detail scrubbed unless `unsafe_reveal_render_detail=True` (SEC-004 / decision D3).
-    ///   `Parse` detail always preserved (decision D2).
+    ///   detail scrubbed unless `unsafe_reveal_render_detail=True`. `Parse` detail always
+    ///   preserved.
     #[pyo3(signature = (model = None, *, data = None, variant = None, guard = None, unsafe_reveal_render_detail = false))]
     fn render(
         &self,
@@ -436,11 +430,11 @@ impl Prompt {
     /// from the dict are kept from the original. The merged definition is routed through the
     /// Rust consumer's `Prompt::derive` (full re-validation: agreement, parse, reserved name).
     ///
-    /// Validators carry forward from `self` by default (R6). Pass `validators=SomeModel` to
+    /// Validators carry forward from `self` by default. Pass `validators=SomeModel` to
     /// override or augment the bound validator on the derived prompt. Coverage is re-checked
     /// against the merged definition.
     ///
-    /// The original `Prompt` is untouched (immutability — SC-004).
+    /// The original `Prompt` is untouched (immutability guaranteed).
     ///
     /// # Errors
     ///
@@ -633,7 +627,7 @@ fn build_overlay(
     })
 }
 
-/// Coverage check for `validation_required` variables (T036 / FR-022..024).
+/// Coverage check for `validation_required` variables.
 ///
 /// For every variable in `prompt.variables()` that has `validation_required = true`,
 /// this verifies that the supplied Pydantic model class (if any) exposes that field in

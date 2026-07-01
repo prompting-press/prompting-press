@@ -1,0 +1,23 @@
+# Consumer sample app (spec 014, WU-C / FR-013–FR-018).
+#
+# A realistic CLI that consumes prompting-press across its full public feature
+# surface, proving the library works end-to-end for an external Rust consumer.
+# Pre-publish it depends on the in-repo crate via a PATH dependency (FR-015);
+# the launch-flip (FR-019) swaps this to the published version constraint.
+[package]
+name = "prompting-press-greeter-cli"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+# Path dependency on the in-repo consumer crate (pre-publish). At launch this
+# flips to `prompting-press = "0.1"` (the published constraint) — see samples/README.md.
+prompting-press = { path = "../../../crates/prompting-press" }
+garde = { version = "0.23", features = ["derive", "serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[[bin]]
+name = "greeter"
+path = "src/main.rs"

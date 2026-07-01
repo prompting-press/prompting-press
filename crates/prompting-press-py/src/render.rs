@@ -1,19 +1,16 @@
 //! The Python render helpers — the [`RenderResult`] and [`GuardConfig`] pyclasses, plus the
-//! [`validate_in_python`] helper shared by `prompt.rs` and `compose.rs` (FR-002, FR-009..011).
+//! [`validate_in_python`] helper shared by `prompt.rs` and `compose.rs`.
 //!
-//! ## Spec 008 Phase 4 note
+//! Render and source lookup are methods on [`Prompt`](crate::prompt::Prompt):
+//! `prompt.render(...)` and `prompt.get_source(...)`.
 //!
-//! The pre-reshape module-level `render(reg, name, vars, ...)` and `get_source(reg, name, ...)`
-//! free functions are removed. Render and source lookup are now methods on
-//! [`Prompt`](crate::prompt::Prompt): `prompt.render(...)` and `prompt.get_source(...)`.
-//!
-//! This module retains:
+//! This module provides:
 //! - The [`RenderResult`] and [`GuardConfig`] pyclasses (Python-visible output / config types).
-//! - The [`validate_in_python`] helper: owns Pydantic validation in Python (FR-002 / Q1), shared
-//!   by `prompt.rs` and `compose.rs`.
-//! - The SEC-004-PY Pydantic error scrubbing helpers.
+//! - The [`validate_in_python`] helper: owns Pydantic validation in Python, shared by
+//!   `prompt.rs` and `compose.rs`.
+//! - The Pydantic error scrubbing helpers (see below).
 //!
-//! ## Why the kernel is called DIRECTLY (critique E1 / C-01)
+//! ## Why the kernel is called directly
 //!
 //! `prompt.rs` calls [`prompting_press_core::render`] directly — not the Rust consumer's
 //! `prompting_press::render` which is generic over `V: Serialize + Validate` (a *garde* type).
@@ -21,7 +18,7 @@
 //! Python and marshaling, the kernel is reached directly. That is still **zero engine logic**
 //! (Principle I): the kernel *is* the shared core; the binding only marshals into it.
 //!
-//! ## SEC-004-PY — Pydantic error scrubbing
+//! ## Pydantic error scrubbing
 //!
 //! A `pydantic.ValidationError` row carries `input` (the rejected value — possibly a secret/PII)
 //! and `ctx` (validator-supplied context). The mapper [`validation_error_to_pyerr`] copies
@@ -37,14 +34,12 @@ use prompting_press_core::{GuardConfig as KernelGuardConfig, RenderResult as Ker
 
 use crate::error::consumer_error_to_pyerr;
 
-/// The opt-in guard-expansion config, surfaced to Python and **plumbed through** to the kernel
-/// (FR-009).
+/// The opt-in guard-expansion config, surfaced to Python and **plumbed through** to the kernel.
 ///
 /// A 1:1 mirror of the kernel's [`prompting_press_core::GuardConfig`]. This pyclass is
-/// **config only**; it carries no logic. The kernel owns guard *expansion* (spec 015 / FR-022..025);
-/// the binding only marshals fields across the boundary and surfaces whatever
-/// [`RenderResult::guard`] the kernel populates. Read-only after construction (`frozen`): build
-/// it once via the constructor.
+/// **config only**; it carries no logic. The kernel owns guard *expansion*; the binding only
+/// marshals fields across the boundary and surfaces whatever [`RenderResult::guard`] the kernel
+/// populates. Read-only after construction (`frozen`): build it once via the constructor.
 ///
 /// ## Advisory override
 ///
@@ -106,9 +101,9 @@ impl From<&GuardConfig> for KernelGuardConfig {
 
 /// A rendered prompt + its content-addressed provenance, read-only from Python.
 ///
-/// The Python mirror of the kernel's [`prompting_press_core::RenderResult`] (data-model
-/// §RenderResult; FR-015). Surfaced **1:1** — the binding adds nothing and interprets nothing.
-/// Read-only (`frozen`): a result is produced by [`render`], never constructed from Python.
+/// The Python mirror of the kernel's [`prompting_press_core::RenderResult`]. Surfaced **1:1** —
+/// the binding adds nothing and interprets nothing. Read-only (`frozen`): a result is produced
+/// by `prompt.render(...)`, never constructed from Python.
 // `skip_from_py_object`: output-only — Python reads the getters, never passes a `RenderResult`
 // *in* — so opt out of the implicit `FromPyObject` derive PyO3 0.29 would otherwise pull in.
 #[pyclass(
@@ -119,7 +114,7 @@ impl From<&GuardConfig> for KernelGuardConfig {
 )]
 #[derive(Clone)]
 pub struct RenderResult {
-    /// The rendered body text (FR-001). The guard text is NEVER concatenated here.
+    /// The rendered body text. The guard text is NEVER concatenated here.
     #[pyo3(get)]
     pub text: String,
     /// The prompt name.
@@ -128,10 +123,10 @@ pub struct RenderResult {
     /// The resolved variant name (the reserved `default`, or the named arm).
     #[pyo3(get)]
     pub variant: String,
-    /// Lowercase-hex `SHA256(resolved variant source)` (FR-012).
+    /// Lowercase-hex `SHA256(resolved variant source)`.
     #[pyo3(get)]
     pub template_hash: String,
-    /// Lowercase-hex `SHA256(rendered text)` (FR-013).
+    /// Lowercase-hex `SHA256(rendered text)`.
     #[pyo3(get)]
     pub render_hash: String,
     /// The opt-in guard instruction text (present iff a guard was enabled and the prompt declares

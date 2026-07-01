@@ -31,7 +31,7 @@ at construction time by the Rust consumer. There are no setters; the sole mutato
 - `Prompt.from_json(text, *, validators=None)` — parse already-read JSON, then validate.
 - `Prompt.from_toml(text, *, validators=None)` — parse already-read TOML, then validate. TOML parsing is done by the Rust consumer (the `toml` crate); no Python `tomllib` dependency is added here because the text is handed to the Rust consumer intact. Construction **raises** [`PromptValidationError`](crate::error::PromptValidationError)
 on any invariant violation (invalid shape, parse failure, agreement failure, reserved
-variant name, or uncovered `validation_required` variable — T036). Never panics. ## SEC-004 scrub Every error path routes through [`consumer_error_to_pyerr`] or the consumer's `From`
+variant name, or uncovered `validation_required` variable). Never panics. ## Error scrubbing Every error path routes through [`consumer_error_to_pyerr`] or the consumer's `From`
 scrubber (for `KernelError`). Raw kernel `Parse`/`Render`/`ExcludedFeature` detail is
 never read here.
 
@@ -117,9 +117,9 @@ derived = p.derive(overlay, *, validators=None)
 ``` `overlay` is a `dict` of top-level fields to replace (any subset of `name`, `role`,
 `body`, `variables`, `variants`, `output_model`, `metadata`). Fields absent
 from the dict are kept from the original. The merged definition is routed through the
-Rust consumer's `Prompt::derive` (full re-validation: agreement, parse, reserved name). Validators carry forward from `self` by default (R6). Pass `validators=SomeModel` to
+Rust consumer's `Prompt::derive` (full re-validation: agreement, parse, reserved name). Validators carry forward from `self` by default. Pass `validators=SomeModel` to
 override or augment the bound validator on the derived prompt. Coverage is re-checked
-against the merged definition. The original `Prompt` is untouched (immutability — SC-004). # Errors - [`PromptValidationError`](crate::error::PromptValidationError) — the merged definition violates any construction invariant, or the (carried/supplied) validators do not cover a `validation_required` variable in the merged definition.
+against the merged definition. The original `Prompt` is untouched (immutability guaranteed). # Errors - [`PromptValidationError`](crate::error::PromptValidationError) — the merged definition violates any construction invariant, or the (carried/supplied) validators do not cover a `validation_required` variable in the merged definition.
 - [`LoadError`](crate::error::LoadError) — `overlay` could not be deserialized.
 
 #### `from_json`
@@ -169,15 +169,14 @@ source. # Errors [`PromptRenderError`](crate::error::PromptRenderError) — unkn
 render(self, /, model=None, *, data=None, variant=None, guard=None, unsafe_reveal_render_detail=False)
 ```
 
-Validate-then-render this prompt. Mirrors the current module-level `render(reg, name, vars, *, data, variant, guard)`
-signature, adapted for the object surface: ```python
+Validate-then-render this prompt. ```python
 p.render(model, *, data=None, variant=None, guard=None, unsafe_reveal_render_detail=False)
 ``` - When `data` is provided, `model` is treated as a Pydantic model **class** and validated via `model.model_validate(data)`.
 - When `data` is `None`, `model` is treated as an already-constructed model **instance** and re-validated via `type(model).model_validate(model.model_dump(...))`.
-- When `model` is `None` (omitted), the bound `validators` class stored at construction is used as the model class (requires `data` to be provided in that case since we don't have an instance of a type we didn't pass). Validation is owned in Python (Q1 / FR-002), BEFORE any templating. On a
-`pydantic.ValidationError`, raises
-[`PromptValidationError`](crate::error::PromptValidationError) with one row per
-offending field — **the kernel is never reached** on validation failure. `variant = None` selects the default (root body) arm. `guard` is the opt-in
+- When `model` is `None` (omitted), the bound `validators` class stored at construction is used as the model class (requires `data` to be provided in that case since we don't have an instance of a type we didn't pass). Validation is owned in Python, BEFORE any templating. On a `pydantic.ValidationError`,
+raises [`PromptValidationError`](crate::error::PromptValidationError) with one row per
+offending field — **the kernel is never reached** on validation failure (`msg` + `loc`
+only, never `input`/`ctx`). `variant = None` selects the default (root body) arm. `guard` is the opt-in
 [`GuardConfig`] plumbed straight through to the kernel. ## `unsafe_reveal_render_detail` — off-by-default render-error detail opt-in Default `False`. When `True`, the full underlying render-error detail is surfaced in
 the raised [`PromptRenderError`](crate::error::PromptRenderError)``.errors[0].message`
 instead of the fixed scrubbed string. **Risk:** enabling this may place **bound-value content** — untrusted input, PII,
@@ -185,7 +184,7 @@ secrets — into the raised exception and into any log line or traceback derived
 it. Use only in a controlled debug context with a trusted log destination and only
 after deliberately accepting that exposure. Never set `True` by default or via
 ambient configuration. # Errors - [`PromptValidationError`](crate::error::PromptValidationError) — Pydantic rejected the vars. Raised **before** any templating.
-- [`PromptRenderError`](crate::error::PromptRenderError) — the kernel rejected the render (unknown variant, strict-undefined reference, parse/render failure). `Render` detail scrubbed unless `unsafe_reveal_render_detail=True`. `Parse` detail always preserved (decision D2).
+- [`PromptRenderError`](crate::error::PromptRenderError) — the kernel rejected the render (unknown variant, strict-undefined reference, parse/render failure). `Render` detail scrubbed unless `unsafe_reveal_render_detail=True`. `Parse` detail always preserved.
 
 ### `core_version`
 
@@ -193,8 +192,7 @@ ambient configuration. # Errors - [`PromptValidationError`](crate::error::Prompt
 def core_version()
 ```
 
-Returns the kernel version, reached through the Rust consumer surface. Retained from the spec-001 stub so the extension module exports a trivial callable and the
-dependency edge onto `prompting-press`/`prompting-press-core` stays load-bearing.
+Returns the version string of the underlying rendering kernel.
 
 ## RenderResult
 
@@ -204,9 +202,9 @@ dependency edge onto `prompting-press`/`prompting-press-core` stays load-bearing
 class RenderResult
 ```
 
-A rendered prompt + its content-addressed provenance, read-only from Python. The Python mirror of the kernel's [`prompting_press_core::RenderResult`] (data-model
-§RenderResult; FR-015). Surfaced **1:1** — the binding adds nothing and interprets nothing.
-Read-only (`frozen`): a result is produced by [`render`], never constructed from Python.
+A rendered prompt + its content-addressed provenance, read-only from Python. The Python mirror of the kernel's [`prompting_press_core::RenderResult`]. Surfaced **1:1** —
+the binding adds nothing and interprets nothing. Read-only (`frozen`): a result is produced
+by `prompt.render(...)`, never constructed from Python.
 
 #### `guard`
 
@@ -266,10 +264,9 @@ class GuardConfig
 ```
 
 The opt-in guard-expansion config, surfaced to Python and **plumbed through** to the kernel. A 1:1 mirror of the kernel's [`prompting_press_core::GuardConfig`]. This pyclass is
-**config only**; it carries no logic. The kernel owns guard *expansion*;
-the binding only marshals fields across the boundary and surfaces whatever
-[`RenderResult::guard`] the kernel populates. Read-only after construction (`frozen`): build
-it once via the constructor. ## Advisory override `advisory` replaces the fixed default wording returned in `RenderResult.guard`. The override
+**config only**; it carries no logic. The kernel owns guard *expansion*; the binding only
+marshals fields across the boundary and surfaces whatever [`RenderResult::guard`] the kernel
+populates. Read-only after construction (`frozen`): build it once via the constructor. ## Advisory override `advisory` replaces the fixed default wording returned in `RenderResult.guard`. The override
 MUST reference the `<untrusted>` opening tag, the `</untrusted>` closing tag, AND an escape
 indication (`&amp;`/`&lt;`/`&gt;` or the word "escap") — otherwise the kernel rejects it and
 raises [`PromptRenderError`] with `errors[0].code == "render"` and
@@ -303,9 +300,8 @@ class CheckReport
 ```
 
 The output of [`Prompt::check`](crate::prompt::Prompt::check): an ordered, read-only list of
-[`Finding`]s. Empty ⇒ the lint passed. The Python mirror of the consumer's [`prompting_press::CheckReport`] (data-model §CheckReport;
-FR-020). Surfaced **1:1** — the binding adds nothing and interprets nothing. Read-only
-(`frozen`): a report is produced by `prompt.check()`, never constructed from Python.
+[`Finding`]s. Empty ⇒ the lint passed. The Python mirror of the consumer's [`prompting_press::CheckReport`]. Surfaced **1:1** — the binding adds nothing and interprets nothing. Read-only
+(`frozen`): a report is produced by `prompt.check`, never constructed from Python.
 
 #### `findings`
 
@@ -321,7 +317,7 @@ Every lint failure found, in the consumer's deterministic order. Empty ⇒ pass.
 is_empty(self, /)
 ```
 
-`report.is_empty()` — alias for [`passed`](Self::passed): `True` iff there are no findings.
+`report.is_empty` — alias for [`passed`](Self::passed): `True` iff there are no findings.
 
 #### `passed`
 
@@ -329,9 +325,9 @@ is_empty(self, /)
 passed(self, /)
 ```
 
-`report.passed()` — `True` iff there are no findings (the lint passed). Mirrors the
+`report.passed` — `True` iff there are no findings (the lint passed). Mirrors the
 consumer's [`CheckReport::passed`](prompting_press::CheckReport::passed); reads clearly at a
-CI gate (`if not prompt.check().passed(): sys.exit(1)`).
+CI gate (`if not prompt.check.passed: sys.exit(1)`).
 
 ## Finding
 
@@ -341,11 +337,11 @@ CI gate (`if not prompt.check().passed(): sys.exit(1)`).
 class Finding
 ```
 
-One actionable lint finding, read-only from Python. The Python mirror of the consumer's [`prompting_press::Finding`]. It names the `prompt`, the
-`variant` where applicable (`None` for a prompt-level provenance finding), the failure `kind`
-(a stable snake_case discriminant string — see the module docs), and a human-readable `detail`.
-The `detail` carries no bound-value content. Read-only (`frozen`): a finding is produced by `prompt.check()`, never constructed from
-Python.
+One actionable lint finding, read-only from Python. Names the `prompt`, the `variant` where applicable (`None` for a prompt-level finding), the
+failure `kind` (a stable snake_case discriminant string — see the module docs), and a
+human-readable `detail`. The `detail` carries no bound-value content (it is built from prompt
+and field names only). Read-only (`frozen`): a finding is produced by `prompt.check`, never
+constructed from Python.
 
 #### `detail`
 
@@ -390,9 +386,9 @@ class Composition
 ```
 
 An explicit, ordered sequence of `(Prompt, vars, variant?)` entries that resolves to a
-`list[Message]` in append order. Built with `Composition()` +
+`list[Message]` in append order. Built with `Composition` +
 [`append`](Self::append) or [`from_messages`](Self::from_messages); there is **no** fluent
-`.chain()`.
+`.chain`.
 
 #### `append`
 
@@ -401,7 +397,7 @@ append(self, /, prompt, vars, *, variant=None)
 ```
 
 `append(prompt, vars, *, variant=None)` — eager-validate + marshal + store one entry. `prompt` is a `Prompt` object; `vars` is a constructed Pydantic model **instance**
-(see module docs); it is validated **now** via the US1 Python-validation path and
+(see module docs); it is validated **now** via the Python-validation path and
 marshaled to the kernel's value type before the entry is stored. On a validation failure
 this raises [`PromptValidationError`](crate::error::PromptValidationError) and **stores
 nothing** — the composition is left exactly as it was (no partial state). Takes `&mut self` and returns `None` (not `self`): the builder is intentionally **not**
@@ -432,12 +428,12 @@ fails — **no** `Composition` is returned (no partial state). # Errors
 resolve(self, /)
 ```
 
-`resolve()` — resolve the composition to an ordered `list[Message]`, rendering
-each entry — in append order — through the kernel. For each entry, in order: call the kernel **directly** (critique E1 / C-01) with the
-entry's bound `Prompt` definition and **pre-validated** value (vars were validated at
-[`append`](Self::append)). The render result becomes
-`Message &#123; role: <def.role stringified>, text: result.text &#125;`. Composition uses no
-guard expansion — a default [`GuardConfig`] is passed, which leaves `text` unchanged. One entry's render failure (unknown variant, a strict-undefined reference, a parse/render
+`resolve` — resolve the composition to an ordered `list[Message]`, rendering
+each entry — in append order — through the kernel. For each entry, in order: calls the kernel directly with the entry's bound `Prompt`
+definition and **pre-validated** value (vars were validated at [`append`](Self::append)).
+The render result becomes `Message &#123; role: <def.role stringified>, text: result.text &#125;`.
+Composition uses no guard expansion — a default [`GuardConfig`] is passed, which leaves
+`text` unchanged. One entry's render failure (unknown variant, a strict-undefined reference, a parse/render
 error) propagates as the mapped Python exception and the partial result built so far is
 **discarded** — never returned as success. An empty composition resolves to `[]`. # Errors
 - [`PromptRenderError`](crate::error::PromptRenderError) — the kernel rejected an entry's render (unknown variant, a strict-undefined reference, a parse/render failure). `parse`/`render` detail is scrubbed.
@@ -450,10 +446,9 @@ error) propagates as the mapped Python exception and the partial result built so
 class Message
 ```
 
-One resolved message in a composition's output: a role-tagged rendered string. The Python mirror of the consumer's `Message` (data-model §Message). `role` is the prompt
-definition's role stringified (`"system"` / `"user"` / `"assistant"`); `text` is that prompt
-rendered with the entry's own validated vars. Read-only (`frozen`): a message is produced by
-[`Composition::resolve`], never constructed from Python.
+One resolved message in a composition's output: a role-tagged rendered string. `role` is the prompt definition's role stringified (`"system"` / `"user"` / `"assistant"`);
+`text` is that prompt rendered with the entry's own validated vars. Read-only (`frozen`): a
+message is produced by [`Composition::resolve`], never constructed from Python.
 
 #### `role`
 

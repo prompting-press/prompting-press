@@ -109,37 +109,36 @@ pub fn get_source<'a>(
     Ok(resolve_variant(def, variant)?.source)
 }
 
-/// Render result + content-addressed provenance (data-model §RenderResult; FR-015).
+/// Render result + content-addressed provenance.
 ///
 /// Plain data returned to the caller — no telemetry sink, no tracing coupling. There is
-/// deliberately **no** `vars_hash` field (FR-014).
+/// deliberately **no** `vars_hash` field.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RenderResult {
-    /// The rendered body text (FR-001). The guard text is NEVER concatenated here.
+    /// The rendered body text. The guard text is NEVER concatenated here.
     pub text: String,
-    /// The prompt name (`def.name`). [FR-015]
+    /// The prompt name (`def.name`).
     pub name: String,
-    /// The resolved variant name (the reserved `default`, or the named arm). [FR-015]
+    /// The resolved variant name (the reserved `default`, or the named arm).
     pub variant: String,
-    /// Lowercase-hex `SHA256(resolved variant source)`. [FR-012]
+    /// Lowercase-hex `SHA256(resolved variant source)`.
     pub template_hash: String,
-    /// Lowercase-hex `SHA256(rendered text)`. [FR-013]
+    /// Lowercase-hex `SHA256(rendered text)`.
     pub render_hash: String,
-    /// The guard instruction text, present only when guard expansion was opted in
-    /// (US3); `None` for US1's disabled config. Never concatenated into `text`. [FR-022]
+    /// The guard instruction text, present only when guard expansion was opted in; `None`
+    /// when the guard is disabled. Never concatenated into `text`.
     pub guard: Option<String>,
 }
 
-/// Render a prompt's resolved variant to text and stamp provenance (spec 002, T019;
-/// spec 015 guard-delimiting).
+/// Render a prompt's resolved variant to text and stamp provenance.
 ///
-/// Resolves the variant (FR-007..FR-011), renders the resolved source against `values`
-/// using the kernel's strict-undefined environment (`build_environment`), and computes
-/// `template_hash`/`render_hash` (FR-012/FR-013). Rendering is deterministic: identical
-/// `(def, variant, values)` yields byte-identical `text` and equal hashes (FR-003,
-/// SC-001). The kernel is validation-blind and performs no I/O (FR-004/FR-005).
+/// Resolves the variant, renders the resolved source against `values` using the kernel's
+/// strict-undefined environment (`build_environment`), and computes
+/// `template_hash`/`render_hash`. Rendering is deterministic: identical
+/// `(def, variant, values)` yields byte-identical `text` and equal hashes. The kernel
+/// is validation-blind and performs no I/O.
 ///
-/// ## Guard expansion (spec 015)
+/// ## Guard expansion
 ///
 /// When `guard.enabled` is `true` AND the definition declares at least one untrusted
 /// field (`trusted: false`):
@@ -155,15 +154,14 @@ pub struct RenderResult {
 ///
 /// When `guard.enabled` is `false` OR there are no untrusted fields, the pre-pass is
 /// NOT applied, `pp_guard_wrap` is not registered, and the body is byte-identical to
-/// a plain render (SC-005). `guard` is `None`.
+/// a plain render. `guard` is `None`.
 ///
 /// # Errors
-/// - [`KernelError::UnknownVariant`] — `variant` names a non-existent arm (FR-009).
+/// - [`KernelError::UnknownVariant`] — `variant` names a non-existent arm.
 /// - [`KernelError::ExcludedFeature`] / [`KernelError::Parse`] — the resolved source uses
-///   an excluded feature or otherwise fails to parse (FR-002, FR-028).
-/// - [`KernelError::UndefinedVariable`] — a strict-undefined reference was hit at render
-///   (FR-001a).
-/// - [`KernelError::Render`] — any other render-time failure (FR-028).
+///   an excluded feature or otherwise fails to parse.
+/// - [`KernelError::UndefinedVariable`] — a strict-undefined reference was hit at render.
+/// - [`KernelError::Render`] — any other render-time failure.
 pub fn render(
     def: &PromptDefinition,
     variant: Option<&str>,

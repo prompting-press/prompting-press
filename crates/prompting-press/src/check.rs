@@ -1,26 +1,25 @@
-//! Advisory lint types and shared helpers for the agreement + trusted/guard check
-//! (spec 008 reshape; FR-016..020).
+//! Advisory lint types and shared helpers for the agreement + trusted/guard check.
 //!
-//! Post-reshape, the lint runs **per-`Prompt`** via [`Prompt::check`](crate::Prompt::check),
-//! not over a registry. Construction enforces the **hard** invariants (template parseable,
-//! referenced roots ⊆ declared variables, no reserved variant name). The only LIVE finding
-//! `Prompt::check()` can surface is the advisory:
+//! The lint runs **per-`Prompt`** via [`Prompt::check`](crate::Prompt::check). Construction
+//! enforces the **hard** invariants (template parseable, referenced roots ⊆ declared
+//! variables, no reserved variant name). The only LIVE finding `Prompt::check()` can surface
+//! is the advisory:
 //!
-//! 1. **Trust / guard advisory (FR-018, reframed).** A `Prompt` that declares one or more
-//!    `trusted: false` variables but carries no `"guard"` key in its `metadata`
-//!    map → [`FindingKind::UntrustedWithoutGuard`] per uncovered field.
+//! 1. **Trust / guard advisory.** A `Prompt` that declares one or more `trusted: false`
+//!    variables but carries no `"guard"` key in its `metadata` map →
+//!    [`FindingKind::UntrustedWithoutGuard`] per uncovered field.
 //!
 //! `UntrustedWithoutGuard` is the only `FindingKind` variant; the hard invariants (undeclared
 //! variables, analysis errors, reserved variant names) are enforced at construction and never
 //! appear in a `CheckReport` from a live `Prompt`.
 //!
-//! ## The `metadata.guard` convention (C-09)
+//! ## The `metadata.guard` convention
 //!
 //! A prompt has a guard configured iff a `"guard"` key is present in its `metadata` map.
 //! The map is a library-opaque `serde_json::Map`; this module reads it
 //! **read-only** and checks only for the *presence* of the top-level key — not its shape.
 //!
-//! ## Purity (FR-019)
+//! ## Purity
 //!
 //! [`Prompt::check`](crate::Prompt::check) takes `&self`, never renders, never mutates.
 //! Its only output is a [`CheckReport`].
@@ -28,10 +27,10 @@
 use prompting_press_core::PromptDefinition;
 
 /// The opaque-metadata key whose *presence* (in `metadata`) marks a prompt as
-/// having a guard configured (the `metadata.guard` convention — module docs / C-09).
+/// having a guard configured (the `metadata.guard` convention — see module docs).
 pub(crate) const GUARD_KEY: &str = "guard";
 
-/// One actionable lint finding (FR-020): it names the prompt, the variant where applicable,
+/// One actionable lint finding: it names the prompt, the variant where applicable,
 /// the failure `kind`, and a human-readable `detail`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Finding {
@@ -42,30 +41,29 @@ pub struct Finding {
     pub variant: Option<String>,
     /// The kind of failure (the discriminant a consumer matches on).
     pub kind: FindingKind,
-    /// A human-readable, actionable description (FR-020). Carries no bound-value content.
+    /// A human-readable, actionable description. Carries no bound-value content.
     pub detail: String,
 }
 
 /// The closed set of lint-failure classes.
 ///
-/// `UntrustedWithoutGuard` is the only advisory class that `Prompt::check()` can surface
-/// (C-09 / FR-018). All other hard invariants (undeclared variables, analysis errors,
-/// reserved variant names) are enforced at construction and are structurally unreachable
-/// from a live `Prompt`.
+/// `UntrustedWithoutGuard` is the only advisory class that `Prompt::check` can surface.
+/// All other hard invariants (undeclared variables, analysis errors, reserved variant names)
+/// are enforced at construction and are structurally unreachable from a live `Prompt`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FindingKind {
     /// The prompt declares `field` as `trusted: false` but configures no guard for it
-    /// (the trust/guard advisory — FR-018; the `metadata.guard` convention, module docs). The only
-    /// advisory class surfaced by `Prompt::check()`.
+    /// (see the `metadata.guard` convention in module docs). The only advisory class
+    /// surfaced by `Prompt::check`.
     UntrustedWithoutGuard {
         /// The uncovered `trusted: false` field name.
         field: String,
     },
 }
 
-/// The output of `Prompt::check()`: an ordered list of [`Finding`]s. Empty ⇒ pass.
+/// The output of `Prompt::check`: an ordered list of [`Finding`]s. Empty ⇒ pass.
 ///
-/// Carries **only** findings — no rendered text, no mutated state (FR-019).
+/// Carries **only** findings — no rendered text, no mutated state.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct CheckReport {
     /// Every advisory finding, in deterministic order. Empty ⇒ pass.
