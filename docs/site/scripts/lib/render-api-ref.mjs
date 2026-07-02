@@ -129,7 +129,7 @@ function renderSymbol(sym, language, context, depth = 3) {
  * @throws {Error}    - When a non-shapeRef symbol has doc:null (FR-008)
  */
 export function renderApiRef(ir) {
-	const { language, package: pkg, version, generatedFrom, groups } = ir;
+	const { language, package: pkg, generatedFrom, groups } = ir;
 	const langDisplay = LANG_DISPLAY[language] ?? language;
 	const fenceLang = LANG_FENCE[language] ?? language;
 
@@ -147,18 +147,6 @@ export function renderApiRef(ir) {
 		`description: "API reference for the ${pkg} ${language} binding. Generated from source doc comments."`,
 	);
 	lines.push("---");
-	lines.push("");
-
-	// ── Intro note ──
-	lines.push(`import { Aside } from '@astrojs/starlight/components';`);
-	lines.push("");
-	lines.push(`<Aside type="note">`);
-	lines.push(
-		`Automatically generated from ${langDisplay} source doc comments (${generatedFrom}).`,
-	);
-	lines.push(`</Aside>`);
-	lines.push("");
-	lines.push(`Package: \`${pkg}\`. Version: \`${version}\`.`);
 	lines.push("");
 
 	// ── Groups ──
