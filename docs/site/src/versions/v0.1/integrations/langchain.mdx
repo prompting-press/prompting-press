@@ -1,0 +1,52 @@
+---
+title: "LangChain / LangGraph"
+description: "Feed Prompting Press prompts to a LangChain chat model or a LangGraph node — a one-line map from role-tagged messages to LangChain's message shape."
+---
+
+import { Tabs, TabItem, Code, Aside } from '@astrojs/starlight/components';
+import pyMessages from '../../../../samples/python/examples/integrations_langchain_messages.py?raw';
+import tsMessages from '../../../../samples/typescript/examples/integrations_langchain_messages.ts?raw';
+
+A Prompting Press composition resolves to an ordered list of role-tagged messages —
+each with a `role` (`system` / `user` / `assistant`) and the rendered `text`. LangChain
+accepts plain `{ role, content }` messages directly at `invoke`, in a LangGraph
+`MessagesState`, and through `add_messages`. So the bridge is a **one-line key rename**:
+`text` becomes `content`, and the role passes straight through (LangChain treats `user`
+and `assistant` identically to its `human` / `ai` aliases).
+
+Feed the resulting list straight to your model or graph. Prompting Press already did the
+templating, so there is no reason to route it back through a LangChain prompt template.
+
+<Aside type="caution" title="Don't re-template already-rendered text">
+Do **not** pass rendered messages through `ChatPromptTemplate.from_messages` using the
+tuple/dict shorthand. That path treats the content as a template and will raise on any
+literal `{...}` in your text (for example, JSON you asked the model to echo). Hand the
+rendered messages to the model or graph directly.
+</Aside>
+
+## Map a composition to LangChain messages
+
+<Tabs syncKey="lang">
+<TabItem label="Python">
+<Code code={pyMessages} lang="python" title="integrations_langchain_messages.py" />
+
+The whole bridge is `[{"role": m.role, "content": m.text} for m in messages]`. LangChain's
+own `convert_to_messages` (used internally by `invoke`) turns those dicts into
+`SystemMessage` / `HumanMessage` / `AIMessage`. If you prefer typed message objects — for
+example to append to LangGraph state explicitly — map the role to the class instead, as the
+`to_langchain_objects` helper shows.
+</TabItem>
+<TabItem label="TypeScript">
+<Code code={tsMessages} lang="typescript" title="integrations_langchain_messages.ts" />
+
+`messages.map(m => ({ role: m.role, content: m.text }))` is the entire bridge.
+`coerceMessageLikeToMessage` (what the chat model applies internally) turns each object
+into the matching message class, and literal braces in the text are preserved.
+</TabItem>
+</Tabs>
+
+## In LangGraph
+
+Prompts in LangGraph are just messages in state. Seed a `MessagesState` with the mapped
+list, or return it from a node — the same `{ role, content }` objects are accepted there
+too. There is nothing framework-specific to learn beyond the message shape above.

@@ -31,9 +31,9 @@ description: "Task list for Framework Integration Guides (spec 016)"
 
 **Purpose**: Make the framework SDKs available to the doc-sample projects (sample-only dev deps, isolated from shipped packages).
 
-- [ ] T001 [P] Add framework dev dependencies to `docs/site/samples/python/pyproject.toml`: `langchain-core`, `langgraph`, `strands-agents`, `crewai` (compatible with authoring-time versions in research.md R1–R3). Keep them in this project only.
-- [ ] T002 [P] Add framework dev dependencies to `docs/site/samples/typescript/package.json`: `@langchain/core`, `@langchain/langgraph`, `@strands-agents/sdk`; confirm `docs/site/samples/typescript/tsconfig.json` globs `examples/**` so new files are type-checked.
-- [ ] T003 Sync/install both sample projects and confirm the baseline `docs:test-samples` gate still passes BEFORE adding new samples (`moon run docs:test-samples-python` and `moon run docs:test-samples-typescript`) — establishes the SDKs install cleanly and no existing sample broke.
+- [X] T001 [P] Add framework dev dependencies to `docs/site/samples/python/pyproject.toml`: `langchain-core`, `langgraph`, `strands-agents`, `crewai` (compatible with authoring-time versions in research.md R1–R3). Keep them in this project only.
+- [X] T002 [P] Add framework dev dependencies to `docs/site/samples/typescript/package.json`: `@langchain/core`, `@langchain/langgraph`, `@strands-agents/sdk`; confirm `docs/site/samples/typescript/tsconfig.json` globs `examples/**` so new files are type-checked.
+- [X] T003 Sync/install both sample projects and confirm the baseline `docs:test-samples` gate still passes BEFORE adding new samples (`moon run docs:test-samples-python` and `moon run docs:test-samples-typescript`) — establishes the SDKs install cleanly and no existing sample broke.
 
 **Checkpoint**: SDKs installed in sample projects only; existing samples green; `rg "langchain|langgraph|strands|crewai" packages/*/pyproject.toml packages/*/package.json crates/*/Cargo.toml` returns nothing (FR-007 guard).
 
@@ -45,8 +45,8 @@ description: "Task list for Framework Integration Guides (spec 016)"
 
 ⚠️ Blocks US1 pages and the US2 integrations-intro cross-links.
 
-- [ ] T004 Create the Integrations chapter directory `docs/site/src/content/docs/integrations/` and the intro page `integrations/index.mdx` with frontmatter (title "Integrations", description) and a stub body (positioning filled in US2 T017). Internal links must be root-absolute.
-- [ ] T005 Add an "Integrations" group to the Starlight `sidebar` in `docs/site/astro.config.mjs` with entries: `/integrations/`, `/integrations/langchain/`, `/integrations/strands/`, `/integrations/crewai/` (order: intro, LangChain, Strands, CrewAI).
+- [X] T004 Create the Integrations chapter directory `docs/site/src/content/docs/integrations/` and the intro page `integrations/index.mdx` with frontmatter (title "Integrations", description) and a stub body (positioning filled in US2 T017). Internal links must be root-absolute.
+- [X] T005 Add an "Integrations" group to the Starlight `sidebar` in `docs/site/astro.config.mjs` with entries: `/integrations/`, `/integrations/langchain/`, `/integrations/strands/`, `/integrations/crewai/` (order: intro, LangChain, Strands, CrewAI).
 
 **Checkpoint**: `node docs/site/scripts/build-versions.mjs` builds `next` with the intro page reachable from the sidebar (frozen-version backfill handled in Phase 6 so the global sidebar entry does not dead-link — do a `next`-only sanity check here).
 
@@ -60,22 +60,22 @@ description: "Task list for Framework Integration Guides (spec 016)"
 
 ### LangChain / LangGraph (FR-002, C1)
 
-- [ ] T006 [P] [US1] Author `docs/site/samples/python/examples/integrations_langchain_messages.py` — build a Composition, map `[{role,text}]`→`[{"role","content"}]`, assert order/role preserved and a brace-containing text round-trips verbatim (use `langchain_core.messages.utils.convert_to_messages` or a fake model; no network). Include the role→`SystemMessage/HumanMessage/AIMessage` typed variant.
-- [ ] T007 [P] [US1] Author `docs/site/samples/typescript/examples/integrations_langchain_messages.ts` — same mapping + assertions in TS against `@langchain/core`.
-- [ ] T008 [US1] Create `docs/site/src/content/docs/integrations/langchain.mdx` — Python + TS tabs importing T006/T007 via `?raw`; prose covering the key-rename mapping, LangGraph `MessagesState`/`add_messages` note, and the `ChatPromptTemplate.from_messages` brace-re-templating footgun (FR-008).
+- [X] T006 [P] [US1] Author `docs/site/samples/python/examples/integrations_langchain_messages.py` — build a Composition, map `[{role,text}]`→`[{"role","content"}]`, assert order/role preserved and a brace-containing text round-trips verbatim (use `langchain_core.messages.utils.convert_to_messages` or a fake model; no network). Include the role→`SystemMessage/HumanMessage/AIMessage` typed variant.
+- [X] T007 [P] [US1] Author `docs/site/samples/typescript/examples/integrations_langchain_messages.ts` — same mapping + assertions in TS against `@langchain/core`.
+- [X] T008 [US1] Create `docs/site/src/content/docs/integrations/langchain.mdx` — Python + TS tabs importing T006/T007 via `?raw`; prose covering the key-rename mapping, LangGraph `MessagesState`/`add_messages` note, and the `ChatPromptTemplate.from_messages` brace-re-templating footgun (FR-008).
 
 ### Strands (FR-003, C2)
 
-- [ ] T009 [P] [US1] Author `docs/site/samples/python/examples/integrations_strands_partition.py` — partition helper returning `system` (`\n\n`-joined, `None` if none) + `convo` (`{role, content:[{text}]}`); assert on a `[system, system, user, assistant, user]` fixture (TWO system messages so the `\n\n`-join + order is actually exercised per G1: assert `system == "<s1>\n\n<s2>"`; 3 convo entries all user|assistant; each content `[{text}]`); construct `Agent(system_prompt=, messages=)` (no `.run()`; no network).
-- [ ] T010 [P] [US1] Author `docs/site/samples/typescript/examples/integrations_strands_partition.ts` — same partition + assertions against `@strands-agents/sdk` (`systemPrompt`, `MessageData{role,content:[TextBlockData]}`), including the two-system-message `\n\n`-join assertion (G1); construct the Agent (no invoke).
-- [ ] T011 [US1] Create `docs/site/src/content/docs/integrations/strands.mdx` — Python + TS tabs importing T009/T010; prose covering the no-in-list-system-role partition, the system-position-flattening limitation (FR-008), and the `guardContent`/`toolResult` out-of-scope note (FR-009).
+- [X] T009 [P] [US1] Author `docs/site/samples/python/examples/integrations_strands_partition.py` — partition helper returning `system` (`\n\n`-joined, `None` if none) + `convo` (`{role, content:[{text}]}`); assert on a `[system, system, user, assistant, user]` fixture (TWO system messages so the `\n\n`-join + order is actually exercised per G1: assert `system == "<s1>\n\n<s2>"`; 3 convo entries all user|assistant; each content `[{text}]`); construct `Agent(system_prompt=, messages=)` (no `.run()`; no network).
+- [X] T010 [P] [US1] Author `docs/site/samples/typescript/examples/integrations_strands_partition.ts` — same partition + assertions against `@strands-agents/sdk` (`systemPrompt`, `MessageData{role,content:[TextBlockData]}`), including the two-system-message `\n\n`-join assertion (G1); construct the Agent (no invoke).
+- [X] T011 [US1] Create `docs/site/src/content/docs/integrations/strands.mdx` — Python + TS tabs importing T009/T010; prose covering the no-in-list-system-role partition, the system-position-flattening limitation (FR-008), and the `guardContent`/`toolResult` out-of-scope note (FR-009).
 
 ### CrewAI (FR-004, C3)
 
-- [ ] T012 [P] [US1] Author `docs/site/samples/python/examples/integrations_crewai_fields.py` — render each prompt and use the `render(...).text` field (the RENDERED string, NOT `Prompt.body` which is the raw template); assign to `Agent(role=,goal=,backstory=)` + `Task(description=,expected_output=)`; assert field values equal the rendered `.text` strings (constructor only; no `kickoff()`, no network).
-- [ ] T013 [US1] Create `docs/site/src/content/docs/integrations/crewai.mdx` — Python-only page importing T012; prose covering field assignment, the `crew.kickoff(inputs=...)` double-fill footgun (FR-008), and an explicit note that no official CrewAI TypeScript SDK exists (FR-021) so this page is Python-only.
+- [X] T012 [P] [US1] Author `docs/site/samples/python/examples/integrations_crewai_fields.py` — render each prompt and use the `render(...).text` field (the RENDERED string, NOT `Prompt.body` which is the raw template); assign to `Agent(role=,goal=,backstory=)` + `Task(description=,expected_output=)`; assert field values equal the rendered `.text` strings (constructor only; no `kickoff()`, no network).
+- [X] T013 [US1] Create `docs/site/src/content/docs/integrations/crewai.mdx` — Python-only page importing T012; prose covering field assignment, the `crew.kickoff(inputs=...)` double-fill footgun (FR-008), and an explicit note that no official CrewAI TypeScript SDK exists (FR-021) so this page is Python-only.
 
-- [ ] T014 [US1] Run `moon run docs:test-samples-python` and `moon run docs:test-samples-typescript`; fix any sample until green (validates C1–C3 against real SDK types — SC-009).
+- [X] T014 [US1] Run `moon run docs:test-samples-python` and `moon run docs:test-samples-typescript`; fix any sample until green (validates C1–C3 against real SDK types — SC-009).
 
 **Checkpoint**: US1 is independently shippable — three framework pages, five tested samples, all green.
 
@@ -87,11 +87,11 @@ description: "Task list for Framework Integration Guides (spec 016)"
 
 **Independent test**: FAQ has both entries; homepage has the use-cases section covering all six points; no principle numbers / no "provenance" (SC-007/008).
 
-- [ ] T015 [P] [US2] Add FAQ entry "Why not just use Jinja / minijinja / a framework's own templating?" to `docs/site/src/content/docs/faq.mdx` — acknowledge minijinja under the hood; distinguish on structured storage, typed inputs, static (build-time, no-data) agreement check vs. Jinja runtime `StrictUndefined`, variants, byte-identical cross-language rendering (FR-010).
-- [ ] T016 [P] [US2] Add FAQ entry "How does this fit ChatPromptTemplate / the system-user split?" to `docs/site/src/content/docs/faq.mdx` — PP emits neutral role-tagged text; link to the per-framework Integrations pages for shaping (FR-011).
-- [ ] T017 [US2] Fill the Integrations intro `integrations/index.mdx` (from T004) with the "PP owns storage/typing/variants/the check; the framework owns the call" framing; link to the three framework pages.
-- [ ] T018 [US2] Add a use-cases section to the homepage `docs/site/src/content/docs/index.mdx` covering all six FR-012 points: structured reviewable artifacts; storage-agnostic loading; variant switching without redeploy (migration / per-user / multilingual / tone — not just A/B); catch prompt/variable mismatches before shipping; one prompt identical across Py/TS/Rust (frontend+backend consistency); per-render content fingerprint (plain terms, NOT "provenance"). Link out to existing Variants / Lint-in-CI guides rather than duplicating.
-- [ ] T019 [US2] Grep-guard (broadened per FR-013): over `docs/site/src/content/docs/{faq,index}.mdx` + `docs/site/src/content/docs/integrations/` + the new `docs/site/samples/**/examples/integrations_*` files, confirm NONE of these internal-artifact patterns appear: `principle [ivxIVX0-9]+`, `provenance`, `\bspec[- ]?016\b|016-framework`, `\b(FR|SC|CHK|US|T)-?[0-9]{2,3}\b`, `SpecKit|speckit|acceptance scenario|conformance corpus`, `\b[CDRA]-?[0-9]{1,2}\b` (roadmap/decision codes), `specs/|\.specify/`. Fix any leak. (SC-008)
+- [X] T015 [P] [US2] Add FAQ entry "Why not just use Jinja / minijinja / a framework's own templating?" to `docs/site/src/content/docs/faq.mdx` — acknowledge minijinja under the hood; distinguish on structured storage, typed inputs, static (build-time, no-data) agreement check vs. Jinja runtime `StrictUndefined`, variants, byte-identical cross-language rendering (FR-010).
+- [X] T016 [P] [US2] Add FAQ entry "How does this fit ChatPromptTemplate / the system-user split?" to `docs/site/src/content/docs/faq.mdx` — PP emits neutral role-tagged text; link to the per-framework Integrations pages for shaping (FR-011).
+- [X] T017 [US2] Fill the Integrations intro `integrations/index.mdx` (from T004) with the "PP owns storage/typing/variants/the check; the framework owns the call" framing; link to the three framework pages.
+- [X] T018 [US2] Add a use-cases section to the homepage `docs/site/src/content/docs/index.mdx` covering all six FR-012 points: structured reviewable artifacts; storage-agnostic loading; variant switching without redeploy (migration / per-user / multilingual / tone — not just A/B); catch prompt/variable mismatches before shipping; one prompt identical across Py/TS/Rust (frontend+backend consistency); per-render content fingerprint (plain terms, NOT "provenance"). Link out to existing Variants / Lint-in-CI guides rather than duplicating.
+- [X] T019 [US2] Grep-guard (broadened per FR-013): over `docs/site/src/content/docs/{faq,index}.mdx` + `docs/site/src/content/docs/integrations/` + the new `docs/site/samples/**/examples/integrations_*` files, confirm NONE of these internal-artifact patterns appear: `principle [ivxIVX0-9]+`, `provenance`, `\bspec[- ]?016\b|016-framework`, `\b(FR|SC|CHK|US|T)-?[0-9]{2,3}\b`, `SpecKit|speckit|acceptance scenario|conformance corpus`, `\b[CDRA]-?[0-9]{1,2}\b` (roadmap/decision codes), `specs/|\.specify/`. Fix any leak. (SC-008)
 
 **Checkpoint**: US2 independently shippable — positioning present and clean.
 
@@ -103,8 +103,8 @@ description: "Task list for Framework Integration Guides (spec 016)"
 
 **Independent test**: quickstart §4 — deep stub points at `/v{latest}/<path>/`; root stub intact; no stub for nonexistent paths.
 
-- [ ] T020 [US3] Extend `docs/site/scripts/build-versions.mjs`: generalize `emitRootRedirect()` (or add a sibling) to also emit a redirect stub at `dist/<slug>/index.html` → `/v{latest}/<slug>/` for every page slug present under the latest version, reusing the existing meta-refresh + canonical + `location.replace()` stub form. Root `/` behavior unchanged (FR-016); no stub for slugs absent under latest (FR-017).
-- [ ] T021 [US3] Build (`node docs/site/scripts/build-versions.mjs`) and verify per quickstart §4: `dist/getting-started/rust/index.html` redirects to `/v{latest}/getting-started/rust/`; `dist/index.html` root redirect intact; a nonexistent path has no stub (SC-005).
+- [X] T020 [US3] Extend `docs/site/scripts/build-versions.mjs`: generalize `emitRootRedirect()` (or add a sibling) to also emit a redirect stub at `dist/<slug>/index.html` → `/v{latest}/<slug>/` for every page slug present under the latest version, reusing the existing meta-refresh + canonical + `location.replace()` stub form. Root `/` behavior unchanged (FR-016); no stub for slugs absent under latest (FR-017).
+- [X] T021 [US3] Build (`node docs/site/scripts/build-versions.mjs`) and verify per quickstart §4: `dist/getting-started/rust/index.html` redirects to `/v{latest}/getting-started/rust/`; `dist/index.html` root redirect intact; a nonexistent path has no stub (SC-005).
 
 **Checkpoint**: US3 independently shippable — shared/bookmarked deep links resolve.
 
@@ -114,10 +114,10 @@ description: "Task list for Framework Integration Guides (spec 016)"
 
 **Purpose**: Frozen-snapshot backfill (needed so the global sidebar entry from T005 doesn't dead-link on old versions) + full multi-version verification.
 
-- [ ] T022 Backfill the Integrations pages into frozen `docs/site/src/versions/v0.1/` (add `integrations/` pages consistent with that version; ensure links version-prefix correctly) — one-time authorized exception (FR-018).
-- [ ] T023 Backfill the Integrations pages into frozen `docs/site/src/versions/v0.2/` likewise (FR-018).
-- [ ] T024 Full multi-version build + link check (quickstart §3): `node docs/site/scripts/build-versions.mjs` exits 0; `integrations/{,,langchain,strands,crewai}` present on `next`, `v0.1`, `v0.2`; sidebar "Integrations" links version-prefixed on each; no internal link 404s (FR-018/019, SC-006).
-- [ ] T025 Final no-leak sweep across ALL new/edited docs AND the new integration sample files (FR-020 no future tense; FR-013 no internal-artifact leak — run the full broadened pattern set from T019 across every new/edited page and every `integrations_*` sample, including code comments; FR-005 every embedded snippet is a `?raw` import, no inline untested code); confirm `rg` guard for FR-007 (no framework dep in shipped `packages/**`/`crates/**` manifests); and confirm FR-006 (samples use only existing public API — structurally enforced because `docs:test-samples` type-check/exec would fail on any nonexistent method/field/option).
+- [X] T022 Backfill the Integrations pages into frozen `docs/site/src/versions/v0.1/` (add `integrations/` pages consistent with that version; ensure links version-prefix correctly) — one-time authorized exception (FR-018).
+- [X] T023 Backfill the Integrations pages into frozen `docs/site/src/versions/v0.2/` likewise (FR-018).
+- [X] T024 Full multi-version build + link check (quickstart §3): `node docs/site/scripts/build-versions.mjs` exits 0; `integrations/{,,langchain,strands,crewai}` present on `next`, `v0.1`, `v0.2`; sidebar "Integrations" links version-prefixed on each; no internal link 404s (FR-018/019, SC-006).
+- [X] T025 Final no-leak sweep across ALL new/edited docs AND the new integration sample files (FR-020 no future tense; FR-013 no internal-artifact leak — run the full broadened pattern set from T019 across every new/edited page and every `integrations_*` sample, including code comments; FR-005 every embedded snippet is a `?raw` import, no inline untested code); confirm `rg` guard for FR-007 (no framework dep in shipped `packages/**`/`crates/**` manifests); and confirm FR-006 (samples use only existing public API — structurally enforced because `docs:test-samples` type-check/exec would fail on any nonexistent method/field/option).
 
 ---
 
