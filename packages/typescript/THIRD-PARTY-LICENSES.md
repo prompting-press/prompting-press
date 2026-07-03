@@ -1948,7 +1948,7 @@ Used by:
 - **pin-project-lite 0.2.17** — <https://github.com/taiki-e/pin-project-lite>
 - **proc-macro2 1.0.106** — <https://github.com/dtolnay/proc-macro2>
 - **quote 1.0.46** — <https://github.com/dtolnay/quote>
-- **rustc-hash 2.1.2** — <https://github.com/rust-lang/rustc-hash>
+- **rustc-hash 2.1.3** — <https://github.com/rust-lang/rustc-hash>
 - **rustversion 1.0.22** — <https://github.com/dtolnay/rustversion>
 - **ryu 1.0.23** — <https://github.com/dtolnay/ryu>
 - **semver 1.0.28** — <https://github.com/dtolnay/semver>
