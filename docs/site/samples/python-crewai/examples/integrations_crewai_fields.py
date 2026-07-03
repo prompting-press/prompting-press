@@ -7,7 +7,7 @@ prompt with Prompting Press and pass the RENDERED string (the ``render(...).text
 field — NOT ``Prompt.body``, which is the raw un-rendered template) into the
 matching field.
 
-Footgun: do NOT ALSO pass the same variables to ``crew.kickoff(inputs=...)``.
+Note: do NOT ALSO pass the same variables to ``crew.kickoff(inputs=...)``.
 CrewAI runs its own ``{placeholder}`` interpolation over these strings; if
 Prompting Press already substituted them, the ``{placeholder}`` text no longer
 exists and re-interpolation is at best redundant and at worst confusing. Render

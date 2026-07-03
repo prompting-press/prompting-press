@@ -12,7 +12,7 @@
 - [ ] CHK002 - Is the CrewAI TypeScript exclusion stated as an explicit requirement with its reason (no official SDK), rather than a silent omission? [Completeness, Spec §FR-004/FR-021]
 - [ ] CHK003 - Are the required positioning artifacts each specified as distinct deliverables (FAQ "why-vs-Jinja", FAQ "system/user fit", homepage use-cases, Integrations intro)? [Completeness, Spec §FR-010/011/012]
 - [ ] CHK004 - Does the homepage use-cases requirement enumerate all six value points, or does it leave "use cases" open to interpretation? [Completeness, Spec §FR-012]
-- [ ] CHK005 - Is each framework page's required footgun explicitly named (LangChain brace re-templating; Strands system-flattening; CrewAI kickoff double-fill), rather than a generic "document caveats"? [Completeness, Spec §FR-008]
+- [ ] CHK005 - Is each framework page's required pitfall explicitly named (LangChain brace re-templating; Strands system-flattening; CrewAI kickoff double-fill), rather than a generic "document caveats"? [Completeness, Spec §FR-008]
 
 ## Docs Content Clarity & Accuracy
 
@@ -37,7 +37,7 @@
 - [ ] CHK018 - Is "real SDK types, not stubs" specified precisely enough to verify (sample-only dev deps installed; drift causes a type/exec failure), including *which* deps go *where*? [Clarity/Measurability, Spec §FR-005a/SC-009, Data-model SampleProjectManifest]
 - [ ] CHK019 - Is the no-shipped-package-dependency requirement expressed as a checkable condition (grep of `packages/**`/`crates/**` manifests returns nothing) rather than a principle statement? [Measurability, Spec §FR-007/SC-004]
 - [ ] CHK020 - For the Strands partition contract (C2), are the edge cases (multiple system messages; non-leading system message → hoist + flatten) captured as requirements the sample/prose must address? [Coverage/Edge Case, Spec Edge Cases, Contracts §C2]
-- [ ] CHK021 - For LangChain (C1), is the brace-round-trip edge (literal `{...}` in rendered text survives) an explicit assertion requirement, tying the footgun prose to a tested behavior? [Coverage/Edge Case, Contracts §C1]
+- [ ] CHK021 - For LangChain (C1), is the brace-round-trip edge (literal `{...}` in rendered text survives) an explicit assertion requirement, tying the pitfall prose to a tested behavior? [Coverage/Edge Case, Contracts §C1]
 
 ## Dependencies, Assumptions & Ambiguities
 

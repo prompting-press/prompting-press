@@ -8,7 +8,7 @@ All unknowns resolved. Sources: live SDK docs + published source (via research a
 
 **Rationale**: LangChain natively coerces `{"role","content"}` dicts (and `(role, content)` tuples) to `SystemMessage`/`HumanMessage`/`AIMessage` at `.invoke()`, `MessagesState`, and `add_messages`. Prompting Press roles map 1:1 (`system`/`user`/`assistant`; LangChain also accepts `human`/`ai` as aliases). The mapping is a key rename (`text`→`content`).
 
-**Footgun to document (FR-008)**: Do NOT route already-rendered text through `ChatPromptTemplate.from_messages` tuple/dict shorthand — it treats `content` as an f-string template and raises `KeyError` on literal `{...}` (e.g. JSON in rendered text). Feed the model/graph directly; PP already did the templating. (If typed message objects are wanted, map role→`SystemMessage`/`HumanMessage`/`AIMessage` explicitly — the public, stable surface.)
+**Note to document (FR-008)**: Do NOT route already-rendered text through `ChatPromptTemplate.from_messages` tuple/dict shorthand — it treats `content` as an f-string template and raises `KeyError` on literal `{...}` (e.g. JSON in rendered text). Feed the model/graph directly; PP already did the templating. (If typed message objects are wanted, map role→`SystemMessage`/`HumanMessage`/`AIMessage` explicitly — the public, stable surface.)
 
 **Versions (authoring-time)**: Python `langchain-core` 1.4.8, `langgraph` 1.2.7; TS `@langchain/core` 1.2.1, `@langchain/langgraph` 1.4.7.
 
@@ -20,7 +20,7 @@ All unknowns resolved. Sources: live SDK docs + published source (via research a
 
 **Rationale**: Strands has no in-list `system` role — `Role` is exactly `user|assistant`; the system prompt is a separate `Agent` argument (`system_prompt: str | list[SystemContentBlock]` in Python; `systemPrompt?: SystemPrompt = string | SystemContentBlock[]` in TS). `content` must be a list of content blocks; a plain-text block is `{"text": ...}` (`TextBlock`/`TextBlockData`). Python `system_prompt=str` and TS `systemPrompt: string` both accept a bare string — PP's rendered string maps with zero transformation.
 
-**Footgun to document (FR-008)**: Strands flattens system position — a mid-conversation system message is hoisted to the single system prompt; Strands cannot preserve mid-stream system placement. Flag as a framework limitation, not a PP capability.
+**Note to document (FR-008)**: Strands flattens system position — a mid-conversation system message is hoisted to the single system prompt; Strands cannot preserve mid-stream system placement. Flag as a framework limitation, not a PP capability.
 
 **Out of scope (FR-009)**: `guardContent` (Bedrock-Guardrails vocabulary: `qualifiers ∈ {grounding_source, query, guard_content}`), `toolResult`, `toolUse`, `cachePoint`, `reasoningContent`, `citationsContent` — all provider request-body block types. Recipes emit `{"text": ...}` only.
 
@@ -34,7 +34,7 @@ All unknowns resolved. Sources: live SDK docs + published source (via research a
 
 **Rationale**: These are plain `str` Pydantic fields; the rendered string is final. CrewAI abstracts the LLM call and the system/user split internally — the integrator never touches a message array.
 
-**Footgun to document (FR-008)**: Do NOT also pass `crew.kickoff(inputs={...})` for variables PP already rendered — CrewAI's own `{placeholder}` interpolation would look for text that no longer exists. Hand CrewAI final strings; don't drive its `system_template`/`prompt_template` from PP.
+**Note to document (FR-008)**: Do NOT also pass `crew.kickoff(inputs={...})` for variables PP already rendered — CrewAI's own `{placeholder}` interpolation would look for text that no longer exists. Hand CrewAI final strings; don't drive its `system_template`/`prompt_template` from PP.
 
 **Versions**: Python `crewai` 1.15.1.
 
