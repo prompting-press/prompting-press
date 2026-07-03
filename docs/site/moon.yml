@@ -62,10 +62,26 @@ tasks:
     options:
       runFromWorkspaceRoot: true
 
-  # Aggregate: all three doc-sample suites (the docs:test-samples gate).
+  test-samples-python-crewai:
+    # SEPARATE from test-samples-python: CrewAI pulls chromadb (Pydantic v1),
+    # which cannot import on Python 3.14 (the repo default). This project is
+    # pinned to 3.13 and hosts ONLY the CrewAI integration example, so uv is
+    # forced onto 3.13 explicitly (mise's active interpreter is 3.14).
+    description: 'Run the CrewAI doc-sample program on Python 3.13 (docs/site/samples/python-crewai/examples/**).'
+    command: 'bash -c "cd docs/site/samples/python-crewai && uv sync --python 3.13 && uv run --python 3.13 pytest -q"'
+    inputs:
+      - '/docs/site/samples/python-crewai/**/*.py'
+      - '/docs/site/samples/python-crewai/pyproject.toml'
+      - '/docs/site/samples/python-crewai/.python-version'
+      - '/packages/python/**'
+    options:
+      runFromWorkspaceRoot: true
+
+  # Aggregate: all doc-sample suites (the docs:test-samples gate).
   test-samples:
-    description: 'Compile + run all doc-sample programs across the three languages.'
+    description: 'Compile + run all doc-sample programs across every language/runtime.'
     deps:
       - 'docs:test-samples-rust'
       - 'docs:test-samples-python'
+      - 'docs:test-samples-python-crewai'
       - 'docs:test-samples-typescript'

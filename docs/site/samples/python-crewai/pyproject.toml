@@ -1,0 +1,27 @@
+# CrewAI doc-sample project (spec 016) — SEPARATE from the main python/ project.
+#
+# CrewAI pulls chromadb, which depends on Pydantic v1; that combination cannot
+# be imported on Python 3.14 (the repo's default pin). CrewAI imports fine on
+# 3.13, so this project is pinned to 3.13 and hosts ONLY the CrewAI integration
+# example. Everything else (langchain, strands, and all other guides) stays in
+# the 3.14 python/ project. Same standalone-program model: each file under
+# examples/ is shown verbatim in the docs via ?raw and executed by CI.
+[project]
+name = "prompting-press-doc-samples-crewai"
+version = "0.0.0"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "prompting-press",
+    "pytest>=8",
+    "crewai>=1.15,<2",
+]
+
+[tool.uv]
+# Pin the interpreter: CrewAI's chromadb/Pydantic-v1 stack breaks on 3.14.
+required-version = ">=0.5"
+
+[tool.uv.sources]
+prompting-press = { path = "../../../../packages/python", editable = true }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
