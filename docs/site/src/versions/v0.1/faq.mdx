@@ -133,6 +133,42 @@ the protection itself.
 
 ---
 
+## Integrations & positioning
+
+### How is this different from Jinja (or minijinja)?
+
+It isn't a better template *syntax* — Prompting Press renders with minijinja under the hood,
+so the `{{ }}` templating will feel familiar. The difference is everything *around* the
+template that raw Jinja leaves you to build yourself:
+
+- **Somewhere to keep prompts.** Raw Jinja gives you a template string and nothing else —
+  you still invent how prompts are named, loaded, typed, and versioned. Prompting Press *is*
+  that structure: named, typed prompt definitions in YAML/JSON/TOML (or code).
+- **A typed input contract with a build-time check.** Jinja's `StrictUndefined` errors only
+  when a render actually hits a missing variable — at runtime, on that code path, if your
+  data happens to exercise it. Prompting Press declares which variables a prompt has and
+  checks that the template only uses those — at construction, with no data — so a template
+  that references `{{ customer }}` when the prompt only declares `user` fails before you
+  ship, not at 2am in production.
+- **Variants.** Named alternative versions of a prompt (formal/casual, v1/v2, per-language)
+  that you select at render time instead of duplicating templates.
+- **The same prompt in every language.** One shared engine renders a prompt byte-identically
+  from Rust, Python, and TypeScript — Jinja (Python) and nunjucks (JS) would drift.
+- **A content hash of each render**, so you can reproduce exactly what was sent.
+
+### How does this fit my framework's system/user prompt split, or `ChatPromptTemplate`?
+
+Prompting Press stays out of the way of the split. It produces **neutral role-tagged text** —
+an ordered list of `{ role, text }` messages, with `role` being `system` / `user` /
+`assistant`. Each framework then wants that shaped differently: LangChain keeps the system
+turn *in* the message list, Strands takes the system prompt as a *separate* argument, and
+CrewAI has no message list at all (it uses `Agent`/`Task` string fields). Rather than pick one
+framework's convention, Prompting Press hands you the neutral messages and the per-framework
+[Integrations](/integrations/) pages show the few lines that reshape them — including why you
+should feed rendered text to the model directly instead of back through `ChatPromptTemplate`.
+
+---
+
 ## API surface
 
 ### Why is there no `.chain()` on `Composition`?
