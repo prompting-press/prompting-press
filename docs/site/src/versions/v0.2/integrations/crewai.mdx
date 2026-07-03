@@ -29,9 +29,3 @@ and don't re-pass those variables to `kickoff`.
 Each `render(...).text` result is assigned straight to a field. The example also asserts the
 `.body`-vs-`.text` distinction, since reaching for `.body` by mistake would ship the raw
 `{{ }}` template into your agent.
-
-<Aside type="note" title="Python only">
-CrewAI publishes an official SDK for Python only — there is no official CrewAI TypeScript
-SDK, so this page is Python-only. (An unrelated third-party `crewai` package exists on npm;
-it is not the CrewAI project's SDK, and these recipes don't use it.)
-</Aside>
