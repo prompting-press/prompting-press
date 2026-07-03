@@ -91,6 +91,15 @@ export default defineConfig({
         },
         { label: "Template features", link: "/templates/" },
         {
+          label: "Integrations",
+          items: [
+            { label: "Overview", link: "/integrations/" },
+            { label: "LangChain / LangGraph", link: "/integrations/langchain/" },
+            { label: "Strands", link: "/integrations/strands/" },
+            { label: "CrewAI", link: "/integrations/crewai/" },
+          ],
+        },
+        {
           label: "API reference",
           items: [
             { label: "Prompt Definition", link: "/reference/prompt-definition/" },

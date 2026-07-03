@@ -9,7 +9,19 @@
 name = "prompting-press-doc-samples"
 version = "0.0.0"
 requires-python = ">=3.12"
-dependencies = ["prompting-press", "pytest>=8"]
+# Framework SDKs (langchain-core/langgraph, strands-agents, crewai) are
+# dependencies of THIS doc-sample project ONLY — they let the integration
+# examples type-check/run against the real SDK shapes. They are deliberately
+# NOT dependencies of any shipped prompting-press-* package (the library stays
+# framework-agnostic; the recipes are user-side glue shown in the docs).
+dependencies = [
+    "prompting-press",
+    "pytest>=8",
+    "langchain-core>=1.4,<2",
+    "langgraph>=1.2,<2",
+    "strands-agents>=1.45,<2",
+    "crewai>=1.15,<2",
+]
 
 [tool.uv.sources]
 prompting-press = { path = "../../../../packages/python", editable = true }

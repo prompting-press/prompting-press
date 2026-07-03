@@ -197,6 +197,101 @@ function emitRootRedirect(latestMinor) {
   log(`Emitted dist/index.html → redirect to ${target}`);
 }
 
+/**
+ * Build the redirect-stub HTML for a single unversioned deep path.
+ * Same meta-refresh + canonical + noscript + location.replace() form as the
+ * root redirect, so behaviour is consistent on a static host.
+ */
+function deepRedirectHtml(target) {
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content="0; url=${target}" />
+    <link rel="canonical" href="${target}" />
+    <title>Redirecting to latest docs…</title>
+    <meta name="robots" content="noindex" />
+  </head>
+  <body>
+    <noscript>
+      <p>
+        Redirecting to the latest documentation&hellip;
+        <a href="${target}">Click here if you are not redirected</a>.
+      </p>
+    </noscript>
+    <script>location.replace("${target}");<\/script>
+  </body>
+</html>
+`;
+}
+
+/**
+ * Emit unversioned deep-link redirect stubs (FR-015/016/017).
+ *
+ * For every page under the latest version's built output (dist/v{latest}/**),
+ * write a redirect stub at the SAME path WITHOUT the version prefix, pointing
+ * at the versioned page. So `/getting-started/rust/` → `/v{latest}/getting-started/rust/`
+ * instead of 404ing (the reported bug: shared/bookmarked links from before the
+ * versioning switch, and any hand-typed unversioned URL).
+ *
+ * - The site root ("") is owned by emitRootRedirect — skip it here.
+ * - Only paths that EXIST under the latest version get a stub; an unversioned
+ *   path with no latest-version page gets nothing → a normal 404 (FR-017).
+ * - Never overwrite a real top-level entry (the version dirs vX.Y / next, or
+ *   the root index.html): a stub is only written where nothing is already
+ *   present, so we never shadow actual content.
+ */
+function emitDeepLinkRedirects(latestMinor) {
+  const latestDir = resolve(DIST_ROOT, `v${latestMinor}`);
+  if (!existsSync(latestDir)) {
+    log(`No latest dir at ${latestDir}; skipping deep-link redirects.`);
+    return;
+  }
+
+  // Reserved top-level names we must never shadow with a stub.
+  const reservedTop = new Set(readdirSync(DIST_ROOT));
+
+  // Collect page paths (dirs containing index.html) under the latest version,
+  // as version-relative POSIX paths ("" = version root, skipped).
+  const pagePaths = [];
+  const walk = (absDir, relParts) => {
+    for (const dirent of readdirSync(absDir, { withFileTypes: true })) {
+      if (dirent.isDirectory()) {
+        walk(resolve(absDir, dirent.name), [...relParts, dirent.name]);
+      } else if (dirent.name === "index.html" && relParts.length > 0) {
+        pagePaths.push(relParts.join("/"));
+      }
+    }
+  };
+  walk(latestDir, []);
+
+  let emitted = 0;
+  let skipped = 0;
+  for (const rel of pagePaths) {
+    const topSegment = rel.split("/")[0];
+    // Don't shadow a real top-level entry (e.g. an "assets" dir, a version dir).
+    if (reservedTop.has(topSegment)) {
+      skipped++;
+      continue;
+    }
+    const stubDir = resolve(DIST_ROOT, rel);
+    const stubFile = resolve(stubDir, "index.html");
+    if (existsSync(stubFile)) {
+      // Something real already lives here — never overwrite.
+      skipped++;
+      continue;
+    }
+    const target = `/v${latestMinor}/${rel}/`;
+    mkdirSync(stubDir, { recursive: true });
+    writeFileSync(stubFile, deepRedirectHtml(target), "utf-8");
+    emitted++;
+  }
+  log(
+    `Emitted ${emitted} unversioned deep-link redirect stub(s) → /v${latestMinor}/… ` +
+      `(${skipped} skipped: reserved/occupied paths).`,
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -318,6 +413,10 @@ function main() {
 
   // Emit the root redirect (TC03).
   emitRootRedirect(latestMinor);
+
+  // Emit unversioned deep-link redirect stubs so shared/bookmarked links like
+  // /getting-started/rust/ resolve to the latest version instead of 404ing.
+  emitDeepLinkRedirects(latestMinor);
 
   // Summary.
   log("\n=== Build summary ===");

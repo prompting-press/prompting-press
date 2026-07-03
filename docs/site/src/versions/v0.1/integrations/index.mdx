@@ -1,0 +1,47 @@
+---
+title: "Integrations"
+description: "Use Prompting Press with agent frameworks — LangChain/LangGraph, Strands, and CrewAI. Prompting Press manages your prompts; the framework makes the call."
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Prompting Press is deliberately **framework-agnostic**. It turns typed inputs and a
+template into rendered text (and, for multi-message prompts, an ordered list of
+role-tagged messages). It never calls a model, assembles a provider request body, or
+depends on any agent framework. That job belongs to your framework.
+
+So the split is clean:
+
+- **Prompting Press owns your prompts** — storing them as typed, versioned, variant-aware
+  definitions; validating inputs; and checking, before you ship, that every variable a
+  template uses is one you declared.
+- **Your framework owns the call** — LangChain/LangGraph, Strands, CrewAI, or anything
+  else takes the rendered text and runs the agent.
+
+The bridge between the two is a few lines of glue that reshape a rendered prompt into
+whatever your framework's constructor or invoke call expects. Each page below shows that
+glue as a complete, copy-pasteable example — and every example on these pages is a real
+program that runs in our test suite, so it stays correct as the frameworks evolve.
+
+<Aside type="note">
+Prompting Press never depends on these frameworks. The mapping code lives in *your*
+application, next to the framework you already use — pin the framework version you want
+and copy the recipe.
+</Aside>
+
+## Pick your framework
+
+- **[LangChain / LangGraph](/integrations/langchain/)** — map the rendered messages to
+  LangChain's `{ role, content }` message shape (Python and TypeScript).
+- **[Strands](/integrations/strands/)** — split a composition into Strands' separate
+  system prompt plus its content-block messages (Python and TypeScript).
+- **[CrewAI](/integrations/crewai/)** — assign rendered strings to an `Agent`'s and
+  `Task`'s fields (Python).
+
+## Where prompts come from
+
+None of these recipes care where the prompt definition was stored. Prompting Press does no
+file or network I/O itself — you hand it the definition (from a file, a database, an object
+store, or a string in code) and it renders. That is why there is one bridge per framework
+and no storage-specific variants: loading is your app's choice, shaping for the framework is
+the recipe below.
