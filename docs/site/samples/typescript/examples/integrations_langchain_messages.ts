@@ -5,7 +5,7 @@
 // the bridge is a one-line key rename (`text` -> `content`): map each rendered
 // message and hand the list straight to a chat model or a LangGraph node.
 //
-// Footgun: do NOT route already-rendered text through
+// Note: do NOT route already-rendered text through
 // `ChatPromptTemplate.fromMessages` with the tuple/object shorthand — that path
 // treats `content` as a template and breaks on literal `{...}` (e.g. JSON) in
 // your rendered text. Prompting Press already did the templating; feed the

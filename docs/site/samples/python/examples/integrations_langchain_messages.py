@@ -5,7 +5,7 @@ messages. LangChain accepts plain ``{"role", "content"}`` dicts directly, so the
 bridge is a one-line key rename (``text`` -> ``content``): map each rendered
 message and hand the list straight to a chat model or a LangGraph node.
 
-Footgun: do NOT route already-rendered text through
+Note: do NOT route already-rendered text through
 ``ChatPromptTemplate.from_messages`` with the tuple/dict shorthand. That path
 treats ``content`` as an f-string template and raises on any literal ``{...}``
 (e.g. JSON) in your rendered text. Prompting Press already did the templating —
