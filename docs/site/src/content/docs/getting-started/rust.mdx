@@ -28,7 +28,9 @@ across the FFI bridge.
 ## Write a prompt definition
 
 A prompt definition is a YAML, JSON, or TOML document — the same shape in any of the three formats.
-The caller reads the text and hands it to the `from_*` factories; the library does no file I/O. The
+The caller reads the text and hands it to the `from_*` factories; the factories themselves do no
+file I/O. (If you'd rather load by key, the optional [loader](/guides/loader/) reads the text for
+you, then you still call a `from_*` factory — loading and construction stay separate.) The
 `assistant` definition used throughout this page:
 
 <Tabs syncKey="def-format">
@@ -81,8 +83,8 @@ trusted = true
 ### Step 1 — construct a `Prompt` (and validate)
 
 Read the definition file and hand its text to a `from_*` factory (`Prompt::from_yaml` / `from_json`
-/ `from_toml`), or build from an already-built `PromptDefinition` value with `Prompt::new`. The
-library does no file I/O — the caller reads the file. All routes run the **same** validation
+/ `from_toml`), or build from an already-built `PromptDefinition` value with `Prompt::new`. These
+routes do no file I/O — the caller reads the file. All routes run the **same** validation
 immediately:
 
 <Tabs syncKey="construct-route">
