@@ -432,7 +432,10 @@ test("T045: derive() carries validators forward from source by default (R6)", ()
 test("T045: derive(overlay, { validators }) overrides bound validator on derived prompt (R6)", () => {
 	const p = new Prompt(GREET_SHAPE, Greeting);
 	const NoCheck = z.object({ name: z.string(), count: z.number() });
-	const derived = p.derive({ body: "Hi {{ name }}, you have {{ count }} messages" }, { validators: NoCheck });
+	const derived = p.derive(
+		{ body: "Hi {{ name }}, you have {{ count }} messages" },
+		{ validators: NoCheck },
+	);
 	// Derived has NoCheck as its bound validator — the count=-1 should now pass (no refine).
 	const result = derived.render({ name: "Eli", count: -1 });
 	assert.equal(result.text, "Hi Eli, you have -1 messages");
