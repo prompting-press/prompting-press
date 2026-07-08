@@ -8,10 +8,10 @@ Flat `string → string` mapping produced on demand from a `RenderResult`. Exact
 
 | Key (fixed) | Source field | Notes |
 |---|---|---|
-| `gen_ai.prompt.name` | `RenderResult.name` | OTel-GenAI-aligned |
-| `gen_ai.prompt.variant` | `RenderResult.variant` | OTel-GenAI-aligned; always populated (`default` if none) |
-| `gen_ai.prompt.template_hash` | `RenderResult.template_hash` | prompting-press provenance extension |
-| `gen_ai.prompt.render_hash` | `RenderResult.render_hash` | prompting-press provenance extension |
+| `prompting_press.prompt.name` | `RenderResult.name` | OTel-GenAI-aligned |
+| `prompting_press.prompt.variant` | `RenderResult.variant` | OTel-GenAI-aligned; always populated (`default` if none) |
+| `prompting_press.prompt.template_hash` | `RenderResult.template_hash` | prompting-press provenance extension |
+| `prompting_press.prompt.render_hash` | `RenderResult.render_hash` | prompting-press provenance extension |
 
 - **Excluded:** `text`, `guard`, prompt/variant `metadata`, `output_model` (FR-007).
 - **Per-language return:** Python `dict[str,str]`, TS `Record<string,string>`, Rust
@@ -24,15 +24,19 @@ Kernel `RenderResult` (`crates/prompting-press-core/src/engine.rs:117`) already 
 `name`, `variant`, `template_hash`, `render_hash`, `guard`. Surfaced 1:1 in each binding. This
 feature ADDS a projection method; it changes no field and no kernel behavior.
 
+## Note
+- The map is an explicit 4-key ALLOWLIST, not a reflection of all RenderResult fields — a future
+  field cannot silently leak into telemetry.
+
 ## Behavior
 
 ```
 provenance_attributes(result):
     return {
-      "gen_ai.prompt.name":          result.name,
-      "gen_ai.prompt.variant":       result.variant,
-      "gen_ai.prompt.template_hash": result.template_hash,
-      "gen_ai.prompt.render_hash":   result.render_hash,
+      "prompting_press.prompt.name":          result.name,
+      "prompting_press.prompt.variant":       result.variant,
+      "prompting_press.prompt.template_hash": result.template_hash,
+      "prompting_press.prompt.render_hash":   result.render_hash,
     }   # pure: no I/O, no callback, no mutation, no emission
 ```
 

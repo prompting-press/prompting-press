@@ -8,7 +8,7 @@
 
 Add a `provenance_attributes()` projection method to the render result in each binding, returning a
 flat string→string map of the four content-identity provenance fields (`name`, `variant`,
-`template_hash`, `render_hash`) under fixed `gen_ai.prompt.*` keys — for one-call attachment to a
+`template_hash`, `render_hash`) under fixed `prompting_press.prompt.*` keys — for one-call attachment to a
 telemetry span. Pure getter: no I/O, no callback, no telemetry dependency, no emission. Rejects the
 issue's `ProvenanceSink`/`OtelSink` (Principle V: no telemetry sink/coupling). Cites the spec-017
 v3.0.0 repositioning statement; its own edit softens Principle V to permit *formatting* provenance
@@ -76,7 +76,7 @@ specs/018-provenance-attributes/
 ```text
 crates/
 ├── prompting-press-core/   # RenderResult data struct (fields already present) — NO behavior change
-├── prompting-press/        # consumer — home for the shared gen_ai.prompt.* key constants +
+├── prompting-press/        # consumer — home for the shared prompting_press.prompt.* key constants +
 │                           #   a provenance_attributes(&RenderResult)->BTreeMap helper (research R1)
 ├── prompting-press-py/     # render.rs — add provenance_attributes() method to the RenderResult pyclass
 └── prompting-press-node/   # render.rs — add provenanceAttributes() to the napi RenderResult type
@@ -89,7 +89,7 @@ conformance/                # add a provenance-attributes parity case (identical
 .specify/memory/            # constitution v3.0.0 Principle V softening + DECISIONS.md (cites spec-017)
 ```
 
-**Structure Decision**: Define the four `gen_ai.prompt.*` key strings and the map-building **once**
+**Structure Decision**: Define the four `prompting_press.prompt.*` key strings and the map-building **once**
 in the consumer crate (`prompting-press`) as `pub const`s + a small helper over the fields; each
 binding's `RenderResult` method calls/mirrors it so the emitted map is identical (Principle I),
 without a kernel behavior change (FR-010). See research R1 for the alternative considered.
