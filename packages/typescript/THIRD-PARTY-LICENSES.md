@@ -1728,7 +1728,7 @@ limitations under the License.
 ## Apache License 2.0
 
 Used by:
-- **ctor 1.0.7** — <https://github.com/mmastrac/linktime>
+- **ctor 1.0.8** — <https://github.com/mmastrac/linktime>
 
 ```
 Apache License
@@ -1949,7 +1949,7 @@ Used by:
 - **proc-macro2 1.0.106** — <https://github.com/dtolnay/proc-macro2>
 - **quote 1.0.46** — <https://github.com/dtolnay/quote>
 - **rustc-hash 2.1.3** — <https://github.com/rust-lang/rustc-hash>
-- **rustversion 1.0.22** — <https://github.com/dtolnay/rustversion>
+- **rustversion 1.0.23** — <https://github.com/dtolnay/rustversion>
 - **ryu 1.0.23** — <https://github.com/dtolnay/ryu>
 - **semver 1.0.28** — <https://github.com/dtolnay/semver>
 - **serde 1.0.228** — <https://github.com/serde-rs/serde>
@@ -2305,7 +2305,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ## MIT License
 
 Used by:
-- **memchr 2.8.2** — <https://github.com/BurntSushi/memchr>
+- **memchr 2.8.3** — <https://github.com/BurntSushi/memchr>
 
 ```
 The MIT License (MIT)
