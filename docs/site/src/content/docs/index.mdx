@@ -54,8 +54,10 @@ bind one shared Rust engine, so a rendered prompt is byte-identical across them.
 
 ## What it does not do
 
-- It performs **no I/O**. The caller reads the prompt text (or fetches it) and passes it to `from_yaml`,
-  `from_json`, or `from_toml`; the library never touches the filesystem, a database, or the network.
+- Its **core performs no I/O**. Rendering and construction (`from_yaml`, `from_json`, `from_toml`) never
+  touch the filesystem, a database, or the network — you push the prompt text in. (An optional,
+  caller-invoked [loader](/guides/loader/) — `FileSystemLoader`, `MemoryLoader`, or your own — can
+  read that text for you; it returns raw text and is never fused into rendering.)
 - It **never calls an LLM**, assembles a provider request body, counts tokens, or parses model output.
 - Its untrusted-input **guard is advisory text, not enforcement**. It names untrusted fields for the downstream
   model; it does not sanitize values, and the library has no model of its own.
@@ -65,9 +67,10 @@ bind one shared Rust engine, so a rendered prompt is byte-identical across them.
 - **Prompts stop being string literals scattered through your code.** Define them as typed
   files (or objects) instead of inline strings buried in application logic — so a prompt gets
   the same diff, review, and history any other source file does.
-- **You load prompts from wherever you already keep them.** Prompting Press does no I/O: you
-  hand it the definition — from a file, a database, an object store, or a string in code — and
-  it renders. There is no storage adapter to adopt and nothing to lock into.
+- **You load prompts from wherever you already keep them.** Hand the definition in — from a file,
+  a database, an object store, or a string in code — and it renders. Storage is never mandated: use
+  the optional [loader](/guides/loader/) seam (filesystem, in-memory, or your own) if it's
+  convenient, or just read the text yourself. Either way it's opt-in and swappable — nothing to lock into.
 - **You change prompts without redeploying.** Named [variants](/guides/variants/) let you keep
   parallel versions of a prompt and pick one at render time — for migrating v1→v2, honoring a
   per-user preference, serving different languages, or switching tone — without editing code

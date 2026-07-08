@@ -72,13 +72,13 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.1",
+    "@biomejs/biome": "2.5.3",
     "@napi-rs/cli": "3.7.2",
     "@types/node": "26.1.1",
     "fast-check": "4.8.0",
     "json-schema-to-typescript": "15.0.4",
-    "knip": "6.23.0",
-    "typescript": "5.9.2",
+    "knip": "6.25.0",
+    "typescript": "6.0.3",
     "zod": "4.4.3"
   }
 }
