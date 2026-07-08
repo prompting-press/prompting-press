@@ -45,7 +45,7 @@ interface, not Zod's identity, so any object exposing `safeParse` works.
 ## Write a prompt definition
 
 A prompt definition is YAML, JSON, or TOML text — the same shape in any of the three formats. The
-caller reads the text and hands it to the `from*` factories; the library does no file I/O. The
+caller reads the text and hands it to the `from*` factories; these factories do no file I/O. The
 `assistant` definition used throughout this page:
 
 <Tabs syncKey="def-format">
@@ -98,7 +98,7 @@ trusted = true
 ### Step 1 — construct a `Prompt` (and validate)
 
 Read the definition file and hand its text to a `from*` factory (`fromYaml` / `fromJson` / `fromToml`),
-or build from a typed `PromptDefinition` object with `new Prompt(...)`. The library does no file I/O —
+or build from a typed `PromptDefinition` object with `new Prompt(...)`. These routes do no file I/O —
 the caller reads the file. Both routes run the **same** validation immediately:
 
 <Tabs syncKey="construct-route">

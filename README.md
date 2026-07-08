@@ -112,7 +112,7 @@ console.log(result.templateHash);  // 64-char SHA-256
 
 ## What it deliberately does not do
 
-- No I/O — you push prompt data in; the library never reads files, a database, or the network.
+- No I/O in the core — rendering and construction never touch files, a database, or the network; you push prompt text in. (An optional, caller-invoked loader seam — `FileSystemLoader`/`MemoryLoader`/custom — can source that text for you; it's opt-in and never fused into rendering.)
 - No LLM calls, no provider request-body assembly, no token counting, no output parsing.
 - The untrusted-input guard is advisory text, not enforcement.
 

@@ -43,7 +43,7 @@ required (the wheel is `abi3-py312` — one wheel covers CPython 3.12 and up).
 ## Write a prompt definition
 
 A prompt definition is YAML, JSON, or TOML text — the same shape in any of the three formats. The
-caller reads the text and hands it to the `from_*` factories; the library does no file I/O. The
+caller reads the text and hands it to the `from_*` factories; these factories do no file I/O. The
 `assistant` definition used throughout this page:
 
 <Tabs syncKey="def-format">
@@ -97,7 +97,7 @@ trusted = true
 
 Read the definition file and hand its text to a `from_*` factory (`from_yaml` / `from_json` /
 `from_toml`), or build from a shape object with `Prompt(...)` — either a typed `PromptDefinition` or
-a plain `dict`. The library does no file I/O — the caller reads the file. Every route runs the
+a plain `dict`. These routes do no file I/O — the caller reads the file. Every route runs the
 **same** validation immediately:
 
 <Tabs syncKey="construct-route">
