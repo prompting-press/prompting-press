@@ -653,6 +653,33 @@ D1 (canonical serialized-form comparison); C-08 (deep/none excluded; axis reserv
 earned, opt-in seams") is the constitutional anchor both later specs cite when introducing their
 own earned seams.
 
+### 018 — Provenance attributes helper  [status: implemented (pending merge after 017)]
+
+- **Description:** Add a projection helper on the render result that formats the four provenance
+  fields (`name`, `variant`, `template_hash`, `render_hash`) into a flat, telemetry-ready
+  `string→string` attribute map in all three bindings (Rust extension trait + free function;
+  Python `dict[str,str]` method; TypeScript `Record<string,string>` method).
+- **Outcome:** A consumer can attach all four provenance fields to an observability span in a
+  single helper call + one bulk set-attributes call, with no hand-written key strings. Keys are
+  library-owned (`prompting_press.prompt.*`), documented as NOT OTel gen_ai.* keys; consumer
+  may remap. Exactly 4 entries — explicit allowlist, never reflection (text/guard/metadata/
+  output_model are never included). No telemetry dependency added anywhere.
+- **Scope (in):** `ProvenanceExt` trait + `provenance_attributes_of` free function + 4 key
+  constants in the consumer crate; `provenance_attributes()` on the Python pyclass; `provenance
+  Attributes()` on the napi `RenderResult`; TypeScript re-export via the existing `RenderResult`
+  class; conformance fixture `provenance-attributes.json`; Principle V constitution softening.
+- **Scope (out):** telemetry SDK coupling, configurable keys, pluggable sink interfaces (explicitly
+  rejected; issue #270 resolved as a pure projection helper, not a callback or emission sink).
+- **Depends on:** 002 (kernel RenderResult fields), 003 (consumer crate), 004 (Python binding),
+  005 (TS binding), **017** (v3.0.0 repositioning statement cited by the constitution amendment).
+  **Governed by:** Principles I (helper calls shared fn), III (no I/O — pure projection), V
+  (provenance formatting added as additive permission). **Requires a MINOR constitution amendment**
+  (v3.1.0 additive) on top of 017's v3.0.0 baseline; recorded in DECISIONS.md.
+- **Notes:** Issue #270 proposed a `ProvenanceSink`/`OtelSink` pluggable interface; resolved via
+  design grilling to this boundary-safe projection helper. Constitution amendment writes v3.1.0 on
+  a v2.0.0 base in this worktree; the version line reconciles at merge after 017. `apm compile`
+  not runnable in-worktree; `CLAUDE.md`/`AGENTS.md` regeneration deferred to post-merge.
+
 ## Deferred
 
 <!-- Gated on real demand (C-08 / R1). Not planned specs until a trigger fires. -->

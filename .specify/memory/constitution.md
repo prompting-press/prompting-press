@@ -1,6 +1,26 @@
 <!--
 SYNC IMPACT REPORT (latest)
 ==================
+Version change: 3.0.0 → 3.1.0 (MINOR — Principle V additive bullet: provenance formatting allowed)
+Date: 2026-07-08
+Driver: spec 018 (Provenance attributes helper).
+Change: Principle V gains one additive bullet: the library MAY format provenance into a flat,
+  telemetry-ready attribute map (a pure projection of fields already on the return value).
+  Still no telemetry sink, no push/emit, no telemetry dependency. The two content hashes and
+  their semantics are unchanged. Library-owned keys (`prompting_press.prompt.*`); consumer may
+  remap. Explicitly cites spec-017's v3.0.0 repositioning statement as the shared anchor.
+  Additive only (no existing bullet removed or redefined) → MINOR on 017's v3.0.0 base.
+Templates checked:
+  ✅ .specify/memory/constitution.md (this file) — Principle V softened with additive bullet
+  ✅ .specify/memory/DECISIONS.md — amendment recorded (spec 018 entry)
+  ✅ .specify/memory/roadmap.md — spec 018 entry added
+  ⚠ .specify/templates/{plan,spec,tasks}-template.md — no structural template change required
+     (the amendment adds an additive bullet; coding-idiom rule applied by reviewer).
+  ⚠ CLAUDE.md + AGENTS.md — `apm compile` not runnable in worktree; flag for reviewer to
+     regenerate after merge (same limitation as spec 017 builder).
+
+PRIOR SYNC IMPACT REPORT (was latest)
+==================
 Version change: 2.0.0 → 3.0.0 (MAJOR — repositioning statement + spec-008 FR-017(b) redefined)
 Date: 2026-07-08
 Driver: spec 017 (derive() merge strategy).
@@ -28,7 +48,7 @@ Templates checked:
   ⚠ CLAUDE.md + AGENTS.md — apm compile not runnable in this worktree; reviewer must regen
      after merge (see T022 note in tasks.md).
 
-PRIOR SYNC IMPACT REPORT (was latest)
+PRIOR SYNC IMPACT REPORT (latest before this)
 ==================
 Version change: 1.2.0 → 2.0.0 (MAJOR — guard body-invariant redefined backward-incompatibly)
 Date: 2026-06-30
@@ -235,11 +255,19 @@ Prompts are in-repo, PR-gated artifacts. The library does **not** reimplement gi
   the delimited body; guard-off ⇒ the hash of the plain body. Both are deterministic and meaningful;
   a trace must record which guard mode produced a hash to reproduce it. `template_hash` is
   unaffected — the template source is unchanged by the guard.
+- The library MAY **format** provenance into a flat, telemetry-ready attribute map (a pure projection
+  of fields already on the return value). This is still **data on the return value** — the library
+  MUST NOT push, emit, or log provenance to any destination, and MUST NOT add any
+  telemetry/observability dependency. The two content hashes and their semantics are unchanged. The
+  map keys are **library-owned** (`prompting_press.prompt.*`); a consumer may remap onto their
+  tracer's convention. (Amended for spec 018, v3.1.0. See also spec-017's v3.0.0 repositioning
+  statement, which this amendment cites as its shared anchor — merge after 017.)
 
 *Rationale:* in a git-canonical design a managed version axis is reinventing git, badly.
 `template_hash`/`render_hash` supply the only property git can't surface at render time — content
 identity in a trace — for free, because the shared core makes the rendered string byte-identical
-across languages.
+across languages. Formatting provenance into a flat attribute map for one-call span attachment is a
+pure convenience over data already returned; it does not break the no-sink guarantee.
 
 ### VI. Per-Language Idiom Over Forced Uniformity
 
@@ -378,4 +406,4 @@ after the first feature lands; major rewrites should be rare and recorded in
   output parsing, a managed version axis, or a new pluggable interface is presumed out of scope and
   requires an amendment (with rationale) before work begins.
 
-**Version**: 3.0.0 | **Ratified**: 2026-06-25 | **Last Amended**: 2026-07-08
+**Version**: 3.1.0 | **Ratified**: 2026-06-25 | **Last Amended**: 2026-07-08
