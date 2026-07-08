@@ -635,6 +635,13 @@ const SYMBOL_TO_GROUP = new Map([
 	["Composition", "Composition"],
 	["Message", "Message"],
 
+	// Loader interface + built-ins (spec 019)
+	["PromptLoader", "Loader"],
+	["FileSystemLoader", "Loader"],
+	["MemoryLoader", "Loader"],
+	["PromptLoadError", "Loader"],
+	["loader", "Loader"], // pub mod loader
+
 	["ConsumerError", "Errors"],
 	["FieldError", "Errors"],
 	// error::code constants
@@ -645,6 +652,8 @@ const SYMBOL_TO_GROUP = new Map([
 	["RENDER", "Errors"],
 	["EXCLUDED_FEATURE", "Errors"],
 	["LOAD", "Errors"],
+	["LOAD_IO", "Errors"],
+	["LOAD_NOT_FOUND", "Errors"],
 
 	["PromptDefinition", "Shape types"],
 	["PromptVariable", "Shape types"],
@@ -683,10 +692,12 @@ for (const [exportedName, info] of publicSurface) {
 	// The sub-modules error/prompt/check/compose are documented by expanding their
 	// re-exported items (already in publicSurface via the `use` items at the root).
 	if (
-		["core", "prompt_definition", "prompt", "check", "compose"].includes(
+		["core", "prompt_definition", "prompt", "check", "compose", "loader"].includes(
 			exportedName,
 		)
 	) {
+		// "loader" is a pub mod — its public items (PromptLoader, FileSystemLoader,
+		// MemoryLoader) are re-exported at the crate root and handled individually.
 		continue;
 	}
 
@@ -786,6 +797,38 @@ for (const [exportedName, info] of publicSurface) {
 			signature: renderFnSig(exportedName, item.inner.function, false, idx),
 			doc: processDoc(item.docs),
 			members: [],
+			shapeRef: null,
+			deprecated: deprecationNote(item),
+		});
+		continue;
+	}
+
+	if (rdocKind === "trait") {
+		// Render the trait with its required methods as members.
+		const traitInner = item.inner.trait;
+		const methodMembers = (traitInner?.items ?? [])
+			.map((mid) => {
+				const m = idx[mid];
+				if (!m) return null;
+				const mKind = Object.keys(m.inner ?? {})[0];
+				if (mKind !== "function") return null;
+				return {
+					name: m.name,
+					kind: "method",
+					signature: renderFnSig(m.name, m.inner.function, true, idx),
+					doc: processDoc(m.docs),
+					members: [],
+					shapeRef: null,
+					deprecated: deprecationNote(m),
+				};
+			})
+			.filter(Boolean);
+		addToGroup(exportedName, {
+			name: exportedName,
+			kind: "interface", // IR kind closest to a Rust trait
+			signature: `pub trait ${exportedName}`,
+			doc: processDoc(item.docs),
+			members: methodMembers,
 			shapeRef: null,
 			deprecated: deprecationNote(item),
 		});

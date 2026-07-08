@@ -460,6 +460,128 @@ text: string
 
 The rendered body text for this entry. The guard text is never concatenated here.
 
+## Loader
+
+### `FileSystemLoader`
+
+```ts
+class FileSystemLoader
+```
+
+A loader that reads prompt files from a configured base directory. Maps a logical key to `&#123;base&#125;/&#123;key&#125;&#123;suffix&#125;` and returns the file's raw text (async). ## Traversal guard The resolved final path is validated against the canonicalized base. Rejected keys: - contain `..` components - are absolute - contain NUL bytes or backslashes - are empty or equal to `"."` - contain an intermediate `"."` component (e.g. `"foo/./bar"`) - resolve via symlinks to outside the base A missing target canonicalize failure returns `load_not_found` (not `load_io`). ## Read cap Files exceeding `maxBytes` reject with `PromptLoadError` (`load_io`).
+
+#### `base`
+
+```ts
+get base(): string
+```
+
+The resolved base directory path.
+
+#### `maxBytes`
+
+```ts
+get maxBytes(): number
+```
+
+The maximum file size in bytes.
+
+#### `suffix`
+
+```ts
+get suffix(): string
+```
+
+The file name suffix (e.g. `".yaml"`).
+
+#### `constructor`
+
+```ts
+new FileSystemLoader(base: string, suffix: string, maxBytes: number): FileSystemLoader
+```
+
+Construct a `FileSystemLoader`. `base` is stored as-is; it is resolved (canonicalized) at each `load` call so the constructor is synchronous. Use `nodepath.resolve` to make the path absolute before construction if needed.
+
+#### `DEFAULT_MAX_BYTES`
+
+```ts
+readonly DEFAULT_MAX_BYTES: number
+```
+
+Default maximum file size (1 MiB).
+
+#### `load`
+
+```ts
+load(key: string): Promise<string>
+```
+
+Load the prompt source for `key`.
+
+### `MemoryLoader`
+
+```ts
+class MemoryLoader
+```
+
+A loader backed by an in-memory key→text mapping. The primary use case is **dependency injection in tests**: production code uses a `FileSystemLoader` or a custom loader; tests substitute a `MemoryLoader` with hard-coded prompt text. No filesystem access is performed. A missing key rejects with `PromptLoadError` (`load_not_found`).
+
+#### `constructor`
+
+```ts
+new MemoryLoader(prompts: Record<string, string> | Map<string, string>): MemoryLoader
+```
+
+Construct a `MemoryLoader` from a `Record<string, string>` or a `Map<string, string>`.
+
+#### `load`
+
+```ts
+load(key: string): Promise<string>
+```
+
+Return the mapped text for `key`, or reject with `PromptLoadError` (`load_not_found`).
+
+### `PromptLoadError`
+
+```ts
+class PromptLoadError
+```
+
+Raised when a PromptLoader `load` call fails. Distinct from LoadError (which is the parse/shape error): `except PromptLoadError` does NOT catch a malformed-YAML `LoadError`. Both extend PromptingPressError so `catch (PromptingPressError)` catches all library errors. Codes in `errors[0].code`: - `"load_not_found"` — key absent from backing store. - `"load_io"` — I/O error or `max_bytes` exceeded.
+
+### `PromptLoader`
+
+```ts
+interface PromptLoader
+```
+
+Pluggable source of raw prompt text. The single operation `load(key)` maps a logical key to the raw text of a prompt definition. The returned text is **never parsed or validated** — that belongs to the construct-from-text path (`Prompt.fromYaml` etc.). Loading and construction are always separate, composable steps. The interface is **async** (`Promise<string>`) to match the Node.js ecosystem's native I/O idiom, enabling remote/cloud backends. Any function `(key: string) => Promise<string>` satisfies this interface as-is (function coercion —). Failures must reject with `PromptLoadError` — never resolve to empty string or `null` for a missing key.
+
+#### `load`
+
+```ts
+load(key: string): Promise<string>
+```
+
+Load the prompt source for `key`, returning raw text. Rejects with PromptLoadError (`load_not_found`) when the key is absent, or (`load_io`) on I/O error or exceeded cap.
+
+### `LOAD_IO`
+
+```ts
+LOAD_IO
+```
+
+Stable code for a loader I/O or cap error (value of `errors[0].code`).
+
+### `LOAD_NOT_FOUND`
+
+```ts
+LOAD_NOT_FOUND
+```
+
+Stable code for a missing-key loader error (value of `errors[0].code`).
+
 ## Errors
 
 ### `LoadError`

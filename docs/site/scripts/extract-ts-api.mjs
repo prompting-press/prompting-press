@@ -252,6 +252,14 @@ function assignGroup(name) {
 			return "Composition";
 		case "Message":
 			return "Message";
+		// Loader interface + built-ins (spec 019)
+		case "PromptLoader":
+		case "FileSystemLoader":
+		case "MemoryLoader":
+		case "PromptLoadError":
+		case "LOAD_NOT_FOUND":
+		case "LOAD_IO":
+			return "Loader";
 		case "PromptingPressError":
 		case "PromptValidationError":
 		case "PromptRenderError":

@@ -73,6 +73,12 @@ export const API_GROUPS = [
 			"A resolved role+text message produced by composing a multi-message prompt.",
 	},
 	{
+		title: "Loader",
+		anchor: "loader",
+		blurb:
+			"Pluggable prompt loader: PromptLoader interface, FileSystemLoader and MemoryLoader built-ins, and PromptLoadError.",
+	},
+	{
 		title: "Errors",
 		anchor: "errors",
 		blurb: "Error hierarchy, error codes, and structured FieldError.",

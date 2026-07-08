@@ -1,6 +1,45 @@
 <!--
 SYNC IMPACT REPORT (latest)
 ==================
+Version change: 3.1.0 → 3.2.0 (MINOR — Principle III softened for caller-invoked loader seam;
+  C-08 Loader re-scoped; error-taxonomy compatibility-surface expansion recorded)
+Date: 2026-07-08
+Driver: spec 019 (pluggable prompt loader).
+
+Change: TWO additive edits on top of the v3.1.0 constitution (specs 017–019 cite the existing
+  v3.0.0 repositioning statement as their shared anchor; it is NOT re-declared here):
+
+  1. **Principle III softened** (additive clause): A **caller-invoked, language-side loader seam**
+     is now in-boundary — the `PromptLoader` interface and its built-ins are pure I/O leaves that the
+     caller invokes; the **kernel stays I/O-free, validation-blind, and unchanged** (SC-005), and
+     **construction remains I/O-free** (FR-011). The "MUST NOT perform I/O" clause is narrowed to
+     the kernel and the construction path; the language-side loader seam is explicitly permitted as
+     an earned, opt-in capability (earned by Bellwether per the v3.0.0 repositioning statement).
+
+  2. **Scope Discipline re-scope** (additive clarification): The previously eliminated **Loader**
+     seam (C-08 decision) is **reintroduced as an earned, opt-in seam** in the standard package.
+     The earning trigger: Bellwether is the real second consumer that needs storage to be a pluggable
+     axis. Heavier backends (cloud/object stores) remain deferred to opt-in extras.
+
+  3. **Error-taxonomy compatibility-surface expansion** (additive, recorded explicitly per
+     spec-015-style): The NEW `PromptLoadError` exception type and the NEW codes `load_io` /
+     `load_not_found` are added to the **closed** `code` vocabulary and error type set. Because these
+     are documented compatibility surfaces, this expansion is recorded here (see DECISIONS.md for the
+     full enumeration).
+
+Migration: additive-only. No existing API changes. The loader seam is opt-in; callers not using a
+  loader see no behavior change. The new error type is distinct from the existing `LoadError` (parse/
+  shape error) — `except LoadError` does NOT catch `PromptLoadError`.
+Templates checked:
+  ✅ .specify/memory/constitution.md (this file)
+  ✅ .specify/memory/DECISIONS.md (amendment recorded)
+  ✅ .specify/memory/roadmap.md (Never and C-08 entries updated)
+  ⚠ .specify/templates/{plan,spec,tasks}-template.md — no structural template change required.
+  ⚠ CLAUDE.md + AGENTS.md — apm compile not runnable in this worktree; reviewer must regen
+     after merge (spec 019 T019; noted in tasks.md). The constitution body below reflects v3.2.0.
+
+PRIOR SYNC IMPACT REPORT (was latest)
+==================
 Version change: 3.0.0 → 3.1.0 (MINOR — Principle V additive bullet: provenance formatting allowed)
 Date: 2026-07-08
 Driver: spec 018 (Provenance attributes helper).
@@ -19,7 +58,7 @@ Templates checked:
   ⚠ CLAUDE.md + AGENTS.md — `apm compile` not runnable in worktree; flag for reviewer to
      regenerate after merge (same limitation as spec 017 builder).
 
-PRIOR SYNC IMPACT REPORT (was latest)
+PRIOR SYNC IMPACT REPORT (before that)
 ==================
 Version change: 2.0.0 → 3.0.0 (MAJOR — repositioning statement + spec-008 FR-017(b) redefined)
 Date: 2026-07-08
@@ -193,8 +232,8 @@ practice (polars, oxc, biome).
 
 The library turns *typed inputs + a template* into *rendered text + provenance*. Nothing else.
 
-- It MUST NOT perform I/O: no file reads, no database/Redis/S3/network access, no storage layer. The
-  caller **pushes** prompt data in.
+- The **kernel** (`prompting-press-core`) and **construction** MUST NOT perform I/O: no file reads,
+  no database/Redis/S3/network access, no storage layer. The caller **pushes** prompt data in.
 - It MUST NOT call an LLM, assemble a provider request body (the `system`/`messages` split, content
   blocks), count tokens, or parse/coerce model output.
 - Token counting is exposed only as a pluggable `count_tokens(text, model) -> int` **hook**; no
@@ -209,12 +248,21 @@ The library turns *typed inputs + a template* into *rendered text + provenance*.
   sanitizing, stripping, or semantic change; entity-escaping is reversible structure, not content
   mutation), but the body is no longer byte-identical to a plain render when the guard is on. (See
   Principle V for the hash consequence; amended for spec 015, v2.0.0.)
+- **A caller-invoked, language-side loader seam is in-boundary** (amended for spec 019, v3.2.0):
+  the `PromptLoader` interface and its built-in implementations (`FileSystemLoader`,
+  `MemoryLoader`) are pure I/O leaves that the **caller invokes**; the kernel and construction
+  remain I/O-free and validation-blind (Principles I/II unchanged). No construction path performs
+  I/O via a loader; loading and construction are always separate, composable steps. The seam is
+  opt-in, language-side only, and earned by a real second consumer (Bellwether — see the v3.0.0
+  repositioning statement). Heavier backends (cloud/object stores) remain deferred.
 
 *Rationale:* every capability outside this boundary is per-vendor, I/O-bound, or framework-coupled —
 exactly the things that destroy reusability. A narrow boundary is what keeps the library orthogonal
 to LangChain/OpenRouter/any call layer. Delimiting untrusted spans is the one industry-standard
 injection defense that lives entirely within "produce rendered text" — it adds locatable structure
-to the output without reaching outside the boundary.
+to the output without reaching outside the boundary. The loader seam earns its place by a concrete
+consumer need and respects the boundary: the kernel sees no I/O; the caller decides when and how
+to load.
 
 ### IV. Typed Input Is the Differentiator
 
@@ -357,11 +405,14 @@ exist.
 ## Scope Discipline (R1)
 
 v1 ships **one concrete path per concern and no speculative extension points.** The original design
-brief proposed five pluggable interfaces; all five are eliminated as v1 public seams:
+brief proposed five pluggable interfaces; the disposition of each is recorded below:
 
-- **Store** → eliminated (push model; the library does no I/O — Principle III).
-- **Loader** → eliminated as a user interface (the library parses its own schema; dual-input is
-  internal — Principle VII).
+- **Store** → eliminated (push model; the kernel does no I/O — Principle III).
+- **Loader** → **earned opt-in seam** (amended for spec 019, v3.2.0): the `PromptLoader`
+  interface + `FileSystemLoader` / `MemoryLoader` built-ins ship in the standard package, earned
+  by Bellwether (real second consumer). The seam is language-side only; the kernel and construction
+  remain I/O-free (Principle III). Heavier backends (cloud/object stores, fsspec, remote caches)
+  remain deferred to opt-in extras — no cloud dependency ships with the standard package.
 - **VariantSelector** → eliminated (selection is caller-owned — Principle V).
 - **ProvenanceSink** → eliminated (provenance is data on the return value — Principle V).
 - **Type system** → not a core seam; it lives in the consumer layer (Principle VI).
@@ -406,4 +457,4 @@ after the first feature lands; major rewrites should be rare and recorded in
   output parsing, a managed version axis, or a new pluggable interface is presumed out of scope and
   requires an amendment (with rationale) before work begins.
 
-**Version**: 3.1.0 | **Ratified**: 2026-06-25 | **Last Amended**: 2026-07-08
+**Version**: 3.2.0 | **Ratified**: 2026-06-25 | **Last Amended**: 2026-07-08

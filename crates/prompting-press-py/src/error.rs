@@ -48,7 +48,9 @@ use pyo3::prelude::*;
 use pyo3::PyTypeInfo;
 
 use prompting_press::error::code;
-use prompting_press::{ConsumerError, FieldError as ConsumerFieldError};
+use prompting_press::{
+    ConsumerError, FieldError as ConsumerFieldError, PromptLoadError as RustPromptLoadError,
+};
 use prompting_press_core::KernelError;
 
 /// One normalized failure row, readable from Python as `row.field` / `row.code` / `row.message`.
@@ -137,6 +139,15 @@ create_exception!(
      Nothing is partially loaded."
 );
 
+create_exception!(
+    prompting_press,
+    PromptLoadError,
+    PromptingPressError,
+    "A PromptLoader::load call failed. code = \"load_not_found\" when the key is absent; \
+     code = \"load_io\" on I/O error or exceeded max_bytes. Distinct from LoadError \
+     (which is the parse/shape error). Carries `.errors`: list[FieldError]."
+);
+
 /// Construct a `PyErr` of the exception type `E` (a `create_exception!` type) carrying `summary`
 /// as the message and `rows` as the `.errors` instance attribute.
 ///
@@ -212,6 +223,38 @@ pub fn kernel_error_to_pyerr(py: Python<'_>, err: KernelError) -> PyErr {
     consumer_error_to_pyerr(py, scrubbed)
 }
 
+/// Translate a Rust [`RustPromptLoadError`] into a Python [`PromptLoadError`] exception.
+///
+/// Normalizes the Rust error into the `[{field, code, message}]` row shape (SEC-003):
+/// the message carries the logical key + code only; never file contents, full paths, or secrets.
+#[must_use]
+pub fn prompt_load_error_to_pyerr(py: Python<'_>, err: RustPromptLoadError) -> PyErr {
+    let row = ConsumerFieldError {
+        field: String::new(),
+        code: err.to_field_error().code,
+        message: err.to_field_error().message,
+    };
+    let summary = format!("prompt load failed: {} [{}]", row.message, row.code);
+    raise_with_rows::<PromptLoadError>(py, vec![row], summary).unwrap_or_else(|e| e)
+}
+
+/// Construct a Python [`PromptLoadError`] with a caller-supplied `[{field, code, message}]`
+/// payload (FR-008a — native error-raise path for pure-Python loaders).
+///
+/// Exposed as `prompting_press.make_prompt_load_error(code, message)` so pure-Python
+/// `FileSystemLoader` and custom loaders can raise `PromptLoadError` with a properly
+/// structured payload, since `create_exception!` types carry no typed Rust field.
+#[pyfunction]
+pub fn make_prompt_load_error(py: Python<'_>, error_code: String, message: String) -> PyErr {
+    let row = ConsumerFieldError {
+        field: String::new(),
+        code: error_code.clone(),
+        message: message.clone(),
+    };
+    let summary = format!("prompt load failed: {message} [{error_code}]");
+    raise_with_rows::<PromptLoadError>(py, vec![row], summary).unwrap_or_else(|e| e)
+}
+
 /// Build a fixed, scrubbed one-line summary from a header plus the (already scrubbed) rows.
 ///
 /// Only the rows' own `field`/`code`/`message` are used — those are the normalized, scrubbed
@@ -246,6 +289,8 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?;
     m.add("PromptRenderError", m.py().get_type::<PromptRenderError>())?;
     m.add("LoadError", m.py().get_type::<LoadError>())?;
+    m.add("PromptLoadError", m.py().get_type::<PromptLoadError>())?;
+    m.add_function(wrap_pyfunction!(make_prompt_load_error, m)?)?;
     Ok(())
 }
 
