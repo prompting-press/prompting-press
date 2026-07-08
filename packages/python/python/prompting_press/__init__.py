@@ -21,6 +21,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 # The generated Pydantic prompt-definition shapes (codegen'd from the JSON Schema — C-07).
 from .generated import PromptDefinition, PromptVariable, PromptVariant
+from .loader import FileSystemLoader, MemoryLoader, PromptLoader
 from .prompting_press import (  # the compiled extension submodule
     CheckReport,
     Composition,
@@ -32,10 +33,12 @@ from .prompting_press import (  # the compiled extension submodule
     Message,
     Prompt,
     PromptingPressError,
+    PromptLoadError,
     PromptRenderError,
     PromptValidationError,
     RenderResult,
     core_version,
+    make_prompt_load_error,
 )
 
 try:
@@ -45,29 +48,26 @@ except PackageNotFoundError:  # pragma: no cover — editable / unbuilt source t
     __version__ = "0.0.0"
 
 __all__ = [
-    # Lint report types.
     "CheckReport",
-    # Multi-message composition.
     "Composition",
-    # Structured error row.
     "FieldError",
+    "FileSystemLoader",
     "Finding",
     "GuardConfig",
     "LoadError",
+    "MemoryLoader",
     "MergeStrategy",
     "Message",
-    # Primary public type (spec 008 Phase 4).
     "Prompt",
-    # Generated prompt-definition shapes.
     "PromptDefinition",
+    "PromptLoadError",
+    "PromptLoader",
     "PromptRenderError",
     "PromptValidationError",
     "PromptVariable",
     "PromptVariant",
-    # Exception hierarchy.
     "PromptingPressError",
-    # Result + config types.
     "RenderResult",
-    # Kernel version accessor.
     "core_version",
+    "make_prompt_load_error",
 ]

@@ -882,6 +882,330 @@ export class Composition {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────
+// PromptLoadError (spec 019) — the loader I/O error, distinct from LoadError (parse/shape).
+// ─────────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Raised when a {@link PromptLoader} `load()` call fails.
+ *
+ * Distinct from {@link LoadError} (which is the parse/shape error): `except PromptLoadError`
+ * does NOT catch a malformed-YAML `LoadError` (SC-010/FR-007). Both extend
+ * {@link PromptingPressError} so `catch (PromptingPressError)` catches all library errors.
+ *
+ * Codes in `errors[0].code`:
+ * - `"load_not_found"` — key absent from backing store.
+ * - `"load_io"` — I/O error or `max_bytes` exceeded.
+ */
+export class PromptLoadError extends PromptingPressError {}
+
+// Register `PromptLoadError` in the code → subclass map so the decoder picks it up.
+function subclassForCodeWithLoader(
+	code: string,
+): new (message: string, errors: readonly FieldError[]) => PromptingPressError {
+	switch (code) {
+		case "load_not_found":
+		case "load_io":
+			return PromptLoadError;
+		default:
+			return subclassForCode(code);
+	}
+}
+
+// Patch the addon error decoder to also recognise loader codes.
+// We shadow `decodeAddonError` locally with a version that delegates to the extended map.
+const _decodeAddonErrorBase = decodeAddonError;
+
+function decodeAddonErrorFull(thrown: unknown): PromptingPressError {
+	// Already one of ours — pass through.
+	if (thrown instanceof PromptingPressError) {
+		return thrown;
+	}
+	const rawMessage =
+		thrown instanceof Error ? thrown.message : typeof thrown === "string" ? thrown : String(thrown);
+	let payload: { code: string; errors: FieldError[] } | undefined;
+	try {
+		const parsed: unknown = JSON.parse(rawMessage);
+		if (
+			typeof parsed === "object" &&
+			parsed !== null &&
+			typeof (parsed as { code?: unknown }).code === "string" &&
+			Array.isArray((parsed as { errors?: unknown }).errors) &&
+			(parsed as { errors: unknown[] }).errors.every(
+				(row) =>
+					typeof row === "object" &&
+					row !== null &&
+					typeof (row as FieldError).field === "string" &&
+					typeof (row as FieldError).code === "string" &&
+					typeof (row as FieldError).message === "string",
+			)
+		) {
+			payload = parsed as { code: string; errors: FieldError[] };
+		}
+	} catch {
+		// Not JSON — fall through.
+	}
+	if (payload === undefined) {
+		return new PromptingPressError(rawMessage, [{ field: "", code: "render", message: rawMessage }]);
+	}
+	const Subclass = subclassForCodeWithLoader(payload.code);
+	const summary =
+		payload.errors.length > 0 ? payload.errors.map((row) => row.message).join("; ") : payload.code;
+	return new Subclass(summary, payload.errors);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────
+// Stable loader-error code constants.
+// ─────────────────────────────────────────────────────────────────────────────────────────
+
+/** Stable code for a missing-key loader error (value of `errors[0].code`). */
+export const LOAD_NOT_FOUND = "load_not_found" as const;
+
+/** Stable code for a loader I/O or cap error (value of `errors[0].code`). */
+export const LOAD_IO = "load_io" as const;
+
+// ─────────────────────────────────────────────────────────────────────────────────────────
+// PromptLoader interface + built-ins (spec 019, FR-001/FR-002/FR-003).
+// ─────────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Pluggable source of raw prompt text (spec 019, FR-001).
+ *
+ * The single operation `load(key)` maps a logical key to the raw text of a prompt definition.
+ * The returned text is **never parsed or validated** — that belongs to the construct-from-text
+ * path (`Prompt.fromYaml` etc.). Loading and construction are always separate, composable steps.
+ *
+ * The interface is **async** (`Promise<string>`) to match the Node.js ecosystem's native I/O
+ * idiom (FR-009), enabling remote/cloud backends.
+ *
+ * Any function `(key: string) => Promise<string>` satisfies this interface as-is (function
+ * coercion — FR-001).
+ *
+ * Failures must reject with `PromptLoadError` — never resolve to empty string or `null` for a
+ * missing key (FR-006).
+ *
+ * @example
+ * ```ts
+ * const loader: PromptLoader = new FileSystemLoader("/prompts");
+ * const raw = await loader.load("greet");
+ * const prompt = Prompt.fromYaml(raw);
+ * ```
+ */
+export interface PromptLoader {
+	load(key: string): Promise<string>;
+}
+
+/** Helper: reject with a `PromptLoadError` with a single row (FR-008a). */
+function rejectLoad(code: string, message: string): never {
+	const errors: FieldError[] = [{ field: "", code, message }];
+	const summary = message;
+	throw new PromptLoadError(summary, errors);
+}
+
+// ─── FileSystemLoader ─────────────────────────────────────────────────────────
+
+import * as fs from "node:fs/promises";
+import * as nodepath from "node:path";
+
+// Sane default: 1 MiB.
+const DEFAULT_MAX_BYTES = 1 << 20;
+
+/**
+ * A loader that reads prompt files from a configured base directory (spec 019, FR-002).
+ *
+ * Maps a logical key to `{base}/{key}{suffix}` and returns the file's raw text (async).
+ *
+ * ## Traversal guard (FR-002a/FR-002b/SC-008)
+ *
+ * The resolved final path is validated against the canonicalized base. Rejected keys:
+ * - contain `..` components
+ * - are absolute
+ * - contain NUL bytes or backslashes
+ * - are empty or equal to `"."`
+ * - contain an intermediate `"."` component (e.g. `"foo/./bar"`)
+ * - resolve via symlinks to outside the base
+ *
+ * A missing target canonicalize failure returns `load_not_found` (not `load_io`).
+ *
+ * ## Read cap (FR-016/SC-009)
+ *
+ * Files exceeding `maxBytes` reject with `PromptLoadError` (`load_io`).
+ */
+export class FileSystemLoader implements PromptLoader {
+	/** Default maximum file size (1 MiB). */
+	static readonly DEFAULT_MAX_BYTES = DEFAULT_MAX_BYTES;
+
+	readonly #base: string;
+	readonly #suffix: string;
+	readonly #maxBytes: number;
+
+	/**
+	 * Construct a `FileSystemLoader`.
+	 *
+	 * `base` is stored as-is; it is resolved (canonicalized) at each `load()` call so the
+	 * constructor is synchronous. Use `nodepath.resolve` to make the path absolute before
+	 * construction if needed.
+	 *
+	 * @param base     The base directory under which prompt files live.
+	 * @param suffix   File name suffix appended to every key (default `".yaml"`).
+	 * @param maxBytes Maximum file size in bytes (default 1 MiB).
+	 */
+	constructor(
+		base: string,
+		suffix = ".yaml",
+		maxBytes: number = DEFAULT_MAX_BYTES,
+	) {
+		this.#base = nodepath.resolve(base);
+		this.#suffix = suffix;
+		this.#maxBytes = maxBytes;
+	}
+
+	/** The resolved base directory path. */
+	get base(): string {
+		return this.#base;
+	}
+
+	/** The file name suffix (e.g. `".yaml"`). */
+	get suffix(): string {
+		return this.#suffix;
+	}
+
+	/** The maximum file size in bytes. */
+	get maxBytes(): number {
+		return this.#maxBytes;
+	}
+
+	/**
+	 * Load the prompt source for `key`.
+	 *
+	 * @throws {PromptLoadError} `load_not_found` — key not found or traversal rejected.
+	 * @throws {PromptLoadError} `load_io` — OS error or `maxBytes` exceeded.
+	 */
+	async load(key: string): Promise<string> {
+		// --- traversal guard (FR-002a/FR-002b/SC-008) ---
+		validateKey(key);
+
+		// Build candidate path: {base}/{key}{suffix}.
+		const candidate = nodepath.join(this.#base, key + this.#suffix);
+
+		// Resolve symlinks / canonicalize.
+		let resolved: string;
+		try {
+			resolved = await fs.realpath(candidate);
+		} catch (err: unknown) {
+			if (isNodeNotFound(err)) {
+				rejectLoad(LOAD_NOT_FOUND, `key not found: \`${key}\``);
+			}
+			rejectLoad(LOAD_IO, `path resolution failed for key \`${key}\``);
+		}
+
+		// Symlink-escape check: resolved must be a descendant of base.
+		const resolvedNorm = addTrailingSep(resolved);
+		const baseNorm = addTrailingSep(this.#base);
+		if (!resolvedNorm.startsWith(baseNorm)) {
+			rejectLoad(LOAD_NOT_FOUND, `key not found: \`${key}\``);
+		}
+
+		// --- read cap (FR-016/SC-009) ---
+		let stat: Awaited<ReturnType<typeof fs.stat>>;
+		try {
+			stat = await fs.stat(resolved);
+		} catch {
+			rejectLoad(LOAD_IO, `cannot read file metadata for key \`${key}\``);
+		}
+		if (stat.size > this.#maxBytes) {
+			rejectLoad(
+				LOAD_IO,
+				`file size (${stat.size} bytes) exceeds maxBytes (${this.#maxBytes}) for key \`${key}\``,
+			);
+		}
+
+		// --- read ---
+		try {
+			return await fs.readFile(resolved, "utf-8");
+		} catch {
+			rejectLoad(LOAD_IO, `failed to read file for key \`${key}\``);
+		}
+	}
+}
+
+/** Normalize a path so it ends with the platform separator, for prefix comparison. */
+function addTrailingSep(p: string): string {
+	return p.endsWith(nodepath.sep) ? p : p + nodepath.sep;
+}
+
+/** Return true if an unknown error is an ENOENT / ENOTDIR (file-not-found) error. */
+function isNodeNotFound(err: unknown): boolean {
+	if (err !== null && typeof err === "object") {
+		const code = (err as { code?: unknown }).code;
+		return code === "ENOENT" || code === "ENOTDIR";
+	}
+	return false;
+}
+
+/** Validate a loader key against traversal rules (FR-002a/FR-002b). */
+function validateKey(key: string): void {
+	// NUL byte.
+	if (key.includes("\0")) {
+		rejectLoad(LOAD_NOT_FOUND, `key not found: \`${key}\``);
+	}
+	// Backslash (Windows separator / UNC).
+	if (key.includes("\\")) {
+		rejectLoad(LOAD_NOT_FOUND, `key not found: \`${key}\``);
+	}
+	// Empty or bare ".".
+	if (!key || key === ".") {
+		rejectLoad(LOAD_NOT_FOUND, `key not found: \`${key}\``);
+	}
+	// Use POSIX path parsing to inspect components (works on all platforms for key validation).
+	const parts = key.split("/").filter((p) => p !== "");
+	for (const part of parts) {
+		if (part === ".." || part === ".") {
+			rejectLoad(LOAD_NOT_FOUND, `key not found: \`${key}\``);
+		}
+	}
+	// Absolute keys (start with "/" or match "C:\" patterns).
+	if (nodepath.isAbsolute(key) || /^[A-Za-z]:/.test(key)) {
+		rejectLoad(LOAD_NOT_FOUND, `key not found: \`${key}\``);
+	}
+}
+
+// ─── MemoryLoader ─────────────────────────────────────────────────────────────
+
+/**
+ * A loader backed by an in-memory key→text mapping (spec 019, FR-003).
+ *
+ * The primary use case is **dependency injection in tests**: production code uses a
+ * `FileSystemLoader` or a custom loader; tests substitute a `MemoryLoader` with hard-coded
+ * prompt text. No filesystem access is performed.
+ *
+ * A missing key rejects with `PromptLoadError` (`load_not_found`).
+ */
+export class MemoryLoader implements PromptLoader {
+	readonly #map: ReadonlyMap<string, string>;
+
+	/**
+	 * Construct a `MemoryLoader` from a `Record<string, string>` or a `Map<string, string>`.
+	 */
+	constructor(prompts: Record<string, string> | Map<string, string> = {}) {
+		this.#map =
+			prompts instanceof Map
+				? new Map(prompts)
+				: new Map(Object.entries(prompts));
+	}
+
+	/**
+	 * Return the mapped text for `key`, or reject with `PromptLoadError` (`load_not_found`).
+	 */
+	async load(key: string): Promise<string> {
+		const text = this.#map.get(key);
+		if (text === undefined) {
+			rejectLoad(LOAD_NOT_FOUND, `key not found: \`${key}\``);
+		}
+		return text;
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────
 // Re-exports: the inert addon classes/functions surfaced 1:1, plus the generated shape.
 // (`Prompt`, `Composition`, and the error hierarchy are the primary surface above;
 // `RenderResult`/`CheckReport` are read-only result types surfaced unchanged, and
@@ -896,3 +1220,6 @@ export {
 	RenderResult,
 };
 // MergeStrategy is declared and exported inline at its definition above.
+
+// Suppress the unused reference warning for the base decoder (used via the extended version).
+void _decodeAddonErrorBase;

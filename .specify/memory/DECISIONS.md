@@ -3,6 +3,87 @@
 Records constitution amendments per the Governance section's amendment policy (written rationale +
 version bump + propagation). Newest first.
 
+## 2026-07-08 — v3.1.0 → v3.2.0 (MINOR): Loader seam earned; Principle III softened; error-taxonomy expansion
+
+**Change**: THREE additive edits on top of the v3.1.0 constitution (no existing principle removed or
+backward-incompatibly redefined → MINOR):
+
+### (a) Principle III softened — loader seam is in-boundary
+
+The "MUST NOT perform I/O" clause in Principle III previously applied to the entire library. Spec 019
+narrows it to the **kernel and construction only**: a **caller-invoked, language-side loader seam**
+(`PromptLoader` interface + built-in implementations) is now explicitly in-boundary.
+
+**Why**: The kernel stays I/O-free and validation-blind (Principles I/II unchanged). Construction
+remains I/O-free (FR-011 — no construction path calls a loader). The loader is a pure I/O leaf
+invoked by the caller; its raw-text output flows into the existing construct-from-text path. This is
+the one I/O shape that does not violate the boundary's spirit: the library is still turning typed
+inputs + a template into rendered text + provenance — the caller just also has a convenience for
+sourcing those typed inputs from a file or in-memory map. Earned by Bellwether (real second
+consumer; see v3.0.0 repositioning statement).
+
+**Boundary preserved**:
+- Kernel `prompting-press-core`: unchanged, no I/O (SC-005 confirmed by diff).
+- Construction (`Prompt::from_yaml` etc.): unchanged, no I/O (FR-011 — NOT fused with a loader).
+- Heavier backends (cloud/object stores, fsspec, remote caches): remain deferred.
+
+### (b) Scope Discipline C-08 — Loader re-scoped from "eliminated" to "earned opt-in seam"
+
+The v1.0.0 Scope Discipline entry stated "**Loader** → eliminated as a user interface (the library
+parses its own schema; dual-input is internal — Principle VII)." Spec 019 supersedes this entry:
+the Loader is **reintroduced as an earned, opt-in seam** in the standard package (no extra install
+required), earned by Bellwether under the Scope Discipline "second concrete consumer" rule.
+
+The re-scope is **additive** (a seam is added, not replaced) and does NOT change any other eliminated
+seam. `VariantSelector`, `ProvenanceSink`, and `Store` remain eliminated.
+
+### (c) Error-taxonomy compatibility-surface expansion (spec-015-style enumeration)
+
+The `code` vocabulary and the `ConsumerError` variant set are documented **closed compatibility
+surfaces**. Spec 019 expands them additively:
+
+1. **New error type `PromptLoadError`** — a new exception class (Python/TS) and Rust enum, parallel
+   to `PromptRenderError`/`PromptValidationError`. Distinct from the existing `LoadError` (which
+   remains the parse/shape error for the dual-input loader). `PromptLoadError` is raised ONLY by
+   the loader interface and its built-ins; it MUST NOT be confused with `LoadError`.
+
+2. **New code `load_not_found`** — added to the closed `code` vocabulary. Emitted when a loader
+   key is absent from the backing store.
+
+3. **New code `load_io`** — added to the closed `code` vocabulary. Emitted on I/O failure or when
+   the `max_bytes` read cap is exceeded.
+
+4. **FFI mapper + routing changes** — both FFI mappers (`prompting-press-py/src/error.rs` and
+   `prompting-press-node/src/error.rs`) are updated to translate a Rust `PromptLoadError` into the
+   corresponding Python/TS exception. The Python module also exposes `make_prompt_load_error(code,
+   message)` as a native-raise factory so pure-Python loaders can construct `PromptLoadError` with
+   a structured payload (FR-008a).
+
+**Scope of the expansion**: these additions are backward-compatible additive changes. No existing
+code or error code is renamed or removed. A consumer that does not use the loader sees no change.
+
+**Why record it spec-015-style**: the `code` vocabulary and error type set are documented
+compatibility surfaces. A consumer may match on code strings or catch specific exception types; an
+undocumented addition would be a stealth API change. Explicit enumeration here + the Principle III
+amendment together form the complete amendment record.
+
+**Version bump**: MINOR (v3.1.0 → v3.2.0) — all changes are additive. No principle removed or
+redefined in a backward-incompatible way.
+
+**Propagation list**:
+- ✅ `.specify/memory/constitution.md` — Principle III softened + Scope Discipline C-08 updated + version line.
+- ✅ `.specify/memory/DECISIONS.md` (this entry).
+- ✅ `.specify/memory/roadmap.md` — Never/Loader and C-08 entries updated + spec 019 added.
+- ⚠ `CLAUDE.md` + `AGENTS.md` — `apm compile` not runnable in this worktree; reviewer regenerates
+  after merge (spec 019 T019; noted in tasks.md).
+- ⚠ `.specify/templates/{plan,spec,tasks}-template.md` — no structural template change required.
+
+**Note**: Authored directly (implementation subagent, not via `/speckit.constitution`) under explicit
+tasking. A later `/speckit.constitution` pass may re-derive the sync-impact report; the change itself
+is faithful to the amendment policy.
+
+---
+
 ## 2026-07-08 — v3.0.0 → v3.1.0 (MINOR): Principle V softening — provenance formatting allowed
 
 **Change**: Added one additive bullet to **Principle V (Repo Is Canonical; Git Owns Versioning)**:

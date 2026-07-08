@@ -635,6 +635,13 @@ const SYMBOL_TO_GROUP = new Map([
 	["Composition", "Composition"],
 	["Message", "Message"],
 
+	// Loader interface + built-ins (spec 019)
+	["PromptLoader", "Loader"],
+	["FileSystemLoader", "Loader"],
+	["MemoryLoader", "Loader"],
+	["PromptLoadError", "Loader"],
+	["loader", "Loader"], // pub mod loader
+
 	["ConsumerError", "Errors"],
 	["FieldError", "Errors"],
 	// error::code constants
@@ -645,6 +652,8 @@ const SYMBOL_TO_GROUP = new Map([
 	["RENDER", "Errors"],
 	["EXCLUDED_FEATURE", "Errors"],
 	["LOAD", "Errors"],
+	["LOAD_IO", "Errors"],
+	["LOAD_NOT_FOUND", "Errors"],
 
 	["PromptDefinition", "Shape types"],
 	["PromptVariable", "Shape types"],

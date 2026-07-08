@@ -143,6 +143,11 @@ API_GROUPS: list[dict[str, Any]] = [
     {"title": "Finding", "anchor": "finding", "blurb": None},
     {"title": "Composition", "anchor": "composition", "blurb": None},
     {"title": "Message", "anchor": "message", "blurb": None},
+    {
+        "title": "Loader",
+        "anchor": "loader",
+        "blurb": None,
+    },
     {"title": "Errors", "anchor": "errors", "blurb": None},
     {
         "title": "Shape types",
@@ -162,6 +167,12 @@ _GROUP_FOR: dict[str, str] = {
     "Composition": "Composition",
     "Message": "Message",
     "core_version": "Prompt",  # utility attached to the Prompt section
+    # Loader interface + built-ins (spec 019)
+    "PromptLoader": "Loader",
+    "FileSystemLoader": "Loader",
+    "MemoryLoader": "Loader",
+    "PromptLoadError": "Loader",
+    "make_prompt_load_error": "Loader",
     "FieldError": "Errors",
     "PromptingPressError": "Errors",
     "PromptValidationError": "Errors",

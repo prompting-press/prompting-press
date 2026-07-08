@@ -1,5 +1,20 @@
 <!--
-SYNC IMPACT REPORT
+SYNC IMPACT REPORT (latest)
+==================
+Version change: 1.4.0 → 1.5.0
+Bump rationale: MINOR — spec 019 (pluggable loader) added [implemented]; Never section refined
+  (I/O / storage adapters → kernel/construction I/O stays Never; caller-side loader seam is now an
+  earned opt-in seam); C-08 updated (Loader seam re-scoped from eliminated → earned).
+Changes this revision (1.5.0, 2026-07-08):
+  - Added spec 019 [implemented] — pluggable prompt loader (PromptLoadError, FileSystemLoader,
+    MemoryLoader, traversal guard + read cap, v3.2.0 constitutional amendment).
+  - C-08 updated: Loader seam re-scoped from "eliminated" to "earned opt-in seam" (earned by
+    Bellwether; heavier backends still deferred).
+  - Never section refined: "I/O / storage adapters" expanded to clarify kernel/construction I/O
+    stays Never; caller-side loader seam is now permitted; heavy cloud backends remain deferred.
+  - spec 017 note updated with "earned seam" anchor reference.
+
+PRIOR SYNC IMPACT REPORT
 ==================
 Version change: 1.3.1 → 1.4.0
 Bump rationale: MINOR — reconcile the roadmap with shipped reality (it had stalled at spec 010).
@@ -223,10 +238,12 @@ Status legend (lifecycle): **undecided** · **needs-info** · **planned** ·
   codegen'd per language from one schema; YAML+JSON push input via a dual-input
   loader; conformance corpus guards the FFI boundary + schema round-trip, not
   render parity. _Principle VII._
-- **C-08 — Scope discipline (R1):** all five of the original design brief's
-  pluggable interfaces (Store, Loader, VariantSelector, ProvenanceSink, type
-  system) are eliminated as v1 public seams. No new pluggable interface until a
-  second concrete implementation exists. _Constitution §Scope Discipline._
+- **C-08 — Scope discipline (R1):** four of the original design brief's pluggable
+  interfaces (Store, VariantSelector, ProvenanceSink, type system) are eliminated
+  as v1 public seams. The **Loader** seam is **reintroduced as an earned, opt-in
+  seam** (spec 019, v3.2.0) — earned by Bellwether, the real second consumer.
+  No new pluggable interface until a second concrete implementation exists.
+  _Constitution §Scope Discipline; amended spec 019._
 - **C-09 — Var provenance is metadata + lint + opt-in guard, never silent
   mutation:** 3-way tag (`trusted | untrusted | external`); configurable,
   opt-in, additive guard expansion; sanitization/stripping rejected. _Principle
@@ -680,6 +697,34 @@ own earned seams.
   a v2.0.0 base in this worktree; the version line reconciles at merge after 017. `apm compile`
   not runnable in-worktree; `CLAUDE.md`/`AGENTS.md` regeneration deferred to post-merge.
 
+### 019 — Pluggable prompt loader  [status: implemented — 2026-07-08]
+
+**Outcome**: A consumer can load prompt source text by a logical key through a pluggable
+`PromptLoader` interface, swapping implementations (filesystem ↔ memory ↔ custom) without
+changing call sites. The two built-in loaders ship in the standard package:
+`FileSystemLoader` (key → `{base}/{key}{suffix}`, traversal-guarded, read-capped) and
+`MemoryLoader` (key → in-memory text map, the primary DI/test fixture).
+
+**Scope**: Defines `PromptLoader` (Rust object-safe trait + blanket closure impl; Python
+`runtime_checkable Protocol`; TS async `interface`) in the **standard package**. Ships
+`FileSystemLoader` + `MemoryLoader`. Does NOT add a name-keyed container/registry
+(deferred). Does NOT fuse loading into construction. Carries the **v3.2.0 constitutional
+amendment** (Principle III softened for caller-invoked loader seam; C-08 Loader re-scoped;
+error-taxonomy expansion — see DECISIONS.md).
+
+**Security**: Traversal guard (FR-002a/FR-002b) validates the final resolved path (including
+suffix) against a canonicalized base; rejects `..`, absolute keys, NUL bytes, backslash,
+escaping symlinks, empty key, bare `.`. Read cap (`max_bytes`, default 1 MiB, FR-016).
+Guard + cap implemented per language (FR-017, SC-008/SC-009). Error messages are scrubbed
+(logical key + code only; no absolute paths or file contents).
+
+**Error taxonomy**: `PromptLoadError` (NEW, spec 019) is distinct from `LoadError` (the
+parse/shape error). Codes `load_not_found` / `load_io` are added to the closed vocabulary.
+Each binding exposes `make_prompt_load_error(code, message)` for native-language loaders to
+raise with a structured payload (FR-008a).
+
+**Governing decisions**: Principle III (softened); C-08 (Loader earned); spec 019 FR-001–FR-017.
+
 ## Deferred
 
 <!-- Gated on real demand (C-08 / R1). Not planned specs until a trigger fires. -->
@@ -779,9 +824,19 @@ own earned seams.
 <!-- Out of scope by constitution; each requires a constitution amendment to revisit. -->
 
 - LLM calls · provider request-body assembly · output parsing/coercion · built-in
-  token counting · a managed version axis (git owns versioning) · I/O / storage
-  adapters · sanitization/stripping of untrusted vars · a SaaS authoring backend
-  as source of truth.
+  token counting · a managed version axis (git owns versioning) ·
+  **kernel or construction I/O** (the kernel and construction path MUST stay
+  I/O-free even though the caller-side loader seam now exists — spec 019) ·
+  **heavier storage backends in the standard package** (cloud/object-store adapters,
+  fsspec, remote caches: remain deferred to opt-in extras) ·
+  sanitization/stripping of untrusted vars · a SaaS authoring backend as source
+  of truth.
+
+*(Note: "I/O / storage adapters" was previously listed as a flat Never. Spec 019
+(v3.2.0) earned a caller-invoked language-side loader seam — this is no longer
+Never at the language binding level. The Never entries above are the refined
+statement: kernel/construction I/O stays Never; heavier cloud backends remain
+deferred. See `.specify/memory/DECISIONS.md` for the full amendment record.)*
 
 ## Open Questions
 
@@ -813,4 +868,4 @@ own earned seams.
 
 ---
 
-**Version**: 1.4.0 | **Ratified**: 2026-06-25 | **Last Amended**: 2026-06-30
+**Version**: 1.5.0 | **Ratified**: 2026-06-25 | **Last Amended**: 2026-07-08

@@ -196,7 +196,13 @@ pub mod check;
 /// No Registry — each entry holds an owned `Prompt`.
 pub mod compose;
 
-pub use error::{ConsumerError, FieldError};
+/// Pluggable prompt loader: the [`PromptLoader`] trait + [`FileSystemLoader`] and
+/// [`MemoryLoader`] built-ins. Returns raw text; does not parse or construct prompts.
+/// Language-side only — the kernel is unchanged (SC-005 / FR-013).
+pub mod loader;
+
+pub use error::{ConsumerError, FieldError, PromptLoadError};
+pub use loader::{FileSystemLoader, MemoryLoader, PromptLoader};
 pub use prompt::{merge_definitions, DeriveOptions, MergeStrategy, Prompt, PromptOverlay};
 
 /// Re-export the lint report types at the crate root so applications reach them as

@@ -43,7 +43,9 @@ use napi::{Error as NapiError, Status};
 use serde::Serialize;
 
 use prompting_press::error::code;
-use prompting_press::{ConsumerError, FieldError as ConsumerFieldError};
+use prompting_press::{
+    ConsumerError, FieldError as ConsumerFieldError, PromptLoadError as RustPromptLoadError,
+};
 use prompting_press_core::KernelError;
 
 /// One normalized failure row, JSON-serialized into the napi error payload.
@@ -148,6 +150,28 @@ pub fn consumer_error_to_napi_err(err: ConsumerError) -> NapiError {
 pub fn kernel_error_to_napi_err(err: KernelError) -> NapiError {
     let scrubbed = ConsumerError::from(err);
     consumer_error_to_napi_err(scrubbed)
+}
+
+/// Translate a Rust [`RustPromptLoadError`] into a [`napi::Error`] (spec 019, T002).
+///
+/// Normalizes the error into the structured JSON payload `{ code, errors }` that the TS facade
+/// decodes into `PromptLoadError`. Messages are scrubbed (SEC-003): logical key + code only.
+pub fn prompt_load_error_to_napi_err(err: RustPromptLoadError) -> NapiError {
+    let row = err.to_field_error();
+    let top_code = row.code.clone();
+    let payload = ErrorPayload {
+        code: top_code,
+        errors: vec![FieldErrorPayload {
+            field: row.field,
+            code: row.code,
+            message: row.message,
+        }],
+    };
+    let reason = serde_json::to_string(&payload).unwrap_or_else(|_| {
+        r#"{"code":"load_io","errors":[{"field":"","code":"load_io","message":"error encoding failed"}]}"#
+            .to_string()
+    });
+    NapiError::new(Status::GenericFailure, reason)
 }
 
 /// Map a kernel-row `code` string back to its `'static` vocabulary constant for the payload's
