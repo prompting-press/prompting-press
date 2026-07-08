@@ -500,6 +500,146 @@ text: <read-only property>
 
 The rendered body text for this entry. The guard text is never concatenated here.
 
+## Loader
+
+### `FileSystemLoader`
+
+```python
+class FileSystemLoader(base: 'str | pathlib.Path', suffix: 'str' = '.yaml', max_bytes: 'int' = 1048576) -> 'None'
+```
+
+Load prompt files from a configured base directory. Maps a logical key to ``&#123;base&#125;/&#123;key&#125;&#123;suffix&#125;`` and returns the file's raw text. Parameters
+----------
+base: The directory under which prompt files live. Canonicalized at construction.
+suffix: File name suffix appended to every key (default ``".yaml"``).
+max_bytes: Maximum file size in bytes (default 1 MiB). A file exceeding this limit raises ``PromptLoadError`` with code ``load_io``. Raises
+------
+PromptLoadError ``load_not_found`` if ``base`` does not exist; ``load_io`` on other OS errors.
+
+#### `DEFAULT_MAX_BYTES`
+
+```python
+DEFAULT_MAX_BYTES(self)
+```
+
+int([x]) -> integer
+int(x, base=10) -> integer Convert a number or string to an integer, or return 0 if no arguments
+are given. If x is a number, return x.__int__. For floating-point
+numbers, this truncates towards zero. If x is not a number or if base is given, then x must be a string,
+bytes, or bytearray instance representing an integer literal in the
+given base. The literal can be preceded by '+' or '-' and be surrounded
+by whitespace. The base defaults to 10. Valid bases are 0 and 2-36.
+Base 0 means to interpret the base from the string as an integer literal.
+>>> int('0b100', base=0)
+4
+
+#### `base`
+
+```python
+base: <read-only property>
+```
+
+The canonicalized base directory.
+
+#### `max_bytes`
+
+```python
+max_bytes: <read-only property>
+```
+
+The maximum file size in bytes.
+
+#### `suffix`
+
+```python
+suffix: <read-only property>
+```
+
+The file name suffix (e.g. ``".yaml"``).
+
+#### `load`
+
+```python
+load(self, key: 'str') -> 'str'
+```
+
+Load the prompt source for ``key``. Parameters
+----------
+key: Logical identifier; treated as a relative path under :attr:`base`. Returns
+-------
+str The raw file contents. Raises
+------
+PromptLoadError - ``load_not_found``: key not found, traversal rejected, or missing target. - ``load_io``: OS error, metadata read failure, or ``max_bytes`` exceeded.
+
+### `MemoryLoader`
+
+```python
+class MemoryLoader(prompts: 'dict[str, str] | None' = None) -> 'None'
+```
+
+Load prompt source from an in-memory key→text mapping. The primary use case is **dependency injection in tests**: production code uses a
+:class:`FileSystemLoader` or a custom loader; tests substitute a :class:`MemoryLoader`
+with hard-coded prompt text. No filesystem access is performed. Parameters
+----------
+prompts: A mapping of logical key → raw prompt text.
+
+#### `load`
+
+```python
+load(self, key: 'str') -> 'str'
+```
+
+Return the mapped text for ``key``, or raise ``PromptLoadError(load_not_found)``. Parameters
+----------
+key: Logical identifier; matched exactly against the mapping keys. Raises
+------
+PromptLoadError ``load_not_found`` when ``key`` is absent from the mapping.
+
+### `PromptLoadError`
+
+```python
+class PromptLoadError(*args, **kwargs)
+```
+
+A PromptLoader::load call failed. code = "load_not_found" when the key is absent; code = "load_io" on I/O error or exceeded max_bytes. Distinct from LoadError (which is the parse/shape error). Carries `.errors`: list[FieldError].
+
+### `PromptLoader`
+
+```python
+class PromptLoader(*args, **kwargs)
+```
+
+Pluggable source of raw prompt text. A single ``load(key)`` operation maps a logical key to the raw text of a prompt
+definition. The returned text is **never parsed or validated** — that belongs to the
+construct-from-text path (``Prompt.from_yaml`` etc.). Any callable ``(key: str) -> str`` satisfies this protocol (FR-001 callable coercion):
+no struct is required. Failures must raise :class:`~prompting_press.PromptLoadError` — never return empty
+string or ``None`` for a missing key.
+
+#### `load`
+
+```python
+load(self, key: 'str') -> 'str'
+```
+
+Return the raw text for ``key``, or raise :class:`~prompting_press.PromptLoadError`. Parameters
+----------
+key: A logical identifier for the prompt (e.g. ``"greet"``). Not a file path. Returns
+-------
+str The raw text content (YAML/JSON/TOML — callers decide the format). Raises
+------
+PromptLoadError ``load_not_found`` when the key is absent; ``load_io`` on I/O error or ``max_bytes`` exceeded.
+
+### `make_prompt_load_error`
+
+```python
+def make_prompt_load_error(error_code, message)
+```
+
+Construct a Python [`PromptLoadError`] with a caller-supplied `[&#123;field, code, message&#125;]`
+payload (FR-008a — native error-raise path for pure-Python loaders). Exposed as `prompting_press.make_prompt_load_error(code, message)` so pure-Python
+`FileSystemLoader` and custom loaders can raise `PromptLoadError` with a properly
+structured payload, since `create_exception!` types carry no typed Rust field.
+
 ## Errors
 
 ### `FieldError`

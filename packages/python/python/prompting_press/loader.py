@@ -47,7 +47,14 @@ import pathlib
 from collections.abc import Callable
 from typing import Protocol, runtime_checkable
 
-from prompting_press import PromptLoadError, make_prompt_load_error  # type: ignore[attr-defined]
+# Import from the compiled extension submodule directly to avoid a circular
+# import: loader.py is part of the prompting_press package, so importing from
+# 'prompting_press' at the top level would be circular; the compiled extension
+# lives at 'prompting_press.prompting_press' (the PyO3 cdylib).
+from .prompting_press import (  # type: ignore[attr-defined]
+    PromptLoadError,
+    make_prompt_load_error,
+)
 
 __all__ = [
     "LOAD_IO",

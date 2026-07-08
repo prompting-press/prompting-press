@@ -157,58 +157,10 @@ The `MergeStrategy` value type.
 ### `RenderResult`
 
 ```ts
-class RenderResult
+RenderResult
 ```
 
-A rendered prompt + its content-addressed provenance, read-only from JS. The Node mirror of the kernel's RenderResult. Surfaced **1:1** — the binding adds nothing and interprets nothing. Read-only class with camelCase JS accessors (`template_hash` → `templateHash`). A result is produced by `renderPrompt`, never constructed from JS.
-
-#### `guard`
-
-```ts
-get guard(): string | null
-```
-
-The opt-in guard instruction text (present iff a guard was enabled and the prompt declares a `trusted: false` field); `null` for a plain render. Never part of `text`.
-
-#### `name`
-
-```ts
-get name(): string
-```
-
-The prompt name.
-
-#### `renderHash`
-
-```ts
-get renderHash(): string
-```
-
-Lowercase-hex `SHA256(rendered text)`. Surfaces as `renderHash`.
-
-#### `templateHash`
-
-```ts
-get templateHash(): string
-```
-
-Lowercase-hex `SHA256(resolved variant source)`. Surfaces as `templateHash`.
-
-#### `text`
-
-```ts
-get text(): string
-```
-
-The rendered body text. The guard text is NEVER concatenated here.
-
-#### `variant`
-
-```ts
-get variant(): string
-```
-
-The resolved variant name (the reserved `default`, or the named arm).
+The result returned by `Prompt.render`. Read-only class surfaced 1:1 from the Rust engine. Carries the rendered text, the resolved prompt name and variant, two SHA-256 content-addressed hashes (`templateHash` / `renderHash`), and the optional advisory guard text (`guard`). The hashes are byte-identical across all three language bindings because rendering is performed once in the shared Rust core.
 
 #### `provenanceAttributes`
 
@@ -223,26 +175,10 @@ Return the four provenance fields as a flat `prompting_press.prompt.*` attribute
 ### `GuardConfig`
 
 ```ts
-interface GuardConfig
+GuardConfig
 ```
 
-The opt-in guard-expansion config, accepted from JS as a plain object and **plumbed through** to the kernel. A 1:1 mirror of the kernel's GuardConfig. This is **config only**; it carries no logic. The kernel owns guard *expansion*; the binding only marshals fields across the boundary and surfaces whatever [`RenderResult::guard`] the kernel populates. Accepted from JS as a plain TS object `&#123; enabled, advisory? &#125;`. ## Advisory override When `advisory` is supplied it replaces the fixed default wording returned in `RenderResult.guard`. The override MUST reference the `<untrusted>` opening tag, the `</untrusted>` closing tag, AND an escape indication (`&amp;`/`&lt;`/`&gt;` or the word "escap") — otherwise the kernel rejects it and a [`PromptRenderError`] is thrown with `errors[0].code === "render"` and `errors[0].field === "guard"`.
-
-#### `advisory`
-
-```ts
-advisory?: string
-```
-
-Optional override for the advisory sentence returned in `RenderResult.guard`. `null` / absent ⇒ the fixed default advisory. When provided, must reference `<untrusted>`, `</untrusted>`, and an escape indication; otherwise the kernel rejects it with a structured `PromptRenderError`.
-
-#### `enabled`
-
-```ts
-enabled: boolean
-```
-
-When `false`, the render is plain and [`RenderResult::guard`] is `None`.
+Options passed to `render` to enable the advisory guard. `&#123; enabled: false &#125;` (or omitting `guard` in `RenderOptions`) opts out and leaves `RenderResult.guard` as `null`. When `enabled: true`, the optional `template` string overrides the default guard prose.
 
 ### `RenderOptions`
 
@@ -255,7 +191,7 @@ Options for Prompt.render.
 #### `guard`
 
 ```ts
-guard?: GuardConfig | null
+guard?: any
 ```
 
 Opt-in guard config; absent / `&#123; enabled: false &#125;` ⇒ a plain render (`RenderResult.guard === null`).
@@ -281,76 +217,20 @@ Select a named variant arm; absent ⇒ the reserved `default` arm.
 ### `CheckReport`
 
 ```ts
-class CheckReport
+CheckReport
 ```
 
-The output of a lint check: an ordered, read-only list of [`Finding`]s. Empty ⇒ the lint passed. The Node mirror of the consumer's CheckReport. Surfaced **1:1** — the binding adds nothing and interprets nothing. Read-only class with read-only accessors; a report is produced by `prompt.check`, never constructed from JS.
-
-#### `findings`
-
-```ts
-get findings(): Finding[]
-```
-
-Every lint failure found, in the consumer's deterministic order. Empty ⇒ pass.
-
-#### `isEmpty`
-
-```ts
-isEmpty(): boolean
-```
-
-`report.isEmpty` — alias for [`passed`](Self::passed): `true` iff there are no findings.
-
-#### `passed`
-
-```ts
-passed(): boolean
-```
-
-`report.passed` — `true` iff there are no findings (the lint passed). Reads clearly at a CI gate (`if (!prompt.check.passed) process.exit(1)`).
+The result returned by `Prompt.check`. Read-only class surfaced 1:1 from the Rust engine. Carries a `passed` boolean and a `findings` array. The only live finding kind is `"untrusted_without_guard"` — a variable declared `trusted: false` but whose prompt metadata declares no guard key. Hard construction invariants (agreement, parse, reserved names) are enforced at `new Prompt` time and are never returned here.
 
 ## Finding
 
 ### `Finding`
 
 ```ts
-interface Finding
+Finding
 ```
 
-One actionable lint finding, read-only from JS. Names the `prompt`, the `variant` where applicable (`null` for a prompt-level finding), the failure `kind` (a stable `snake_case` discriminant string — see the module docs), and a human-readable `detail`. The `detail` carries no bound-value content (it is built by the consumer from prompt/field names only). Surfaced as a plain JS object with all four fields (the natural shape for the `findings` array the TS facade iterates / matches on).
-
-#### `detail`
-
-```ts
-detail: string
-```
-
-A human-readable, actionable description. Carries no bound-value content.
-
-#### `kind`
-
-```ts
-kind: string
-```
-
-The failure kind as a stable `snake_case` **discriminant string** — the value JS matches on. Currently always `"untrusted_without_guard"`. The kind's inner datum is echoed in [`detail`](Self::detail).
-
-#### `prompt`
-
-```ts
-prompt: string
-```
-
-The prompt's name.
-
-#### `variant`
-
-```ts
-variant?: string
-```
-
-The variant the finding pertains to; `None` (`undefined` in JS) for a prompt-level provenance finding.
+One advisory finding returned inside a `CheckReport`. Fields: `prompt` (string — prompt name), `variant` (string | null — variant name, or null for the root body), `kind` (string — stable finding code, currently only `"untrusted_without_guard"`), and `detail` (string — human-readable description).
 
 ## Composition
 
@@ -439,28 +319,142 @@ The selected variant arm. Absent means the reserved `default` variant.
 ### `Message`
 
 ```ts
-interface Message
+Message
 ```
 
-One resolved message in a composition's output: a role-tagged rendered string. `role` is the prompt definition's role stringified (`"system"` / `"user"` / `"assistant"`); `text` is that prompt rendered with the entry's own validated value. Surfaced as a plain JS object `&#123; role, text &#125;`; a message is produced by [`Composition::resolve`], never constructed from JS.
+One role-tagged message entry produced by `Composition.resolve`. Fields: `role` (string — the prompt's declared role, e.g. `"system"`, `"user"`, `"assistant"`) and `text` (string — the rendered body text for that entry).
 
-#### `role`
+## Loader
+
+### `FileSystemLoader`
 
 ```ts
-role: string
+class FileSystemLoader
 ```
 
-The conversational role, taken from the prompt definition's `role`.
+A loader that reads prompt files from a configured base directory. Maps a logical key to `&#123;base&#125;/&#123;key&#125;&#123;suffix&#125;` and returns the file's raw text (async). ## Traversal guard The resolved final path is validated against the canonicalized base. Rejected keys: - contain `..` components - are absolute - contain NUL bytes or backslashes - are empty or equal to `"."` - contain an intermediate `"."` component (e.g. `"foo/./bar"`) - resolve via symlinks to outside the base A missing target canonicalize failure returns `load_not_found` (not `load_io`). ## Read cap Files exceeding `maxBytes` reject with `PromptLoadError` (`load_io`).
 
-#### `text`
+#### `base`
 
 ```ts
-text: string
+get base(): string
 ```
 
-The rendered body text for this entry. The guard text is never concatenated here.
+The resolved base directory path.
+
+#### `maxBytes`
+
+```ts
+get maxBytes(): number
+```
+
+The maximum file size in bytes.
+
+#### `suffix`
+
+```ts
+get suffix(): string
+```
+
+The file name suffix (e.g. `".yaml"`).
+
+#### `constructor`
+
+```ts
+new FileSystemLoader(base: string, suffix: string, maxBytes: number): FileSystemLoader
+```
+
+Construct a `FileSystemLoader`. `base` is stored as-is; it is resolved (canonicalized) at each `load` call so the constructor is synchronous. Use `nodepath.resolve` to make the path absolute before construction if needed.
+
+#### `DEFAULT_MAX_BYTES`
+
+```ts
+readonly DEFAULT_MAX_BYTES: number
+```
+
+Default maximum file size (1 MiB).
+
+#### `load`
+
+```ts
+load(key: string): Promise<string>
+```
+
+Load the prompt source for `key`.
+
+### `MemoryLoader`
+
+```ts
+class MemoryLoader
+```
+
+A loader backed by an in-memory key→text mapping. The primary use case is **dependency injection in tests**: production code uses a `FileSystemLoader` or a custom loader; tests substitute a `MemoryLoader` with hard-coded prompt text. No filesystem access is performed. A missing key rejects with `PromptLoadError` (`load_not_found`).
+
+#### `constructor`
+
+```ts
+new MemoryLoader(prompts: Record<string, string> | Map<string, string>): MemoryLoader
+```
+
+Construct a `MemoryLoader` from a `Record<string, string>` or a `Map<string, string>`.
+
+#### `load`
+
+```ts
+load(key: string): Promise<string>
+```
+
+Return the mapped text for `key`, or reject with `PromptLoadError` (`load_not_found`).
+
+### `PromptLoadError`
+
+```ts
+class PromptLoadError
+```
+
+Raised when a PromptLoader `load` call fails. Distinct from LoadError (which is the parse/shape error): `except PromptLoadError` does NOT catch a malformed-YAML `LoadError`. Both extend PromptingPressError so `catch (PromptingPressError)` catches all library errors. Codes in `errors[0].code`: - `"load_not_found"` — key absent from backing store. - `"load_io"` — I/O error or `max_bytes` exceeded.
+
+### `PromptLoader`
+
+```ts
+interface PromptLoader
+```
+
+Pluggable source of raw prompt text. The single operation `load(key)` maps a logical key to the raw text of a prompt definition. The returned text is **never parsed or validated** — that belongs to the construct-from-text path (`Prompt.fromYaml` etc.). Loading and construction are always separate, composable steps. The interface is **async** (`Promise<string>`) to match the Node.js ecosystem's native I/O idiom, enabling remote/cloud backends. Any function `(key: string) => Promise<string>` satisfies this interface as-is (function coercion —). Failures must reject with `PromptLoadError` — never resolve to empty string or `null` for a missing key.
+
+#### `load`
+
+```ts
+load(key: string): Promise<string>
+```
+
+Load the prompt source for `key`, returning raw text. Rejects with PromptLoadError (`load_not_found`) when the key is absent, or (`load_io`) on I/O error or exceeded cap.
+
+### `LOAD_IO`
+
+```ts
+LOAD_IO
+```
+
+Stable code for a loader I/O or cap error (value of `errors[0].code`).
+
+### `LOAD_NOT_FOUND`
+
+```ts
+LOAD_NOT_FOUND
+```
+
+Stable code for a missing-key loader error (value of `errors[0].code`).
 
 ## Errors
+
+### `coreVersion`
+
+```ts
+coreVersion
+```
+
+Returns the semantic version string of the underlying `prompting-press-core` Rust engine (e.g. `"0.1.0"`). Useful for diagnostics and version pinning.
 
 ### `LoadError`
 
@@ -557,14 +551,6 @@ safeParse(data: unknown): ZodSafeParseResult<T>
 ```
 
 Validate `data` and return a tagged success/failure result without throwing.
-
-### `coreVersion`
-
-```ts
-coreVersion(): string
-```
-
-Returns the version string of the underlying rendering kernel. Surfaces as `coreVersion` in JS (napi renames `snake_case` → camelCase).
 
 ### `ValidatorMap`
 

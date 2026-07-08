@@ -530,6 +530,96 @@ pub text: String
 
 The rendered body text for this entry.
 
+## Loader
+
+### `FileSystemLoader`
+
+```rust
+pub struct FileSystemLoader
+```
+
+A loader that reads prompt files from a configured base directory. Maps a logical key to `&#123;base&#125;/&#123;key&#125;&#123;suffix&#125;` and returns the file's raw text. ## Traversal guard Keys are treated as relative paths under `base`. The guard rejects: - keys with `..` path components - absolute keys (start with `/` or a Windows drive prefix) - keys containing embedded NUL bytes - keys containing backslash (`\\`) or UNC path patterns - `key=""` or `key="."` (resolve to the base directory, not a file) - any intermediate `"."` component (e.g. `foo/./bar`) - symlinks that point outside the canonicalized `base` A canonicalize failure on a **missing target** returns `load_not_found` (not `load_io`). ## Read cap Reading a file exceeding [`max_bytes`](FileSystemLoader) returns `PromptLoadError::Io` with code `load_io`.
+
+#### `new`
+
+```rust
+pub fn new<impl Into<PathBuf>, impl Into<String>>(base: _, suffix: _, max_bytes: usize) -> Result<Self, PromptLoadError>
+```
+
+Construct a `FileSystemLoader` rooted at `base` with the given `suffix` and `max_bytes`. `base` is canonicalized at construction time. A non-existent `base` returns `PromptLoadError::NotFound`; other OS failures return `PromptLoadError::Io`. # Errors - [`PromptLoadError::NotFound`] if `base` does not exist. - [`PromptLoadError::Io`] on other canonicalize failures (e.g. permission error).
+
+#### `with_base`
+
+```rust
+pub fn with_base<impl Into<PathBuf>>(base: _) -> Result<Self, PromptLoadError>
+```
+
+Convenience constructor with default suffix (`.yaml`) and [`DEFAULT_MAX_BYTES`](FileSystemLoader::DEFAULT_MAX_BYTES). # Errors - [`PromptLoadError::NotFound`] if `base` does not exist. - [`PromptLoadError::Io`] on other canonicalize failures.
+
+#### `max_bytes`
+
+```rust
+pub max_bytes: usize
+```
+
+Maximum bytes to read from a file.
+
+### `MemoryLoader`
+
+```rust
+pub struct MemoryLoader
+```
+
+A loader backed by an in-memory key→text mapping. The primary use case is **dependency injection in tests**: production code uses a [`FileSystemLoader`] or a custom loader; tests substitute a `MemoryLoader` with hard-coded prompt text. No filesystem access is performed. A missing key returns [`PromptLoadError::NotFound`]; there is no I/O path.
+
+#### `new`
+
+```rust
+pub fn new(map: HashMap<String, String>) -> Self
+```
+
+Construct a `MemoryLoader` from an existing key→text mapping.
+
+### `PromptLoadError`
+
+```rust
+pub enum PromptLoadError
+```
+
+The error type returned by [`crate::loader::PromptLoader::load`]. Distinct from [`ConsumerError`] at the type level. Normalizes into the common `[&#123;field, code, message&#125;]` contract under codes [`code::LOAD_IO`] and [`code::LOAD_NOT_FOUND`]. Messages are scrubbed: the logical key + code only; never file contents, full absolute paths, or secrets. ## Compatibility surface note `PromptLoadError` and its codes [`code::LOAD_IO`] / [`code::LOAD_NOT_FOUND`] are NEW additions to the closed error vocabulary (spec 019 compatibility-surface expansion). See the amendment in `.specify/memory/DECISIONS.md`.
+
+#### `Io`
+
+```rust
+Io { key: String, detail: String }
+```
+
+An I/O or resource failure occurred (read error, `max_bytes` exceeded, etc.). Code: [`code::LOAD_IO`].
+
+#### `NotFound`
+
+```rust
+NotFound { key: String }
+```
+
+A key was not found in the loader's backing store (missing file, missing map entry). Code: [`code::LOAD_NOT_FOUND`].
+
+### `PromptLoader`
+
+```rust
+pub trait PromptLoader
+```
+
+A pluggable source of raw prompt text. The single operation [`PromptLoader::load`] maps a logical key to the raw text of a prompt definition. The returned text is **never parsed or validated** — that belongs to the construct-from-text path ([`crate::Prompt::from_yaml`] etc.). Loading and construction are always separate, composable steps. The trait is **object-safe** (`dyn PromptLoader` is valid) and `Send + Sync` so loaders can be stored in shared state without additional wrappers. A blanket impl allows any `Fn(&str) -> Result<String, PromptLoadError>` closure to be used as a loader without defining a struct.
+
+#### `load`
+
+```rust
+pub fn load(&self, key: &str) -> Result<String, PromptLoadError>
+```
+
+Load the prompt source for the given logical `key`, returning raw text. # Errors - [`PromptLoadError::NotFound`] — the key does not exist in the backing store. - [`PromptLoadError::Io`] — an I/O failure occurred, or a resource cap was exceeded.
+
 ## Errors
 
 ### `FieldError`
@@ -611,6 +701,22 @@ pub const LOAD: &str = "load";
 ```
 
 Malformed YAML/JSON input, or a deserialize failure, in the dual-input loader.
+
+### `LOAD_IO`
+
+```rust
+pub const LOAD_IO: &str = "load_io";
+```
+
+A `PromptLoader::load` call failed due to an I/O error or an exceeded read cap (e.g. `max_bytes` exceeded).
+
+### `LOAD_NOT_FOUND`
+
+```rust
+pub const LOAD_NOT_FOUND: &str = "load_not_found";
+```
+
+A `PromptLoader::load` call could not find the requested key.
 
 ### `PARSE`
 

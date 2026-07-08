@@ -991,6 +991,11 @@ export const LOAD_IO = "load_io" as const;
  * ```
  */
 export interface PromptLoader {
+	/**
+	 * Load the prompt source for `key`, returning raw text.
+	 * Rejects with {@link PromptLoadError} (`load_not_found`) when the key is absent,
+	 * or (`load_io`) on I/O error or exceeded cap.
+	 */
 	load(key: string): Promise<string>;
 }
 
