@@ -7,6 +7,10 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "lib": ["ES2022"],
+    // TypeScript 6 no longer auto-includes every installed @types/* package; the facade
+    // uses node: builtins (node:fs/promises, node:path in FileSystemLoader), so @types/node
+    // must be named explicitly or `node:` imports fail to resolve (TS2591).
+    "types": ["node"],
 
     // Type safety: strict everything.
     "strict": true,
