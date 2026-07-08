@@ -15,7 +15,7 @@ importers:
         specifier: 3.7.2
         version: 3.7.2(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@26.1.1)
       '@types/node':
-        specifier: ^26.1.1
+        specifier: 26.1.1
         version: 26.1.1
       fast-check:
         specifier: 4.8.0
