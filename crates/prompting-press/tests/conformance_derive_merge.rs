@@ -78,7 +78,7 @@ fn load_derive_merge_fixtures() -> Vec<(PathBuf, DeriveMergeFixture)> {
 fn parse_strategy(s: &str) -> MergeStrategy {
     match s {
         "merge" => MergeStrategy::Merge,
-        "replace" | _ => MergeStrategy::Replace,
+        _ => MergeStrategy::Replace,
     }
 }
 
@@ -126,7 +126,7 @@ fn derive_merge_fixtures_match_expected() {
         let expected_vars = expected_merged
             .get("variables")
             .cloned()
-            .unwrap_or(Value::Object(Default::default()));
+            .unwrap_or(Value::Object(serde_json::Map::default()));
         if !json_keys_match(&got_vars, &expected_vars) {
             failures.push(format!(
                 "[rust] case={} divergence=merged_variables: got {:?}, expected {:?}",
@@ -140,7 +140,7 @@ fn derive_merge_fixtures_match_expected() {
         let expected_meta = expected_merged
             .get("metadata")
             .cloned()
-            .unwrap_or(Value::Object(Default::default()));
+            .unwrap_or(Value::Object(serde_json::Map::default()));
         if got_meta != expected_meta {
             failures.push(format!(
                 "[rust] case={} divergence=merged_metadata: got {:?}, expected {:?}",

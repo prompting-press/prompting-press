@@ -1005,7 +1005,7 @@ trusted = true
 
     // ── T008 [US2]: Replace parity — derive(overlay) == derive_with(overlay, Default) ──
 
-    /// derive(overlay) and derive_with(overlay, DeriveOptions::default()) produce identical
+    /// `derive(overlay)` and `derive_with(overlay, DeriveOptions::default())` produce identical
     /// output for a scalar-replace and a map-replace case (SC-002 / INV-2).
     #[test]
     fn derive_default_and_derive_with_default_are_identical() {
@@ -1370,7 +1370,7 @@ trusted = true
         // guard key: child wins whole entry (INV-4).
         let guard = meta.get("guard").expect("guard key present");
         assert_eq!(
-            guard.get("enabled").and_then(|v| v.as_bool()),
+            guard.get("enabled").and_then(serde_json::Value::as_bool),
             Some(true),
             "overlay guard wins"
         );

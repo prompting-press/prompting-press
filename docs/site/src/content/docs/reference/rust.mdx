@@ -8,6 +8,22 @@ description: "API reference for the prompting-press rust binding. Generated from
 
 ## Prompt
 
+### `DeriveOptions`
+
+```rust
+pub struct DeriveOptions
+```
+
+Options for [`Prompt::derive_with`]. Implements [`Default`] so callers use `DeriveOptions &#123; strategy: MergeStrategy::Merge,..Default::default &#125;` — forward- extensible without a breaking signature change when future options are added.
+
+#### `strategy`
+
+```rust
+pub strategy: MergeStrategy
+```
+
+The merge strategy to apply. Defaults to [`MergeStrategy::Replace`].
+
 ### `Prompt`
 
 ```rust
@@ -46,7 +62,15 @@ Borrow the underlying [`PromptDefinition`] for use by binding crates (e.g. `prom
 pub fn derive(&self, overlay: PromptOverlay) -> Result<Self, ConsumerError>
 ```
 
-The sole mutator: shallow-replace top-level fields from `overlay` onto a clone of this prompt's definition, then route the merged definition through [`Prompt::new`] (full re-validation). The original `Prompt` is untouched. Each `Some(field)` in `overlay` replaces the corresponding field; `None` fields are left as-is. `name` IS overlayable (the overlay can rename a prompt). After the merge, every construction invariant is re-checked over the whole merged definition — so an overlay that introduces an agreement violation or a reserved variant name is rejected. In Rust the validator is the generic `V` named at the `render` call site (garde covers all fields at compile time); `derive` takes `&self` and carries no runtime validator. `PromptOverlay` therefore contains only data fields. # Errors Same error classes as [`Prompt::new`]: a merged definition that fails any construction invariant returns the structured error.
+The sole mutator: shallow-replace top-level fields from `overlay` onto a clone of this prompt's definition, then route the merged definition through [`Prompt::new`] (full re-validation). The original `Prompt` is untouched. Each `Some(field)` in `overlay` replaces the corresponding field; `None` fields are left as-is. `name` IS overlayable (the overlay can rename a prompt). After the merge, every construction invariant is re-checked over the whole merged definition — so an overlay that introduces an agreement violation or a reserved variant name is rejected. Uses [`MergeStrategy::Replace`] (the default): each overlay-present map field replaces the base's map field wholesale — byte-identical to the pre-017 behavior. In Rust the validator is the generic `V` named at the `render` call site (garde covers all fields at compile time); `derive` takes `&self` and carries no runtime validator. `PromptOverlay` therefore contains only data fields. # Errors Same error classes as [`Prompt::new`]: a merged definition that fails any construction invariant returns the structured error.
+
+#### `derive_with`
+
+```rust
+pub fn derive_with(&self, overlay: PromptOverlay, options: DeriveOptions) -> Result<Self, ConsumerError>
+```
+
+Strategy-aware mutator: merge `overlay` onto this prompt's definition using the selected [`MergeStrategy`], then re-validate the whole merged definition. - [`MergeStrategy::Replace`] — byte-identical to [`derive`](Self::derive). Each overlay-present field replaces the base's field wholesale (the default). - [`MergeStrategy::Merge`] — for the three map-typed fields (`variables`, `variants`, `metadata`) performs a **top-level key union** with child-wins-whole-entry on collision (no recursion). Scalar fields (`name`, `role`, `body`, `output_model`) still replace when overlay-present. Reserved axes `deep`/`none` are excluded. The merged definition is always routed through [`Prompt::new`] (full re-validation: agreement check, template parse, reserved-name check) — no invariant is weakened by the strategy choice. The original `Prompt` is untouched (immutability). # Errors Same error classes as [`Prompt::new`]: a merged definition that fails any construction invariant returns the structured error.
 
 #### `from_json`
 
@@ -211,6 +235,30 @@ pub variants: Option<HashMap<String, PromptVariant>>
 
 Replace the full `variants` map.
 
+### `MergeStrategy`
+
+```rust
+pub enum MergeStrategy
+```
+
+Selects how [`Prompt::derive_with`] combines map-typed overlay fields with the base. Two strategies are supported in this release (the merge/replace industry-standard pair — RFC 7386 JSON Merge Patch, Kubernetes, Terraform `merge`). The enum is designed so a future value (e.g. `Deep`) can be added without a new method or a breaking signature change (C-08 — reserved axis, earned by a future second consumer). ## Semantics - [`Replace`](MergeStrategy::Replace) — each overlay-present top-level field replaces the base's field wholesale. This is the default and reproduces the pre-017 behavior exactly. - [`Merge`](MergeStrategy::Merge) — for the three map-typed fields (`variables`, `variants`, `metadata`) performs a **top-level key union** with child-wins-whole-entry on collision (no recursion into entry contents — that would be the excluded `deep` strategy). Scalar fields (`name`, `role`, `body`, `output_model`) still replace when overlay-present. ## Soundness boundary The agreement check is name-only (`required_roots ⊆ declared variable names`). Consequently: - A `Merge` that **removes** a variable a base variant body still references fails construction via the agreement check (name-removal caught across all variant arms). - A `Merge` that **replaces** a variable's declaration (changing its `type` or `trusted` flag) is **accepted** — type/trust correctness is the validator's responsibility. The merged definition is always re-validated through [`Prompt::new`] regardless of strategy, so no construction invariant is weakened by the strategy choice.
+
+#### `Merge`
+
+```rust
+Merge
+```
+
+Top-level key union for map-typed fields (`variables`, `variants`, `metadata`). Child-wins-whole-entry on key collision; no recursion (no `deep`). Scalar fields replace when overlay-present.
+
+#### `Replace`
+
+```rust
+Replace
+```
+
+Wholesale field replacement (the default). Each overlay-present field replaces the base's field; absent overlay fields are left untouched. Byte-identical to pre-017 behavior.
+
 ### `core_version`
 
 ```rust
@@ -218,6 +266,14 @@ pub fn core_version() -> &'static str
 ```
 
 Returns the version string of the underlying rendering kernel.
+
+### `merge_definitions`
+
+```rust
+pub fn merge_definitions(base: Value, overlay: Value, strategy: MergeStrategy) -> Result<Value, ConsumerError>
+```
+
+The **single-source** map-union algorithm shared by both the typed [`Prompt::derive_with`] path and the Node binding's `derive_prompt`. `base` and `overlay` must be `serde_json::Value::Object`s. Each top-level key in `overlay` is applied to `base` according to `strategy`: - [`MergeStrategy::Replace`]: each overlay-present key replaces the base's key wholesale (the pre-017 behavior, preserved exactly). - [`MergeStrategy::Merge`]: for the three map-typed fields (`variables`, `variants`, `metadata`) the function unions top-level sub-keys with child-wins-whole-entry (no recursion). All other keys (scalar fields) replace wholesale, same as `Replace`. By operating entirely in `serde_json::Value` space this helper is the common denominator for both the typed Rust path (which serializes `PromptDefinition` + `PromptOverlay` to `Value` before calling this) and the Node binding (which is already JSON-native). This guarantees byte-identical results across bindings by construction — per-binding date/decimal serialization would otherwise let a typed-map union and a JSON-space union diverge. # Errors [`ConsumerError::Load`] if `base` or `overlay` is not a JSON object.
 
 ## RenderResult
 
@@ -285,7 +341,7 @@ The resolved variant name (the reserved `default`, or the named arm).
 pub struct GuardConfig
 ```
 
-Per-render guard option. Opt-in, per render. When [`enabled`](Self::enabled) is `false`: - The rendered body is byte-identical to a plain render (the pre-pass is not applied, no values are inspected, no entity-escaping occurs). - [`build_guard_text`] returns `None`. When `enabled` is `true` AND the definition declares at least one untrusted field (`trusted: false`): - The source pre-pass runs before rendering, rewriting each `&#123;&#123; EXPR &#125;&#125;` whose root identifier is untrusted into `&#123;&#123; (EXPR) \| pp_guard_wrap &#125;&#125;`. The `pp_guard_wrap` filter entity-escapes `&`, `<`, `>` (in that order) and wraps the result in `<untrusted>…</untrusted>`. Values of trusted roots are never touched. - [`build_guard_text`] returns a fixed advisory string referencing the markers. **This is NOT a sanitizer.** Enabling the guard makes untrusted values visually locatable in the output; it is not a guarantee that a downstream model will honour the markers. The advisory is a suggestion, not enforcement.
+Per-render guard option. Opt-in, per render. When [`enabled`](Self::enabled) is `false`: - The rendered body is byte-identical to a plain render (the pre-pass is not applied, no values are inspected, no entity-escaping occurs). - `build_guard_text` returns `None`. When `enabled` is `true` AND the definition declares at least one untrusted field (`trusted: false`): - The source pre-pass runs before rendering, rewriting each `&#123;&#123; EXPR &#125;&#125;` whose root identifier is untrusted into `&#123;&#123; (EXPR) \| pp_guard_wrap &#125;&#125;`. The `pp_guard_wrap` filter entity-escapes `&`, `<`, `>` (in that order) and wraps the result in `<untrusted>…</untrusted>`. Values of trusted roots are never touched. - `build_guard_text` returns a fixed advisory string referencing the markers. **This is NOT a sanitizer.** Enabling the guard makes untrusted values visually locatable in the output; it is not a guarantee that a downstream model will honour the markers. The advisory is a suggestion, not enforcement.
 
 #### `advisory`
 

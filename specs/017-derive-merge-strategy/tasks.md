@@ -20,7 +20,7 @@
 ## Phase 1: Setup (Shared Infrastructure)
 
 - [X] T001 Confirm baseline is green on branch `017-derive-merge-strategy` (build Rust workspace + Python wheel + npm addon; run existing `derive` tests) so pre-change behavior is captured for the SC-002 parity assertion.
-- [ ] T002 Record the exact current `derive` signatures + behavior (Rust `crates/prompting-press/src/prompt.rs:307`, Py `crates/prompting-press-py/src/prompt.rs:445`, TS `packages/typescript/src/index.ts:692`) as the "replace/default" golden reference in `specs/017-derive-merge-strategy/quickstart.md` Scenario 2 baseline notes.
+- [X] T002 Record the exact current `derive` signatures + behavior as the "replace/default" golden reference. **DONE (via tests, not a written note):** the default-path parity intent is captured executably by the SC-002 tests (T008/T009 — `derive(overlay)` / `derive_with(.., Replace)` produce byte-identical output to the pre-change behavior; existing suites pass unchanged), which is stronger than a prose baseline. quickstart Scenario 2 documents the default-is-Replace guarantee.
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 

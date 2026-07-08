@@ -236,6 +236,7 @@ const KIND_REFERENCE = 4194304; // re-export that TypeDoc could not resolve to i
 function assignGroup(name) {
 	switch (name) {
 		case "Prompt":
+		case "MergeStrategy":
 			return "Prompt";
 		case "RenderResult":
 			return "RenderResult";

@@ -72,20 +72,15 @@ use crate::render::{validate_in_python, GuardConfig, RenderResult};
     eq_int,
     from_py_object
 )]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PyMergeStrategy {
     /// Wholesale field replacement (default). Byte-identical to pre-017 derive behavior.
     #[pyo3(name = "REPLACE")]
+    #[default]
     Replace,
     /// Top-level key union for map fields (child-wins, no recursion). Scalars replace.
     #[pyo3(name = "MERGE")]
     Merge,
-}
-
-impl Default for PyMergeStrategy {
-    fn default() -> Self {
-        Self::Replace
-    }
 }
 
 impl From<PyMergeStrategy> for MergeStrategy {
