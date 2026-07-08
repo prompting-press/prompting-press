@@ -145,6 +145,29 @@ impl RenderResult {
             self.name, self.variant, self.template_hash, self.render_hash
         )
     }
+
+    /// Return the four provenance fields as a flat `prompting_press.prompt.*` attribute map.
+    ///
+    /// Returns a `dict[str, str]` containing exactly four entries keyed by the library-owned
+    /// `prompting_press.prompt.*` constants. Suitable for direct use as telemetry span
+    /// attributes (e.g. `span.set_attributes(result.provenance_attributes())`).
+    ///
+    /// The map is an explicit allowlist — it NEVER includes `text`, `guard`,
+    /// `output_model`, or any other field (FR-007). It requires no telemetry dependency
+    /// (FR-006). Keys are NOT OTel gen_ai.* keys; a consumer may remap them.
+    fn provenance_attributes<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> PyResult<Bound<'py, pyo3::types::PyDict>> {
+        use prompting_press::{KEY_NAME, KEY_RENDER_HASH, KEY_TEMPLATE_HASH, KEY_VARIANT};
+
+        let dict = pyo3::types::PyDict::new(py);
+        dict.set_item(KEY_NAME, &self.name)?;
+        dict.set_item(KEY_VARIANT, &self.variant)?;
+        dict.set_item(KEY_TEMPLATE_HASH, &self.template_hash)?;
+        dict.set_item(KEY_RENDER_HASH, &self.render_hash)?;
+        Ok(dict)
+    }
 }
 
 impl From<KernelRenderResult> for RenderResult {

@@ -125,6 +125,28 @@ impl RenderResult {
     pub fn guard(&self) -> Option<String> {
         self.guard.clone()
     }
+
+    /// Return the four provenance fields as a flat `prompting_press.prompt.*` attribute map.
+    ///
+    /// Returns a `Record<string, string>` (marshaled from a `HashMap<String, String>` by napi)
+    /// containing exactly four entries keyed by the library-owned `prompting_press.prompt.*`
+    /// constants. Suitable for direct use as telemetry span attributes.
+    ///
+    /// The map is an explicit allowlist — it NEVER includes `text`, `guard`,
+    /// `output_model`, or any other field (FR-007). It requires no telemetry dependency
+    /// (FR-006). Keys are NOT OTel gen_ai.* keys; a consumer may remap them.
+    #[napi]
+    #[must_use]
+    pub fn provenance_attributes(&self) -> std::collections::HashMap<String, String> {
+        use prompting_press::{KEY_NAME, KEY_RENDER_HASH, KEY_TEMPLATE_HASH, KEY_VARIANT};
+
+        let mut map = std::collections::HashMap::with_capacity(4);
+        map.insert(KEY_NAME.to_string(), self.name.clone());
+        map.insert(KEY_VARIANT.to_string(), self.variant.clone());
+        map.insert(KEY_TEMPLATE_HASH.to_string(), self.template_hash.clone());
+        map.insert(KEY_RENDER_HASH.to_string(), self.render_hash.clone());
+        map
+    }
 }
 
 impl From<KernelRenderResult> for RenderResult {

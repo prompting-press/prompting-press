@@ -203,6 +203,20 @@ pub use prompt::{merge_definitions, DeriveOptions, MergeStrategy, Prompt, Prompt
 /// `prompting_press::{CheckReport, Finding, FindingKind}`.
 pub use check::{CheckReport, Finding, FindingKind};
 
+/// Provenance attributes helper (spec 018): four `pub const` key strings and a shared
+/// builder. Callers import [`ProvenanceExt`] for the ergonomic `.provenance_attributes()`
+/// method on [`RenderResult`].
+pub mod provenance;
+
+/// Re-export the key constants at the crate root for convenience.
+pub use provenance::{KEY_NAME, KEY_RENDER_HASH, KEY_TEMPLATE_HASH, KEY_VARIANT};
+
+/// Re-export the extension trait so callers can write `use prompting_press::ProvenanceExt`.
+pub use provenance::ProvenanceExt;
+
+/// Re-export the free function so callers can use it directly when they have raw field values.
+pub use provenance::provenance_attributes_of;
+
 /// Re-export the composition types at the crate root so applications reach them as
 /// `prompting_press::{Composition, Message}`.
 pub use compose::{Composition, Message};

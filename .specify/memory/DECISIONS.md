@@ -3,6 +3,39 @@
 Records constitution amendments per the Governance section's amendment policy (written rationale +
 version bump + propagation). Newest first.
 
+## 2026-07-08 — v3.0.0 → v3.1.0 (MINOR): Principle V softening — provenance formatting allowed
+
+**Change**: Added one additive bullet to **Principle V (Repo Is Canonical; Git Owns Versioning)**:
+the library MAY **format** provenance into a flat, telemetry-ready attribute map — a pure projection
+of fields already on the return value. The no-sink guarantee is preserved: the library MUST NOT push,
+emit, or log provenance to any destination, and MUST NOT add any telemetry/observability dependency.
+The two content hashes (`template_hash`/`render_hash`) and their semantics are unchanged. Map keys
+are library-owned (`prompting_press.prompt.*`); consumers may remap onto their tracer's convention.
+
+**Version bump**: MINOR (additive bullet, no existing principle removed or redefined) — on 017's v3.0.0 base.
+
+**Rationale**: Issue #270 (feat: ProvenanceSink) was resolved via design grilling to a **projection
+helper** on the render result — not a callback sink and not built-in OTel coupling. Resolving
+provenance fields into a flat attribute map (suitable for direct `span.set_attributes()` call) is
+a pure convenience that lives entirely within the library's boundary: it reads fields already
+returned, constructs a new map, returns it. No I/O. No model call. No telemetry dependency.
+Formatting something you already return is not pushing it anywhere. This amendment relaxes only the
+wording of the "MAY format" permission; it does not open a new pluggable seam and it explicitly
+rejects `ProvenanceSink`/`OtelSink` (the pluggable interface proposed in issue #270) — that would
+violate Scope Discipline and the no-sink clause, which this bullet explicitly preserves.
+
+This amendment cites spec-017's v3.0.0 repositioning statement (minimal core PLUS earned, opt-in
+seams) as the shared anchor for this relaxation, per FR-013 of spec 018. Spec-017 introduces the
+broader framing; spec-018 adds one concrete, boundary-safe opt-in on top of it.
+
+**Propagation**:
+- Principle V bullet added in `.specify/memory/constitution.md`.
+- `.specify/memory/roadmap.md` — spec 018 entry added.
+- `.specify/templates/{plan,spec,tasks}-template.md` — no structural change required (additive bullet).
+- `CLAUDE.md`/`AGENTS.md` — `apm compile` not runnable in worktree; flag for reviewer to regenerate
+  after merge (same limitation as spec-017 builder).
+
+---
 ## 2026-07-08 — v2.0.0 → v3.0.0 (MAJOR): repositioning statement + spec-008 FR-017(b) redefined
 
 **Change**: TWO amendments land with spec 017 (derive() merge strategy):
