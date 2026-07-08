@@ -1,9 +1,40 @@
 {
-  "latest": "0.2",
+  "latest": "0.3",
   "versions": [
     {
       "isLatest": true,
-      "label": "0.2 (latest)",
+      "label": "0.3 (latest)",
+      "lastPatch": "0.3.0",
+      "minor": "0.3",
+      "slugs": [
+        "",
+        "changelog",
+        "faq",
+        "getting-started/python",
+        "getting-started/rust",
+        "getting-started/typescript",
+        "guides/composition",
+        "guides/derive",
+        "guides/guard",
+        "guides/lint-in-ci",
+        "guides/loader",
+        "guides/metadata",
+        "guides/provenance-attributes",
+        "guides/variants",
+        "integrations/crewai",
+        "integrations/index",
+        "integrations/langchain",
+        "integrations/strands",
+        "reference/prompt-definition",
+        "reference/python",
+        "reference/rust",
+        "reference/typescript",
+        "templates"
+      ]
+    },
+    {
+      "isLatest": false,
+      "label": "0.2",
       "lastPatch": "0.2.0",
       "minor": "0.2",
       "slugs": [
