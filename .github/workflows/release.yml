@@ -604,13 +604,13 @@ jobs:
       # index.d.ts as an "Unknown distribution format". The wheels are named
       # `wheel-<target>` and the sdist `sdist`; both patterns land in one dist/.
       - name: Download wheels
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
           path: dist
           pattern: wheel-*
           merge-multiple: true
       - name: Download sdist
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
           path: dist
           pattern: sdist
@@ -766,7 +766,7 @@ jobs:
       # generated napi loader (index.js/index.d.ts), and src/index.ts imports
       # from ../index.js — so tsc can't compile the facade until they're present.
       - name: Download all prebuilt addons
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
           path: packages/typescript
           pattern: node-*
