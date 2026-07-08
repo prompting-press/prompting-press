@@ -43,11 +43,12 @@ tasks:
       runFromWorkspaceRoot: true
 
   test-typescript:
-    description: 'Pre-release gate — full-surface TypeScript consumer harness (file dep on packages/typescript).'
-    # `pnpm test` builds the addon + facade FIRST, then refreshes the file-dep
-    # snapshot, then runs node:test — the build must precede install snapshot
-    # (the dist/ output is what the file: dep resolves via main/types).
-    command: 'bash -c "pnpm -C integration/typescript test"'
+    description: 'Pre-release gate — full-surface TypeScript consumer harness (link dep on packages/typescript).'
+    # Install the harness deps (zod, biome, @types/node) FIRST, then `pnpm test`
+    # builds packages/typescript's addon + facade (delegated — @napi-rs/cli lives
+    # there) and runs node:test. The harness depends on the package via `link:`
+    # (live symlink), so the built dist/ resolves regardless of order.
+    command: 'bash -c "pnpm -C integration/typescript install && pnpm -C integration/typescript test"'
     inputs:
       - '/integration/typescript/**/*.mjs'
       - '/integration/typescript/package.json'

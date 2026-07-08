@@ -63,8 +63,15 @@ fn memory_loader_raw_text_composes_with_from_yaml() {
 
 // ── FileSystemLoader ──────────────────────────────────────────────────────────
 
+// Each call returns a UNIQUE temp dir (pid + a process-wide atomic counter), so the
+// filesystem tests — which cargo runs in parallel threads by default — never share a
+// directory or race on `greet.yaml` (one test sets max_bytes=1, another reads the file;
+// a shared dir made the hit test flaky on CI).
 fn temp_dir_with_prompt() -> std::path::PathBuf {
-    let dir = std::env::temp_dir().join(format!("ppress-integ-{}", std::process::id()));
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
+    let dir = std::env::temp_dir().join(format!("ppress-integ-{}-{}", std::process::id(), n));
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(dir.join("greet.yaml"), GREET_YAML).unwrap();
     dir
