@@ -88,7 +88,7 @@
 - [X] T019 Amend `.specify/memory/constitution.md`: add the one-time **v3.0.0 repositioning statement** ("minimal, validation-blind core PLUS earned, opt-in seams", motivated by second consumer Bellwether) and the **Principle VI clarification** (`derive` gains a merge-strategy axis; compile-time-vs-runtime coverage asymmetry preserved). Update the version line to 3.0.0 and add the sync-impact report comment (which MUST note the spec-008 FR-017(b) redefinition below).
 - [X] T020 Record the amendment in `.specify/memory/DECISIONS.md` (rationale, MAJOR bump → v3.0.0, propagation list) per the Governance amendment policy. **MUST explicitly record the redefinition of spec-008 FR-017(b)** (FR-016.2): the shipped "shallow-replaces each supplied top-level field (no deep merge) … the only way to vary a prompt" is superseded by "overlay MAY union under `MergeStrategy::Merge`" — a backward-incompatible FR redefinition (analogous to spec-015 redefining spec-002's guard invariant), the driver for the MAJOR bump — not merely a Principle VI clause.
 - [X] T021 [P] Update `.specify/memory/roadmap.md`: add spec 017 entry (status → in-progress/implemented as appropriate) and note it carries the v3.0.0 repositioning statement that 018/019 cite.
-- [ ] T022 Regenerate the APM-rendered `CLAUDE.md` + `AGENTS.md` constitution copies (via `apm compile` or the project's regen path) so the v3.0.0 body + version match the source (SC-007). **DEFERRED**: `apm compile` is not runnable inside the git worktree. Reviewer must run `apm compile` after merge to regenerate CLAUDE.md + AGENTS.md to v3.0.0.
+- [X] T022 Regenerate the APM-rendered `CLAUDE.md` + `AGENTS.md` constitution copies (via `apm compile`) so the v3.0.0 body + version match the source (SC-007). **DONE**: `apm compile` (0.23.1) run on the consolidated `017-derive-merge-strategy` branch → both regenerated to v3.0.0 (hash `c459af94f644`); unrelated APM asset regen was restored so only CLAUDE.md/AGENTS.md changed.
 
 ---
 
@@ -96,7 +96,7 @@
 
 - [X] T023 [P] Boundary assertion: confirm `git diff` shows NO change to `crates/prompting-press-core/` and `schemas/jsonschema/prompt-definition.schema.json`, and no new dependency in any manifest (SC-006). Add a note/CI check if a cheap one exists.
 - [X] T024 [P] Docs: update the derive/inheritance guidance in the docs site + each binding quickstart to show the `strategy` param + `MergeStrategy { Replace, Merge }`, the union semantics, the `deep`/`none`-excluded rationale, the name-only soundness boundary (FR-019), and that `metadata` (incl. a `guard` key the library reads for presence) is inherited/replaced under `Merge` (SEC-002). Docs-are-product rule — current behavior only. Note the TS breaking change (validators → options object) in the changelog/migration note.
-- [ ] T025 [P] Update `specs/017-derive-merge-strategy/quickstart.md` if any surface detail shifted during implementation (keep it an accurate validation guide).
+- [X] T025 [P] Update `specs/017-derive-merge-strategy/quickstart.md` if any surface detail shifted during implementation (keep it an accurate validation guide). **DONE**: quickstart already reflects the final surface (`derive_with(overlay, DeriveOptions { strategy })`, `strategy=MergeStrategy.MERGE`, `{ strategy: MergeStrategy.Merge }`) from the iterate; verified accurate against the implementation.
 - [X] T026 Run the full workspace test + conformance gate; confirm all green including the new `Merge` conformance case.
 
 ---
