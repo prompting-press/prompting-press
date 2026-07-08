@@ -22,14 +22,13 @@ Observed `kind` strings:
 
 from __future__ import annotations
 
-import pytest
-from pydantic import BaseModel
-
 import prompting_press
+import pytest
 from prompting_press import (
     Prompt,
     PromptingPressError,
 )
+from pydantic import BaseModel
 
 # --------------------------------------------------------------------------------------
 # The stable finding `kind` strings (the binding's public vocabulary). Asserted by value

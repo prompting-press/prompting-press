@@ -318,6 +318,8 @@ apm_modules/
 # Rust / Cargo
 /target/
 crates/*/target/
+integration/rust/target/
+samples/rust/*/target/
 **/*.rs.bk
 
 # Python

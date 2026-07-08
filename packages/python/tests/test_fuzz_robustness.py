@@ -22,12 +22,12 @@ stays bounded (FR-004).  Derandomised with a fixed database so failures replay.
 
 from __future__ import annotations
 
+import contextlib
 import string
 from typing import Any
 
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
-
 from prompting_press import (
     Prompt,
     PromptingPressError,
@@ -75,9 +75,7 @@ _VALID_VAR_ENTRY = st.fixed_dictionaries(
 _HOSTILE_VAR_ENTRY = st.one_of(
     _VALID_VAR_ENTRY,
     st.fixed_dictionaries({"type": st.text(max_size=20), "trusted": _TRUSTED_ANY}),
-    st.dictionaries(
-        st.text(max_size=10), st.integers() | st.text(max_size=20), max_size=5
-    ),
+    st.dictionaries(st.text(max_size=10), st.integers() | st.text(max_size=20), max_size=5),
     st.none(),
     st.integers(),
     st.text(max_size=20),
@@ -187,9 +185,7 @@ def valid_prompt_and_hostile_vars(
     # avoids the agreement-check raising on an out-of-vars reference.
     body = draw(_SAFE_BODY)
     prompt_def: dict[str, Any] = {
-        "name": draw(
-            st.text(alphabet=string.ascii_letters + "_-", min_size=1, max_size=20)
-        ),
+        "name": draw(st.text(alphabet=string.ascii_letters + "_-", min_size=1, max_size=20)),
         "role": "user",
         "body": body,
         "variables": variables,
@@ -217,10 +213,8 @@ def valid_prompt_and_hostile_vars(
 @FUZZ_SETTINGS
 def test_construct_never_panics(doc: dict[str, Any]) -> None:
     """Prompt(dict) never panics; always returns or raises PromptingPressError."""
-    try:
+    with contextlib.suppress(PromptingPressError):
         Prompt(doc)
-    except PromptingPressError:
-        pass  # expected structured error path
 
 
 # ---------------------------------------------------------------------------
@@ -238,10 +232,8 @@ def test_construct_never_panics(doc: dict[str, Any]) -> None:
 @FUZZ_SETTINGS
 def test_from_yaml_never_panics(text: str) -> None:
     """Prompt.from_yaml(text) never panics on hostile input."""
-    try:
+    with contextlib.suppress(PromptingPressError):
         Prompt.from_yaml(text)
-    except PromptingPressError:
-        pass
 
 
 # ---------------------------------------------------------------------------
@@ -258,10 +250,8 @@ def test_from_yaml_never_panics(text: str) -> None:
 @FUZZ_SETTINGS
 def test_from_json_never_panics(text: str) -> None:
     """Prompt.from_json(text) never panics on hostile input."""
-    try:
+    with contextlib.suppress(PromptingPressError):
         Prompt.from_json(text)
-    except PromptingPressError:
-        pass
 
 
 # ---------------------------------------------------------------------------
@@ -278,10 +268,8 @@ def test_from_json_never_panics(text: str) -> None:
 @FUZZ_SETTINGS
 def test_from_toml_never_panics(text: str) -> None:
     """Prompt.from_toml(text) never panics on hostile input."""
-    try:
+    with contextlib.suppress(PromptingPressError):
         Prompt.from_toml(text)
-    except PromptingPressError:
-        pass
 
 
 # ---------------------------------------------------------------------------
@@ -308,12 +296,10 @@ def test_render_hostile_vars_never_panics(
         p = Prompt(prompt_def)
     except PromptingPressError:
         return  # construction failed — that's fine; skip render
-    try:
+    with contextlib.suppress(PromptingPressError):
         # Use _AnyVars so Pydantic validation does not reject the hostile values
         # before they reach the kernel; we want the kernel path exercised too.
         p.render(_AnyVars, data=vars_dict)
-    except PromptingPressError:
-        pass  # structured error — correct
 
 
 # ---------------------------------------------------------------------------
@@ -329,10 +315,8 @@ def test_check_never_panics(doc: dict[str, Any]) -> None:
         p = Prompt(doc)
     except PromptingPressError:
         return
-    try:
+    with contextlib.suppress(PromptingPressError):
         p.check()
-    except PromptingPressError:
-        pass  # unexpected but structured — acceptable
 
 
 # ---------------------------------------------------------------------------
@@ -344,9 +328,7 @@ def test_check_never_panics(doc: dict[str, Any]) -> None:
 def valid_prompt_with_literal_body(draw: st.DrawFn) -> dict[str, Any]:
     """A fully valid prompt dict (literal body, no Jinja vars) for determinism tests."""
     return {
-        "name": draw(
-            st.text(alphabet=string.ascii_letters + "_", min_size=1, max_size=20)
-        ),
+        "name": draw(st.text(alphabet=string.ascii_letters + "_", min_size=1, max_size=20)),
         "role": draw(st.sampled_from(["user", "system"])),
         "body": draw(_SAFE_BODY),
         "variables": {},

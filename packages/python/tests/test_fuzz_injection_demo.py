@@ -26,14 +26,13 @@ from typing import Any
 
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
-from pydantic import BaseModel
-
 from prompting_press import (
     CheckReport,
     GuardConfig,
     Prompt,
     PromptingPressError,
 )
+from pydantic import BaseModel
 
 # ---------------------------------------------------------------------------
 # Hypothesis settings
@@ -160,17 +159,13 @@ def test_guard_delimits_untrusted_value(injection: str) -> None:
     p = Prompt(_UNTRUSTED_PROMPT_DEF)
     try:
         plain = p.render(TopicVars, data={"topic": injection})
-        guarded = p.render(
-            TopicVars, data={"topic": injection}, guard=GuardConfig(enabled=True)
-        )
+        guarded = p.render(TopicVars, data={"topic": injection}, guard=GuardConfig(enabled=True))
     except PromptingPressError:
         return  # structured error path — skip
 
     # 1. Guard advisory field must be present (a non-empty static advisory string).
     #    spec-015: the advisory is a fixed instruction — not a per-field enumeration.
-    assert guarded.guard is not None, (
-        "guard advisory must be present when guard is enabled"
-    )
+    assert guarded.guard is not None, "guard advisory must be present when guard is enabled"
     assert isinstance(guarded.guard, str) and len(guarded.guard) > 0, (
         f"guard advisory must be a non-empty string, got: {guarded.guard!r}"
     )

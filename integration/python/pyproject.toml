@@ -1,0 +1,29 @@
+# Integration test harness for the Python binding — pre-release gate.
+#
+# Exercises the entire public API surface of prompting-press as an external
+# downstream consumer. Mirror of the dependency wiring used by
+# samples/python/greeter-cli: path/editable dep on packages/python.
+
+[project]
+name = "prompting-press-integration"
+version = "0.0.0"
+description = "Integration test harness for prompting-press (pre-release gate)."
+requires-python = ">=3.12"
+# No installable package — this project contains only tests.
+dependencies = [
+    "prompting-press",
+    "pydantic>=2,<3",
+]
+
+[tool.uv.sources]
+# Path dependency on the in-repo Python binding (pre-publish).
+# At launch flip to: prompting-press = { version = ">=0.1" }
+"prompting-press" = { path = "../../packages/python", editable = true }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

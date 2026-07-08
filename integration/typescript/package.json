@@ -1,0 +1,27 @@
+{
+	"name": "@prompting-press-integration/typescript",
+	"version": "0.0.0",
+	"description": "Full-surface integration test gate for the prompting-press TypeScript package.",
+	"private": true,
+	"type": "module",
+	"license": "Apache-2.0",
+	"engines": {
+		"node": ">=20"
+	},
+	"scripts": {
+		"build:addon:debug": "napi build --platform --esm --manifest-path ../../crates/prompting-press-node/Cargo.toml --output-dir ../../packages/typescript",
+		"build:facade": "pnpm --dir ../../packages/typescript run build:facade",
+		"build": "pnpm run build:addon:debug && pnpm run build:facade",
+		"test": "pnpm run build && node --test \"test/*.test.mjs\"",
+		"check": "biome check ."
+	},
+	"dependencies": {
+		"prompting-press": "file:../../packages/typescript",
+		"zod": "4.4.3"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.5.1",
+		"@napi-rs/cli": "3.7.2",
+		"@types/node": "26.1.1"
+	}
+}

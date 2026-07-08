@@ -27,12 +27,11 @@ import traceback
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
-from pydantic import BaseModel, field_validator
-
 from prompting_press import (
     Prompt,
     PromptingPressError,
 )
+from pydantic import BaseModel, field_validator
 
 # ---------------------------------------------------------------------------
 # Hypothesis settings
@@ -67,9 +66,7 @@ def _assert_no_leakage(exc: PromptingPressError, secret: str) -> None:
     """Assert the secret substring is absent from all error surfaces."""
     assert secret not in str(exc), f"secret leaked in str(exc): {str(exc)!r}"
     for row in exc.errors:
-        assert secret not in (row.field or ""), (
-            f"secret leaked in FieldError.field: {row.field!r}"
-        )
+        assert secret not in (row.field or ""), f"secret leaked in FieldError.field: {row.field!r}"
         assert secret not in (row.message or ""), (
             f"secret leaked in FieldError.message: {row.message!r}"
         )
