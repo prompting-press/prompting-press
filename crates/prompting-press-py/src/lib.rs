@@ -78,5 +78,8 @@ fn prompting_press_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // The immutable Prompt object (spec 008 Phase 4, T035–T038). Primary public type.
     m.add_class::<prompt::Prompt>()?;
 
+    // The merge strategy enum (spec 017 — derive() strategy axis).
+    m.add_class::<prompt::PyMergeStrategy>()?;
+
     Ok(())
 }

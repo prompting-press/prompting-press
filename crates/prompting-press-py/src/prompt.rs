@@ -45,13 +45,57 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 use prompting_press::error::code;
-use prompting_press::{ConsumerError, FieldError as ConsumerFieldError};
+use prompting_press::{
+    ConsumerError, DeriveOptions, FieldError as ConsumerFieldError, MergeStrategy,
+};
 use prompting_press_core::GuardConfig as KernelGuardConfig;
 
 use crate::check::CheckReport;
 use crate::error::consumer_error_to_pyerr;
 use crate::marshal::to_kernel_value;
 use crate::render::{validate_in_python, GuardConfig, RenderResult};
+
+// ─── MergeStrategy ───────────────────────────────────────────────────────────
+
+/// The merge strategy for [`Prompt.derive`].
+///
+/// - `REPLACE` (default) — each overlay-present field replaces the base's field wholesale.
+///   Byte-identical to the pre-017 behavior.
+/// - `MERGE` — map-typed fields (`variables`, `variants`, `metadata`) union at top-level keys
+///   (child-wins-whole-entry, no recursion). Scalar fields replace when overlay-present.
+///
+/// Pass as a keyword argument: `prompt.derive(overlay, strategy=MergeStrategy.MERGE)`.
+#[pyclass(
+    name = "MergeStrategy",
+    module = "prompting_press",
+    eq,
+    eq_int,
+    from_py_object
+)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PyMergeStrategy {
+    /// Wholesale field replacement (default). Byte-identical to pre-017 derive behavior.
+    #[pyo3(name = "REPLACE")]
+    Replace,
+    /// Top-level key union for map fields (child-wins, no recursion). Scalars replace.
+    #[pyo3(name = "MERGE")]
+    Merge,
+}
+
+impl Default for PyMergeStrategy {
+    fn default() -> Self {
+        Self::Replace
+    }
+}
+
+impl From<PyMergeStrategy> for MergeStrategy {
+    fn from(py: PyMergeStrategy) -> Self {
+        match py {
+            PyMergeStrategy::Replace => MergeStrategy::Replace,
+            PyMergeStrategy::Merge => MergeStrategy::Merge,
+        }
+    }
+}
 
 // ─── Prompt ──────────────────────────────────────────────────────────────────
 
@@ -418,20 +462,25 @@ impl Prompt {
         self.inner.check().into()
     }
 
-    /// The sole mutator: shallow-replace top-level fields, re-validate, return a new `Prompt`.
+    /// The sole mutator: shallow-replace (or union) top-level fields, re-validate, return a
+    /// new `Prompt`.
     ///
     /// ```python
-    /// derived = p.derive(overlay, *, validators=None)
+    /// derived = p.derive(overlay, *, validators=None, strategy=MergeStrategy.REPLACE)
     /// ```
     ///
     /// `overlay` is a `dict` of top-level fields to replace (any subset of `name`, `role`,
-    /// `body`, `variables`, `variants`, `output_model`, `metadata`). Fields absent
-    /// from the dict are kept from the original. The merged definition is routed through the
-    /// Rust consumer's `Prompt::derive` (full re-validation: agreement, parse, reserved name).
+    /// `body`, `variables`, `variants`, `output_model`, `metadata`). Fields absent from the
+    /// dict are kept from the original. The merged definition is routed through the Rust
+    /// consumer's `Prompt::derive_with` (full re-validation: agreement, parse, reserved name).
+    ///
+    /// `strategy` selects how map-typed fields (`variables`, `variants`, `metadata`) combine:
+    /// - `MergeStrategy.REPLACE` (default) — overlay replaces each present field wholesale.
+    /// - `MergeStrategy.MERGE` — union top-level keys (child-wins, no recursion); scalars replace.
     ///
     /// Validators carry forward from `self` by default. Pass `validators=SomeModel` to
     /// override or augment the bound validator on the derived prompt. Coverage is re-checked
-    /// against the merged definition.
+    /// against the merged variable set (FR-009).
     ///
     /// The original `Prompt` is untouched (immutability guaranteed).
     ///
@@ -441,19 +490,25 @@ impl Prompt {
     ///   definition violates any construction invariant, or the (carried/supplied) validators
     ///   do not cover a `validation_required` variable in the merged definition.
     /// - [`LoadError`](crate::error::LoadError) — `overlay` could not be deserialized.
-    #[pyo3(signature = (overlay, *, validators = None))]
+    #[pyo3(signature = (overlay, *, validators = None, strategy = None))]
     fn derive(
         &self,
         py: Python<'_>,
         overlay: &Bound<'_, PyAny>,
         validators: Option<&Bound<'_, PyAny>>,
+        strategy: Option<PyMergeStrategy>,
     ) -> PyResult<Self> {
         // Build a PromptOverlay from the Python dict via JSON round-trip.
         let rust_overlay = build_overlay(py, overlay)?;
 
+        let merge_strategy = strategy.unwrap_or_default().into();
+        let options = DeriveOptions {
+            strategy: merge_strategy,
+        };
+
         let derived_inner = self
             .inner
-            .derive(rust_overlay)
+            .derive_with(rust_overlay, options)
             .map_err(|e| consumer_error_to_pyerr(py, e))?;
 
         // Determine the effective validators for the derived prompt (R6):
@@ -936,7 +991,7 @@ trusted = true
                 .expect("set body");
 
             let derived = original
-                .derive(py, overlay.as_any(), None)
+                .derive(py, overlay.as_any(), None, None)
                 .expect("valid overlay must succeed");
 
             assert_eq!(derived.body(), "Hey {{ name }}");
@@ -959,7 +1014,7 @@ trusted = true
                 .set_item("body", PyString::new(py, "{{ ghost }}"))
                 .expect("set body");
 
-            let result = original.derive(py, overlay.as_any(), None);
+            let result = original.derive(py, overlay.as_any(), None, None);
             assert!(
                 result.is_err(),
                 "overlay introducing undeclared var must fail"

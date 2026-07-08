@@ -197,7 +197,7 @@ pub mod check;
 pub mod compose;
 
 pub use error::{ConsumerError, FieldError};
-pub use prompt::{Prompt, PromptOverlay};
+pub use prompt::{merge_definitions, DeriveOptions, MergeStrategy, Prompt, PromptOverlay};
 
 /// Re-export the lint report types at the crate root so applications reach them as
 /// `prompting_press::{CheckReport, Finding, FindingKind}`.

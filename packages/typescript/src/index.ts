@@ -317,6 +317,33 @@ function validateOrThrow<T>(schema: ZodLikeSchema<T>, data: unknown): T {
 export type ValidatorMap = ZodLikeSchema;
 
 // --------------------------------------------------------------------------------------
+// MergeStrategy — the strategy selector for Prompt.derive() (spec 017).
+// --------------------------------------------------------------------------------------
+
+/**
+ * Selects how {@link Prompt.derive} combines map-typed overlay fields with the base.
+ *
+ * - `Replace` (default) — each overlay-present field replaces the base's field wholesale.
+ *   Byte-identical to pre-017 behavior.
+ * - `Merge` — map-typed fields (`variables`, `variants`, `metadata`) union at top-level
+ *   keys (child-wins-whole-entry, no recursion). Scalar fields replace when overlay-present.
+ *
+ * Reserved axes (`deep`, `none`) are excluded per C-08; the axis is extensible without
+ * a new method or a breaking signature change.
+ *
+ * Pass as `{ strategy: MergeStrategy.Merge }` in the options object to {@link Prompt.derive}.
+ */
+export const MergeStrategy = {
+	/** Wholesale field replacement (default). Byte-identical to pre-017 derive behavior. */
+	Replace: "replace",
+	/** Top-level key union for map-typed fields (child-wins, no recursion). */
+	Merge: "merge",
+} as const;
+
+/** The `MergeStrategy` value type. */
+export type MergeStrategy = (typeof MergeStrategy)[keyof typeof MergeStrategy];
+
+// --------------------------------------------------------------------------------------
 // RenderOptions — options object for Prompt.render().
 // --------------------------------------------------------------------------------------
 
@@ -440,10 +467,11 @@ function makeInternalArg(handle: NapiPrompt): InternalCtorArg {
  * p.render(data, opts?);           // static form (or uses bound validators when present)
  * ```
  *
- * ## derive(overlay, validators?) — sole mutator
+ * ## derive(overlay, options?) — sole mutator (spec 017: options object replaces positional validators)
  *
- * Shallow-replaces top-level fields; re-validates the merged whole. Validators carry forward
- * from the source by default; pass `validators` to override.
+ * Merges top-level fields via the selected strategy; re-validates the merged whole.
+ * `options.validators` carry forward from the source by default; pass `{ validators }` to
+ * override. `options.strategy` defaults to `MergeStrategy.Replace` (unchanged behavior).
  */
 export class Prompt {
 	/** The underlying napi handle. Private — never exposed outside this class. */
@@ -676,26 +704,40 @@ export class Prompt {
 	}
 
 	/**
-	 * The sole mutator: shallow-replace top-level fields from `overlay` onto a clone of this
-	 * prompt's definition, then re-validate the merged whole via the Rust consumer. The original
-	 * `Prompt` is untouched (immutability guaranteed).
+	 * The sole mutator: merge `overlay` onto a clone of this prompt's definition using
+	 * `options.strategy`, then re-validate the merged whole via the Rust consumer. The
+	 * original `Prompt` is untouched (immutability guaranteed).
 	 *
-	 * Validators carry forward from the source by default; pass `validators` to
-	 * override/augment. Coverage is re-checked against the merged definition.
+	 * **Breaking change (0.x, spec 017):** the optional `validators` parameter has moved
+	 * into the `options` object. Migrate `derive(overlay, validators)` →
+	 * `derive(overlay, { validators })`.
 	 *
-	 * @param overlay    A partial `PromptDefinition` object — any subset of top-level fields to replace.
-	 * @param validators Optional new validator. If omitted, the source's bound validator is inherited.
-	 * @throws {LoadError}             overlay causes a shape violation.
+	 * @param overlay  A partial `PromptDefinition` object — any subset of top-level fields.
+	 * @param options  Optional configuration:
+	 *   - `validators` — new validator to bind; if absent, the source's bound validator is
+	 *     inherited. Coverage is re-checked against the merged variable set (FR-009).
+	 *   - `strategy` — {@link MergeStrategy} value; default `Replace`. Under `Merge`, the
+	 *     three map-typed fields (`variables`, `variants`, `metadata`) union at top-level
+	 *     keys (child-wins, no recursion); scalar fields replace when overlay-present.
+	 *
+	 * @throws {LoadError}             overlay causes a shape violation or unknown strategy.
 	 * @throws {PromptRenderError}     merged template/agreement error.
 	 * @throws {PromptValidationError} uncovered `validation_required` variable after merge.
 	 */
-	derive(overlay: Partial<PromptDefinition>, validators?: ValidatorMap): Prompt {
-		// Effective validator: overlay's (if explicitly provided) else inherit from this.
+	derive(
+		overlay: Partial<PromptDefinition>,
+		options?: { validators?: ValidatorMap; strategy?: MergeStrategy },
+	): Prompt {
+		const { validators, strategy } = options ?? {};
+		// Effective validator: options's (if explicitly provided) else inherit from this.
 		const effectiveValidators = validators !== undefined ? validators : this.#validators;
 
 		let derivedHandle: NapiPrompt;
 		try {
-			derivedHandle = this.#handle.derivePrompt(overlay as Record<string, unknown>);
+			derivedHandle = this.#handle.derivePrompt(
+				overlay as Record<string, unknown>,
+				strategy ?? null,
+			);
 		} catch (thrown) {
 			throw decodeAddonError(thrown);
 		}
@@ -853,3 +895,4 @@ export {
 	// Read-only result classes + the trivial version probe, surfaced unchanged (Principle I).
 	RenderResult,
 };
+// MergeStrategy is declared and exported inline at its definition above.

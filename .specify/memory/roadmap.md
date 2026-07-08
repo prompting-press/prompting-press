@@ -631,6 +631,28 @@ Status legend (lifecycle): **undecided** · **needs-info** · **planned** ·
   bindings + 2 facades + docs, all gates green. PR #214 open (in CI). The lost original spec was recovered
   from the `015-guard-delimiting` branch and re-clarified 2026-06-30.
 
+### 017 — `derive()` merge strategy  [status: implemented — 2026-07-08]
+
+**Outcome**: A consumer can derive a child prompt that inherits a base's map-typed fields
+(`variables`, `variants`, `metadata`) and adds its own in a single `derive` call — removing the
+"forget to spread base variables" footgun — while the `Replace`-default behavior remains fully
+non-breaking.
+
+**Scope**: Adds `MergeStrategy { Replace (default), Merge }` + `DeriveOptions` to the Rust
+consumer; adds a `strategy=` keyword-only arg to the Python binding; moves `derive`'s optional
+tail into an options object `{ validators?, strategy? }` in TypeScript (breaking at 0.x). The
+shared `merge_definitions(base, overlay, strategy)` helper in `serde_json::Value` space is the
+single union algorithm for both the typed Rust path and the Node binding (FR-018 / Principle I).
+Carries the **v3.0.0 constitutional repositioning** (preamble + Principle VI clarification +
+explicit redefinition of spec-008 FR-017(b) — see DECISIONS.md).
+
+**Governing decisions**: FR-018 (single-source helper); FR-019 (name-only soundness boundary);
+D1 (canonical serialized-form comparison); C-08 (deep/none excluded; axis reserved).
+
+**Note for specs 018 and 019**: This spec's v3.0.0 repositioning statement ("minimal core PLUS
+earned, opt-in seams") is the constitutional anchor both later specs cite when introducing their
+own earned seams.
+
 ## Deferred
 
 <!-- Gated on real demand (C-08 / R1). Not planned specs until a trigger fires. -->

@@ -24,6 +24,7 @@ from prompting_press import (
     CheckReport,
     Composition,
     GuardConfig,
+    MergeStrategy,
     Prompt,
     PromptRenderError,
     PromptValidationError,
@@ -686,3 +687,152 @@ def test_prompt_repr() -> None:
     r = repr(p)
     assert "simple" in r
     assert "user" in r
+
+
+# ─── T015 (spec 017): MergeStrategy parity tests ──────────────────────────────
+
+BASE_EXTRACTION_DEF = {
+    "name": "analyst",
+    "role": "user",
+    "body": "{{ extraction }}",
+    "variables": {
+        "extraction": {"type": "string", "trusted": True},
+    },
+}
+
+
+def test_merge_strategy_importable() -> None:
+    """MergeStrategy is importable from prompting_press (T012)."""
+    assert hasattr(prompting_press, "MergeStrategy")
+    assert hasattr(MergeStrategy, "REPLACE")
+    assert hasattr(MergeStrategy, "MERGE")
+
+
+def test_merge_strategy_in_all() -> None:
+    """MergeStrategy is in prompting_press.__all__."""
+    assert "MergeStrategy" in prompting_press.__all__
+
+
+def test_derive_merge_unions_variables_base_unchanged() -> None:
+    """Merge unions base {extraction} + overlay {sentiment} → {extraction, sentiment}; base unchanged.
+    US1 / SC-001 / SC-005."""
+    base = Prompt(BASE_EXTRACTION_DEF)
+    derived = base.derive(
+        {
+            "body": "{{ extraction }} | {{ sentiment }}",
+            "variables": {"sentiment": {"type": "string", "trusted": True}},
+        },
+        strategy=MergeStrategy.MERGE,
+    )
+
+    vars_keys = set(derived.variables.keys())
+    assert "extraction" in vars_keys, "base var retained"
+    assert "sentiment" in vars_keys, "overlay var added"
+    assert len(vars_keys) == 2
+
+    # Base is untouched (SC-005).
+    assert "sentiment" not in base.variables
+
+
+def test_derive_merge_replace_default_parity() -> None:
+    """derive(overlay) == derive(overlay, strategy=MergeStrategy.REPLACE) (SC-002)."""
+    base = Prompt(BASE_EXTRACTION_DEF)
+    overlay = {"body": "Hello {{ extraction }}!"}
+
+    via_default = base.derive(overlay)
+    via_replace = base.derive(overlay, strategy=MergeStrategy.REPLACE)
+
+    assert via_default.body == via_replace.body
+    assert via_default.body == "Hello {{ extraction }}!"
+
+
+def test_derive_merge_immutability() -> None:
+    """derive with Merge leaves the base Prompt untouched."""
+    base = Prompt(BASE_EXTRACTION_DEF)
+    original_body = base.body
+    original_vars_keys = set(base.variables.keys())
+
+    base.derive(
+        {
+            "body": "{{ extraction }} | {{ sentiment }}",
+            "variables": {"sentiment": {"type": "string", "trusted": True}},
+        },
+        strategy=MergeStrategy.MERGE,
+    )
+
+    assert base.body == original_body
+    assert set(base.variables.keys()) == original_vars_keys
+
+
+def test_derive_merge_unions_variants() -> None:
+    """Merge unions variants: base variant + overlay variant → both present."""
+    base = Prompt(
+        {
+            "name": "base",
+            "role": "user",
+            "body": "{{ name }}",
+            "variables": {"name": {"type": "string", "trusted": True}},
+            "variants": {"v1": {"body": "v1: {{ name }}"}},
+        }
+    )
+    derived = base.derive(
+        {"variants": {"v2": {"body": "v2: {{ name }}"}}},
+        strategy=MergeStrategy.MERGE,
+    )
+
+    variant_keys = set(derived.variants.keys())
+    assert "v1" in variant_keys, "base variant retained"
+    assert "v2" in variant_keys, "overlay variant added"
+
+
+def test_derive_merge_unions_metadata() -> None:
+    """Merge unions metadata; child wins on collision."""
+    base = Prompt(
+        {
+            "name": "base",
+            "role": "user",
+            "body": "{{ name }}",
+            "variables": {"name": {"type": "string", "trusted": True}},
+            "metadata": {"base_key": "base_val", "shared": "from_base"},
+        }
+    )
+    derived = base.derive(
+        {"metadata": {"overlay_key": "overlay_val", "shared": "from_overlay"}},
+        strategy=MergeStrategy.MERGE,
+    )
+
+    meta = derived.metadata
+    assert meta.get("base_key") == "base_val", "base key retained"
+    assert meta.get("overlay_key") == "overlay_val", "overlay key added"
+    assert meta.get("shared") == "from_overlay", "child wins on collision"
+
+
+def test_derive_merge_validation_required_uncovered_raises() -> None:
+    """Under Merge, uncovered validation_required in merged vars raises (SC-004 / FR-009)."""
+    from pydantic import BaseModel
+
+    base_def = {
+        "name": "strict",
+        "role": "user",
+        "body": "{{ name }}",
+        "variables": {
+            "name": {"type": "string", "trusted": True, "validation_required": True},
+        },
+    }
+
+    class NameValidator(BaseModel):
+        name: str
+
+    base = Prompt(base_def, validators=NameValidator)
+
+    # Merging adds extra (validation_required=True) not covered by NameValidator.
+    with pytest.raises(PromptValidationError):
+        base.derive(
+            {
+                "variables": {
+                    "extra": {"type": "string", "trusted": True, "validation_required": True},
+                },
+                "body": "{{ name }} {{ extra }}",
+            },
+            strategy=MergeStrategy.MERGE,
+        )
