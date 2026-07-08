@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0](https://github.com/prompting-press/prompting-press/compare/prompting-press-core-v0.2.0...prompting-press-core-v0.3.0) (2026-07-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* add merge strategy to derive() for composing prompt variables ([#272](https://github.com/prompting-press/prompting-press/issues/272))
+
+### Features
+
+* add merge strategy to derive() for composing prompt variables ([#272](https://github.com/prompting-press/prompting-press/issues/272)) ([3f1e27f](https://github.com/prompting-press/prompting-press/commit/3f1e27f6ad98e2cb60de1db14f293aab21214c98))
+
 ## [0.2.0](https://github.com/prompting-press/prompting-press/compare/prompting-press-core-v0.1.0...prompting-press-core-v0.2.0) (2026-07-01)
 
 
