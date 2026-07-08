@@ -11,6 +11,20 @@
 The library formats provenance it already returns into a flat, telemetry-ready attribute map;
 it never emits, pushes, or depends on any telemetry system.
 
+## Clarifications
+
+### Session 2026-07-08 (proposed defaults — user away; revisit if needed)
+
+- Q: Which exact attribute-key strings should the helper emit? → A: The `gen_ai.prompt.*` namespace
+  (`gen_ai.prompt.name`, `.variant`, `.template_hash`, `.render_hash`) — ecosystem-recognizable —
+  **with a documented note** that `name`/`variant` align with the emerging OTel GenAI semantic
+  convention while `template_hash`/`render_hash` are **prompting-press provenance extensions** in
+  that namespace (not part of the official convention). Avoids a false "fully OTel-standard" claim
+  without inventing an obscure library namespace.
+- Q: What return shape per binding? → A: A flat string→string map — Python `dict[str, str]`,
+  TypeScript `Record<string, string>`, Rust **`BTreeMap<String, String>`** (deterministic key
+  order, D1 parity discipline; directly passable to a span's bulk set-attributes call).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Attach render provenance to a telemetry span in one call (Priority: P1)
@@ -122,9 +136,12 @@ from them.
   telemetry span attributes.
 - **FR-002**: The map MUST contain exactly four entries: the prompt **name**, the resolved
   **variant**, the **template hash**, and the **render hash** — and no other entries.
-- **FR-003**: The map keys MUST be the standard GenAI-convention provenance attribute keys
-  (the `gen_ai.prompt.*` family: name, variant, template hash, render hash). The keys MUST be
-  stable and documented.
+- **FR-003**: The map keys MUST be the fixed `gen_ai.prompt.*` strings (`gen_ai.prompt.name`,
+  `gen_ai.prompt.variant`, `gen_ai.prompt.template_hash`, `gen_ai.prompt.render_hash`), stable and
+  documented. The documentation MUST state that `name`/`variant` align with the emerging OTel GenAI
+  semantic convention while `template_hash`/`render_hash` are **prompting-press provenance
+  extensions** within that namespace (not part of the official convention) — no false claim of full
+  OTel-standard compliance.
 - **FR-004**: The helper MUST be a **pure projection** of fields already present on the result:
   it MUST perform no I/O, invoke no callback, mutate nothing, and produce no side effects.
 - **FR-005**: The library MUST NOT invoke any caller-supplied callback during render, and MUST
@@ -138,8 +155,10 @@ from them.
 - **FR-008**: The four provenance fields MUST remain publicly readable on the result, so a
   consumer can construct a custom-keyed attribute map without the helper. The helper is additive.
 - **FR-009**: The helper MUST be present in all three bindings (Rust consumer, Python,
-  TypeScript) with equivalent semantics, expressed in each language's native idiom (a map/dict/
-  record return; a method, since it is a projection/computation rather than stored state) (C-06).
+  TypeScript) with equivalent semantics, as a **method** (projection/computation, not stored
+  state), returning a flat string→string map in each language's native idiom: Python
+  `dict[str, str]`, TypeScript `Record<string, string>`, Rust **`BTreeMap<String, String>`**
+  (deterministic key order for cross-binding parity, D1) (C-06).
 - **FR-010**: The helper MUST NOT require modifying the `prompting-press-core` kernel: the four
   provenance fields are already present on the render result, so this feature is confined to the
   consumer/binding layer (Principle III; kernel unchanged, no I/O).

@@ -1,51 +1,51 @@
-# Memory synthesis — spec 018 (provenance attributes helper)
+# Memory Synthesis
 
-Compact planning context. Source of truth; ≤900 words.
+## Current Scope
 
-## What already ships (verified in code)
+Spec 018 — add a `provenance_attributes()` projection method to `RenderResult` in each binding,
+returning a flat `gen_ai.prompt.*` string→string map of the four content-identity fields. Binding/
+consumer layer only; kernel `RenderResult` data unchanged. Cites spec-017's v3.0.0 repositioning;
+its own edit softens Principle V (formatting allowed; still no sink/push/dependency).
 
-- `RenderResult` (`crates/prompting-press-core/src/engine.rs:117`) carries: `text`, `name`,
-  `variant`, `template_hash` (`SHA256(resolved variant source)`), `render_hash`
-  (`SHA256(rendered text)`), `guard: Option<String>`. Its rustdoc says verbatim: *"Plain data
-  returned to the caller — no telemetry sink, no tracing coupling."* — that is Principle V in code.
-- No `metadata`/`output_model`/`version` on `RenderResult` — they live on the definition and are
-  library-opaque. Bringing them into an attribute map would be a kernel change + interpretation of
-  an opaque bag. Excluded.
+## Relevant Decisions
 
-## What spec 018 adds
+- **D1 — Cross-binding parity via canonical serialized form** (Reason: the emitted map's values are
+  the already-serialized `template_hash`/`render_hash`/`name`/`variant`; the conformance parity case
+  compares serialized form. Status: active. Source: docs/memory/decisions/2026-06-28-…marshaling.md)
+- **Spec-017 v3.0.0 repositioning statement** (Reason: 018 cites it as the shared anchor for
+  softening Principle V; it does not re-introduce the rationale. Status: pending/landing with 017.)
 
-- A **projection method** on the render result → flat `string→string` map of the **four**
-  content-identity provenance fields, keyed by the GenAI convention `gen_ai.prompt.{name, variant,
-  template_hash, render_hash}`. Pure getter; no I/O, no callback, no mutation, no dependency.
-- Rejected alternative: a callback `ProvenanceSink` + built-in `OtelSink` (issue #270's proposal)
-  — violates Principle V ("no telemetry sink, no OTel coupling") + re-adds a C-08-eliminated seam.
+## Active Architecture Constraints
 
-## Governing constraints
+- **Kernel `RenderResult` already carries the 4 fields** (`crates/prompting-press-core/src/engine.rs:121-127`);
+  its rustdoc says "no telemetry sink, no tracing coupling" — 018 preserves that (formatting only).
+- **Each binding surfaces its own `RenderResult`** (py pyclass, napi struct, TS type) 1:1 from the
+  kernel; the helper is added per binding, keys/map defined once in the consumer (Principle I).
 
-- **Principle V (softened here):** provenance stays data on the return value; the library MAY now
-  FORMAT it into an attribute map, but still exposes no sink, no push/emit, no telemetry dep. The
-  two hashes and their semantics are unchanged.
-- **Principle III / C-03:** no kernel change (fields already exist), no I/O.
-- **Principle VI / C-06:** native idiom — dict (Py) / Record (TS) / map or Vec<(String,String)>
-  (Rust); a method (projection), not a stored property.
-- **C-08 / Scope Discipline:** no config knob (alternate keys, field selection) — fixed convention
-  keys; consumers wanting variation read the four public fields directly.
-- **Opaque-metadata doctrine:** metadata/variants/output_model excluded (flattening = interpreting
-  the opaque bag + span-cardinality foot-gun). Rendered text + guard text excluded (leak/size).
+## Accepted Deviations
 
-## Amendment
+- _(none)_
 
-- 018 **cites** spec-017's v3.0.0 repositioning statement; makes its own edit = soften Principle V.
-- Record in DECISIONS.md; propagate to constitution body/version + rendered CLAUDE.md/AGENTS.md.
+## Relevant Security Constraints
 
-## Motivating consumer
+- **No rendered content in telemetry** — the map excludes `text`/`guard`/metadata (FR-007): avoids a
+  data-exposure + span-cardinality foot-gun. Aligns with the D2/D3 scrubbing doctrine's spirit.
 
-Every consumer today hand-writes `span.set_attribute("gen_ai.prompt.name", result.name)` ×4 with
-typo-prone key strings. Helper collapses it to `span.set_attributes(result.provenance_attributes())`.
+## Related Historical Lessons
 
-## Open questions → clarify
+- **Principle V verbatim in code** — the kernel `RenderResult` rustdoc already encodes "no telemetry
+  sink, no tracing coupling"; the softening amendment must be precise (formatting ≠ sink).
+- **C-08 no speculative config** — fixed keys, no key-mapping knob; consumers wanting variation read
+  the public fields.
 
-1. Exact final GenAI key strings (confirm against current semantic-convention spec at plan time).
-2. Rust return type: `BTreeMap<String,String>` (ordered, deterministic) vs `Vec<(String,String)>`.
-   (Lean BTreeMap — deterministic iteration, map-like.)
-3. Method name parity: `provenance_attributes()` (Py/Rust) / `provenanceAttributes()` (TS).
+## Conflict Warnings
+
+- **Soft:** issue #270 proposed a `ProvenanceSink` + built-in `OtelSink` — that WOULD hard-conflict
+  with Principle V. Resolved by shipping the projection helper instead (no sink, no dep). No hard
+  conflict remains.
+
+## Retrieval Notes
+
+- Read: docs/memory/INDEX.md, D1; kernel engine.rs (fields), binding render.rs (surfacing), TS
+  index.ts. Governance: constitution Principle V, C-08. memory-md MCP unavailable → direct reads.
+- Budget: within limits (2 decisions, 2 architecture, 0 deviations, 1 security, 2 lessons).
