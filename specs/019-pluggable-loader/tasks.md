@@ -24,21 +24,22 @@
 
 **⚠️ The canonical interface lands here.**
 
-- [ ] T002 Add `LoadError` in the Rust consumer (`crates/prompting-press/src/error.rs` or loader module) that normalizes into the common `[{field,code,message}]` family (codes `not_found`/`io`), distinct from parse/validation errors (FR-007/FR-008). Ensure default messages are scrubbed (no file contents / secret-looking values — D2/D3 lineage).
-- [ ] T003 Add the loader module in `crates/prompting-press/src/`: object-safe `trait PromptLoader { fn load(&self,key:&str)->Result<String,LoadError>; }` + blanket impl for `Fn(&str)->Result<String,LoadError>+Send+Sync` (FR-001).
-- [ ] T004 Implement `FileSystemLoader { base, suffix=".yaml" }`: `load(key)` reads `{base}/{key}{suffix}`; **reject keys escaping `base`** (`..`/absolute) with `LoadError` via canonicalize + prefix-check (FR-002/FR-002a/SC-008). Missing file → `LoadError` (FR-006).
-- [ ] T005 Implement `MemoryLoader` from a `key→text` map; miss → `LoadError` (FR-003/FR-006).
-- [ ] T006 [P] Rust tests: FileSystemLoader hit + miss; **traversal guard** (`../secret` → LoadError, no outside read, SC-008); MemoryLoader hit + miss; closure-as-loader (blanket impl); load-error ≠ parse-error (compose with `from_yaml` and show distinct surfaces, FR-007); scrubbed error message.
-- [ ] T007 [P] Rustdoc: interface contract, `load` returns raw text (not a Prompt), missing-key/error behavior, traversal guard, sync nature, and the "compose with from_yaml; not fused" note (FR-005/FR-011).
+- [ ] T002 **Error-taxonomy expansion (compatibility-surface change — FR-008/FR-018):** add a NEW `PromptLoadError` exception type in the Python + TS bindings (via the existing `create_exception!` / PromptingPressError hierarchy — paralleling `PromptRenderError`), and add NEW `code` constants **`load_io`** and **`load_not_found`** to the closed vocab in `crates/prompting-press/src/error.rs`. Do NOT reuse `LoadError` (that is the parse error) or `ConsumerError::Load`. Add the Rust-side carrier the loader returns (a new `PromptLoadError`-mapping variant/type) and wire BOTH FFI mappers (`prompting-press-node/src/error.rs`, `prompting-press-py/src/error.rs`) + the per-binding routing switches to map `load_io`/`load_not_found` → `PromptLoadError`. Default messages scrubbed (logical key + code only; NO file contents / full absolute path / secrets — D2/D3, security SEC-003).
+- [ ] T002a **Native error-raise path (FR-008a):** expose a binding-level constructor/factory so a pure-Python / pure-TS loader can raise `PromptLoadError` with a populated `[{field,code,message}]` payload (since `create_exception!` types carry no typed Rust field).
+- [ ] T003 Add the loader module in `crates/prompting-press/src/`: object-safe `trait PromptLoader { fn load(&self,key:&str)->Result<String, /* PromptLoadError carrier */>; }` + blanket impl for the closure form (FR-001).
+- [ ] T004 Implement `FileSystemLoader { base, suffix=".yaml", max_bytes }`: `load(key)` reads `{base}/{key}{suffix}`. **Traversal guard (FR-002a/FR-002b/SC-008):** validate the FINAL resolved path incl. suffix against a canonicalized `base`; reject absolute keys, `..` components, escaping symlinks, cross-platform separators/UNC/NUL; define `key=""`/`key="."`/empty-suffix; a canonicalize-fail on a missing target → `load_not_found` (NOT `load_io`). **Read cap (FR-016/SC-009):** enforce `max_bytes` (sane default) → `load_io` on exceed.
+- [ ] T005 Implement `MemoryLoader` from a `key→text` map; miss → `PromptLoadError` `load_not_found` (FR-003/FR-006).
+- [ ] T006 [P] Rust tests: FileSystemLoader hit + miss (`load_not_found`); **traversal guard** (`../secret`, absolute, escaping symlink, `key=""`, `key="."`, empty suffix → `PromptLoadError`, no outside read, SC-008); **read cap** (exceed `max_bytes` → `load_io`, SC-009); MemoryLoader hit + miss; closure-as-loader; load-error ≠ parse-error at the CLASS level (compose with `from_yaml`, SC-010); scrubbed error message (no path/secret leak).
+- [ ] T007 [P] Rustdoc: interface contract, `load` returns raw text (not a Prompt), the `PromptLoadError`/`load_io`/`load_not_found` taxonomy, traversal guard + cap, sync nature, "compose with from_yaml; not fused" (FR-005/FR-011).
 
-**Checkpoint**: Rust interface + built-ins + LoadError exist, traversal-guarded, tested.
+**Checkpoint**: Rust interface + built-ins + the NEW `PromptLoadError` taxonomy exist, traversal-guarded + capped, tested.
 
 ## Phase 3: User Story 1 — Filesystem behind a swappable interface (Priority: P1) 🎯 MVP
 
-- [ ] T008 [US1] Python: `PromptLoader` `runtime_checkable Protocol` + `FileSystemLoader(base, suffix=".yaml")` + callable coercion, in `packages/python/python/prompting_press/`. Sync `load(key)->str`; raises `LoadError`; traversal-guarded. (Native impl or thin wrapper over the Rust built-in — research R2; keep it a language-side leaf.)
-- [ ] T009 [US1] TypeScript: `PromptLoader` interface (`load(key): Promise<string>`) + `FileSystemLoader` (node `fs`, base+suffix, async) + function coercion, in `packages/typescript/src/`. Raises/rejects `LoadError`; traversal-guarded.
-- [ ] T010 [P] [US1] Python tests: FileSystemLoader hit/miss, traversal guard, callable coercion, compose `Prompt.from_yaml(loader.load(k))`, load-vs-parse error distinction.
-- [ ] T011 [P] [US1] TS tests: FileSystemLoader hit/miss (async), traversal guard, function coercion, compose `Prompt.fromYaml(await loader.load(k))`, error distinction.
+- [ ] T008 [US1] Python: `PromptLoader` `runtime_checkable Protocol` + `FileSystemLoader(base, suffix=".yaml", max_bytes=<default>)` + callable coercion, in `packages/python/python/prompting_press/`. Sync `load(key)->str`; raises `PromptLoadError` via the T002a native-raise path; **traversal guard + read cap implemented natively (FR-017)** — not only in Rust.
+- [ ] T009 [US1] TypeScript: `PromptLoader` interface (`load(key): Promise<string>`) + `FileSystemLoader` (node `fs`, base+suffix+max_bytes, async) + function coercion, in `packages/typescript/src/`. Rejects with `PromptLoadError` (T002a); **traversal guard + read cap implemented natively (FR-017)**.
+- [ ] T010 [P] [US1] Python tests: hit/miss (`load_not_found`), traversal guard (`../`, absolute, symlink escape, `key=""`, empty suffix, SC-008), read cap (SC-009), callable coercion, compose `Prompt.from_yaml(loader.load(k))`, `except PromptLoadError` does NOT catch a malformed-YAML `LoadError` (SC-010).
+- [ ] T011 [P] [US1] TS tests: hit/miss (async), traversal guard (same cases), read cap, function coercion, a REJECTING loader surfaces `PromptLoadError` (not an unhandled rejection), compose `Prompt.fromYaml(await loader.load(k))`, class-level error distinction (SC-010).
 
 **Checkpoint**: filesystem loading behind the interface works in all three bindings; swap-without-changing-call-sites demonstrated.
 
@@ -52,14 +53,14 @@
 
 - [ ] T015 [P] [US3] Per binding: an example/test custom loader (implement the interface or pass a callable/function) used interchangeably with the built-ins, NO registration (SC-004); its failure surfaces as a load error distinct from parse errors.
 
-## Phase 6: Constitution amendment (v3.0.0 — MAJOR boundary)
+## Phase 6: Constitution amendment (additive → v3.2.0, on 017's v3.0.0 baseline)
 
-**⚠️ The MAJOR amendment of the trio (FR-016/017/018). Cites spec-017's repositioning.**
+**⚠️ FR-018/019. 017 is the v3.0.0 baseline (already written); 019 CITES it and adds only its own edits.**
 
-- [ ] T016 Amend `.specify/memory/constitution.md`: **soften Principle III** to permit a caller-invoked, language-side loader seam (kernel + construction stay I/O-free) and **re-scope Scope-Discipline/C-08** so the Loader seam is an earned opt-in seam (earned by second consumer Bellwether). Cite the spec-017 v3.0.0 repositioning statement; keep the version line at v3.0.0 (coordinate with 017/018 under the same major line); update the sync-impact report.
+- [ ] T016 Amend `.specify/memory/constitution.md` (assumes 017's v3.0.0 landed first): **CITE** the existing spec-017 v3.0.0 repositioning statement (do NOT re-declare it). Add ONLY 019's edits: **soften Principle III** to permit a caller-invoked, language-side loader seam (kernel + construction stay I/O-free) and **re-scope Scope-Discipline/C-08** so the Loader seam is an earned opt-in seam (earned by Bellwether). Bump version → **v3.2.0** (additive; 018 = v3.1.0). Update the sync-impact report noting BOTH the boundary softening AND the error-taxonomy expansion (below).
 - [ ] T017 Update `.specify/memory/roadmap.md`: the "**Never: I/O / storage adapters**" entry and the Scope-Discipline "Loader → eliminated" entry — reflect the earned opt-in loader seam; add spec 019 entry. Note heavier backends still deferred.
-- [ ] T018 Record in `.specify/memory/DECISIONS.md`: the Principle III softening + C-08 re-scope rationale, MAJOR bump, that it cites spec-017's repositioning, and the bounded scope (opt-in leaf; kernel/construction I/O-free).
-- [ ] T019 Regenerate the APM-rendered `CLAUDE.md`/`AGENTS.md` constitution copies to match (SC-007); if `apm compile` isn't runnable, note for reviewer.
+- [ ] T018 Record in `.specify/memory/DECISIONS.md` (spec-015-style, enumerated): (a) Principle III softening + C-08 Loader re-scope; (b) **the error-taxonomy compatibility-surface expansion** — the NEW `PromptLoadError` type + `load_io`/`load_not_found` codes added to the closed `code` vocab + `ConsumerError`/error set, and the FFI-mapper/routing changes; state the bounded scope (opt-in leaf; kernel/construction I/O-free) and that it cites 017's v3.0.0 → additive v3.2.0.
+- [ ] T019 Regenerate the APM-rendered `CLAUDE.md`/`AGENTS.md` constitution copies to match (SC-007); if `apm compile` isn't runnable, note for reviewer. **Merge-order note:** 019 must land AFTER 017 (its v3.0.0 baseline) — ideally after 018 (v3.1.0) — or rebase the version line.
 
 ## Phase 7: Polish & Cross-Cutting
 

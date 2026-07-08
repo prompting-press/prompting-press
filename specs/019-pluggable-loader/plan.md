@@ -11,7 +11,7 @@ implementations — `FileSystemLoader` (base dir + suffix; path-traversal-guarde
 `MemoryLoader` (key→text map) — in each binding's standard package. The loader is a pure I/O leaf:
 it returns text, never a `Prompt`, and is composed by the caller with the existing text factories
 (`Prompt.from_yaml(loader.load(key))`). No fusion into construction, no name-keyed container, no
-cross-FFI loader. Missing key → `LoadError` normalized into the common `[{field,code,message}]`
+cross-FFI loader. Missing key → `PromptLoadError` normalized into the common `[{field,code,message}]`
 family, distinct from parse errors. Carries the MAJOR boundary amendment: reintroduces the Loader
 seam (C-08) and softens Principle III's "no I/O" for a caller-invoked, language-side loader while
 the **kernel and construction stay I/O-free**. Cites spec-017's v3.0.0 repositioning statement.

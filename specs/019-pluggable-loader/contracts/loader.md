@@ -5,9 +5,9 @@ Uniform capability; native idiom (C-06). Three parallel ecosystems (a loader is 
 ## Rust (`prompting-press` consumer)
 ```rust
 pub trait PromptLoader: Send + Sync {
-    fn load(&self, key: &str) -> Result<String, LoadError>;   // raw text
+    fn load(&self, key: &str) -> Result<String, PromptLoadError>;   // raw text
 }
-impl<F> PromptLoader for F where F: Fn(&str) -> Result<String, LoadError> + Send + Sync { /* blanket */ }
+impl<F> PromptLoader for F where F: Fn(&str) -> Result<String, PromptLoadError> + Send + Sync { /* blanket */ }
 
 pub struct FileSystemLoader { /* base: PathBuf, suffix: String (default ".yaml") */ }
 pub struct MemoryLoader { /* HashMap<String,String> */ }
@@ -42,7 +42,7 @@ export class MemoryLoader implements PromptLoader { /* Record<string,string> */ 
 
 ## Cross-binding contract
 - `load(key)` returns raw text; never a Prompt, never parses.
-- Missing key / traversal escape → `LoadError` (normalized `[{field,code,message}]`), distinct from parse errors.
+- Missing key / traversal escape → `PromptLoadError` (normalized `[{field,code,message}]`), distinct from parse errors.
 - FileSystemLoader: `{base}/{key}{suffix}`, traversal-guarded. MemoryLoader: key→text map.
 - Custom loader = implement the interface (or pass a callable/function); NO registration.
 - NOT fused into construction; NO name-keyed container in this feature.

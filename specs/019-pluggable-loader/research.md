@@ -3,9 +3,9 @@
 No open NEEDS CLARIFICATION. Decisions from grill + 2026-07-08 clarify defaults.
 
 ## R1 — Interface + error contract
-- **Decision:** `load(key) -> raw text`; failure → `LoadError` normalized into the crate's common
+- **Decision:** `load(key) -> raw text`; failure → `PromptLoadError` normalized into the crate's common
   `[{field, code, message}]` family (reuse `ConsumerError::Load` lineage, `crates/prompting-press/src/error.rs:109`),
-  code `not_found`/`io`. Distinct surface from parse/validation errors (FR-007).
+  NEW class `PromptLoadError` + NEW codes `load_io`/`load_not_found` (NOT a reuse of the existing parse-error `LoadError`/`ConsumerError::Load` — that collided). Recorded as a compatibility-surface expansion (FR-018). Distinct at the CLASS level from parse errors (FR-007/SC-010).
 - **Rationale:** consistency with existing error normalization (C-06); no bespoke parallel hierarchy.
 - **Alternatives rejected:** nullable return (silent empty → confusing downstream parse error);
   brand-new exception tree (fragments error handling).
@@ -24,7 +24,7 @@ No open NEEDS CLARIFICATION. Decisions from grill + 2026-07-08 clarify defaults.
 
 ## R3 — FileSystemLoader mapping + traversal guard (security)
 - **Decision:** `base` dir + `suffix` (default `.yaml`); `load(key)` reads `{base}/{key}{suffix}`.
-  Keys are relative under `base`; a key escaping `base` (`..`, absolute) → `LoadError` (SC-008).
+  Keys are relative under `base`; a key escaping `base` (`..`, absolute) → `PromptLoadError` (SC-008).
 - **Rationale:** logical keys not physical paths (centralization value); traversal guard prevents
   reading arbitrary files when keys are attacker-influenced. Canonicalize + prefix-check under base.
 
