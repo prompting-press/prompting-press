@@ -898,60 +898,9 @@ export class Composition {
  */
 export class PromptLoadError extends PromptingPressError {}
 
-// Register `PromptLoadError` in the code → subclass map so the decoder picks it up.
-function subclassForCodeWithLoader(
-	code: string,
-): new (message: string, errors: readonly FieldError[]) => PromptingPressError {
-	switch (code) {
-		case "load_not_found":
-		case "load_io":
-			return PromptLoadError;
-		default:
-			return subclassForCode(code);
-	}
-}
-
-// Patch the addon error decoder to also recognise loader codes.
-// We shadow `decodeAddonError` locally with a version that delegates to the extended map.
-const _decodeAddonErrorBase = decodeAddonError;
-
-function decodeAddonErrorFull(thrown: unknown): PromptingPressError {
-	// Already one of ours — pass through.
-	if (thrown instanceof PromptingPressError) {
-		return thrown;
-	}
-	const rawMessage =
-		thrown instanceof Error ? thrown.message : typeof thrown === "string" ? thrown : String(thrown);
-	let payload: { code: string; errors: FieldError[] } | undefined;
-	try {
-		const parsed: unknown = JSON.parse(rawMessage);
-		if (
-			typeof parsed === "object" &&
-			parsed !== null &&
-			typeof (parsed as { code?: unknown }).code === "string" &&
-			Array.isArray((parsed as { errors?: unknown }).errors) &&
-			(parsed as { errors: unknown[] }).errors.every(
-				(row) =>
-					typeof row === "object" &&
-					row !== null &&
-					typeof (row as FieldError).field === "string" &&
-					typeof (row as FieldError).code === "string" &&
-					typeof (row as FieldError).message === "string",
-			)
-		) {
-			payload = parsed as { code: string; errors: FieldError[] };
-		}
-	} catch {
-		// Not JSON — fall through.
-	}
-	if (payload === undefined) {
-		return new PromptingPressError(rawMessage, [{ field: "", code: "render", message: rawMessage }]);
-	}
-	const Subclass = subclassForCodeWithLoader(payload.code);
-	const summary =
-		payload.errors.length > 0 ? payload.errors.map((row) => row.message).join("; ") : payload.code;
-	return new Subclass(summary, payload.errors);
-}
+// NOTE: the TypeScript loaders (`FileSystemLoader`, `MemoryLoader`, and any custom loader)
+// are pure JS and throw `PromptLoadError` directly — loader errors never cross the native
+// addon boundary, so `decodeAddonError` needs no loader-aware extension here.
 
 // ─────────────────────────────────────────────────────────────────────────────────────────
 // Stable loader-error code constants.
@@ -1054,11 +1003,7 @@ export class FileSystemLoader implements PromptLoader {
 	 * @param suffix   File name suffix appended to every key (default `".yaml"`).
 	 * @param maxBytes Maximum file size in bytes (default 1 MiB).
 	 */
-	constructor(
-		base: string,
-		suffix = ".yaml",
-		maxBytes: number = DEFAULT_MAX_BYTES,
-	) {
+	constructor(base: string, suffix = ".yaml", maxBytes: number = DEFAULT_MAX_BYTES) {
 		this.#base = nodepath.resolve(base);
 		this.#suffix = suffix;
 		this.#maxBytes = maxBytes;
@@ -1103,9 +1048,19 @@ export class FileSystemLoader implements PromptLoader {
 			rejectLoad(LOAD_IO, `path resolution failed for key \`${key}\``);
 		}
 
-		// Symlink-escape check: resolved must be a descendant of base.
+		// Symlink-escape check: resolved must be a descendant of base. Canonicalize the base
+		// too (realpath) so a symlinked base component — e.g. macOS `/var` → `/private/var`,
+		// or any symlinked deploy path — does not defeat the prefix comparison against the
+		// already-realpath'd candidate. Fall back to the plain resolved base if it does not
+		// (yet) exist on disk.
+		let canonicalBase: string;
+		try {
+			canonicalBase = await fs.realpath(this.#base);
+		} catch {
+			canonicalBase = this.#base;
+		}
 		const resolvedNorm = addTrailingSep(resolved);
-		const baseNorm = addTrailingSep(this.#base);
+		const baseNorm = addTrailingSep(canonicalBase);
 		if (!resolvedNorm.startsWith(baseNorm)) {
 			rejectLoad(LOAD_NOT_FOUND, `key not found: \`${key}\``);
 		}
@@ -1192,10 +1147,7 @@ export class MemoryLoader implements PromptLoader {
 	 * Construct a `MemoryLoader` from a `Record<string, string>` or a `Map<string, string>`.
 	 */
 	constructor(prompts: Record<string, string> | Map<string, string> = {}) {
-		this.#map =
-			prompts instanceof Map
-				? new Map(prompts)
-				: new Map(Object.entries(prompts));
+		this.#map = prompts instanceof Map ? new Map(prompts) : new Map(Object.entries(prompts));
 	}
 
 	/**
@@ -1225,6 +1177,3 @@ export {
 	RenderResult,
 };
 // MergeStrategy is declared and exported inline at its definition above.
-
-// Suppress the unused reference warning for the base decoder (used via the extended version).
-void _decodeAddonErrorBase;

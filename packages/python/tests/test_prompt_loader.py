@@ -192,8 +192,11 @@ def test_callable_coercion_hit() -> None:
             return VALID_YAML
         raise make_prompt_load_error(LOAD_NOT_FOUND, f"key not found: `{key}`")
 
-    # The callable satisfies PromptLoader protocol.
-    assert isinstance(my_loader, PromptLoader)
+    # A bare (key)->str callable is a valid loader at the call site (FR-001 callable
+    # coercion): the library never gates on isinstance — it just calls the loader.
+    # A plain function is NOT a structural instance of the `load`-method Protocol, so
+    # `isinstance(fn, PromptLoader)` is correctly False; assert it is callable instead.
+    assert callable(my_loader)
     raw = my_loader("greet")
     prompt = Prompt.from_yaml(raw)
     assert prompt.name == "test"
@@ -316,13 +319,15 @@ def test_custom_loader_failure_surfaces_as_prompt_load_error() -> None:
 
 
 def test_make_prompt_load_error_not_found() -> None:
+    # make_prompt_load_error RETURNS a PromptLoadError instance for the caller to raise
+    # (see loader.py: `raise make_prompt_load_error(...)`); it does not raise on its own.
     with pytest.raises(PromptLoadError) as exc_info:
-        make_prompt_load_error(LOAD_NOT_FOUND, "key not found: `x`")
+        raise make_prompt_load_error(LOAD_NOT_FOUND, "key not found: `x`")
     assert exc_info.value.errors[0].code == LOAD_NOT_FOUND
     assert "x" in exc_info.value.errors[0].message
 
 
 def test_make_prompt_load_error_io() -> None:
     with pytest.raises(PromptLoadError) as exc_info:
-        make_prompt_load_error(LOAD_IO, "I/O error loading `x`: disk full")
+        raise make_prompt_load_error(LOAD_IO, "I/O error loading `x`: disk full")
     assert exc_info.value.errors[0].code == LOAD_IO
