@@ -4,6 +4,18 @@ Session decision: **constitution will be amended (repositioning B)** — Prompti
 deliberately moves from "never a framework" toward batteries-included, opt-in seams.
 Driver: repositioning + real consumer (Bellwether/claudebroker). Three SEPARATE specs.
 
+## BACKLOG (user-raised 2026-07-08) — consolidated docs + examples pass
+After ALL THREE specs (017 derive-merge, 018 provenance-attributes, 019 loader) are
+IMPLEMENTED, do a single cross-cutting pass:
+- **Docs site**: update guides / API-ref / getting-started to cover the merge strategy, the
+  provenance-attributes helper, and the pluggable loader (+ the v3.0.0 repositioning framing).
+  Docs-are-product rule: current behavior only; lands with/after the impl.
+- **Examples / samples**: update to use the loader (FileSystem/Memory), `derive(merge=shallow)`
+  for Bellwether-style shared-base prompts, and `provenance_attributes()` in the tracing sample.
+NOT a per-spec Phase-7 task (each spec already has its own local docs touch) — this is the
+after-the-trio integration pass. Formalize as a roadmap Deferred entry or a spec 020 once the
+three land.
+
 ## #268 — Pluggable PromptLoader — RESOLVED SHAPE
 - **Option A** (standalone loader), NOT the container. Container (`PromptLibrary`,
   name-keyed get + check_all) DEFERRED to its own future spec (it's the deferred
