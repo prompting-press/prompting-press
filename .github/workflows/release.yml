@@ -328,7 +328,7 @@ jobs:
       # PATH); harmless for the other suites. Kept unconditional so the matrix
       # stays uniform.
       - name: Set up Python 3.12
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
           python-version: '3.12'
       - name: Install mise toolchain
@@ -536,7 +536,7 @@ jobs:
 
       # abi3-py312 ⇒ one wheel per platform serves CPython 3.12+; 3.12 is the floor.
       - name: Set up Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
           python-version: '3.12'
 
