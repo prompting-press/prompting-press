@@ -1,0 +1,65 @@
+# moon.yml — integration project (pre-release full-surface gate).
+#
+# The `integration:test` gate builds + runs a full-surface consumer harness in
+# all three languages against the in-repo packages (path / editable / file deps).
+# Unlike `samples:test` (illustrative apps), this harness exercises the ENTIRE
+# public API surface — construction, render, guard, derive+merge, provenance,
+# loaders, compose, check, error taxonomy, version — with one modular test file
+# per feature so it is trivially extensible: add a feature => add a test file.
+#
+# Each leg is independent and can be run alone. This is a pre-release gate: a
+# public-API regression that a real downstream consumer would hit fails here,
+# citing the language leg.
+#
+# Not a language-homed project (the harnesses span Rust/Python/TS); the inherited
+# Rust build/test tasks are excluded so moon does not try to run cargo at this root.
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+language: 'unknown'
+
+workspace:
+  inheritedTasks:
+    exclude: ['build', 'test']
+
+tasks:
+  test-rust:
+    description: 'Pre-release gate — full-surface Rust consumer harness (path dep on the in-repo crate).'
+    command: 'cargo test --manifest-path integration/rust/Cargo.toml'
+    inputs:
+      - '/integration/rust/**/*.rs'
+      - '/integration/rust/Cargo.toml'
+      - '/crates/prompting-press/src/**'
+    options:
+      runFromWorkspaceRoot: true
+
+  test-python:
+    description: 'Pre-release gate — full-surface Python consumer harness (editable dep on packages/python).'
+    command: 'bash -c "cd integration/python && uv sync && uv run pytest -q"'
+    inputs:
+      - '/integration/python/**/*.py'
+      - '/integration/python/pyproject.toml'
+      - '/packages/python/**'
+    options:
+      runFromWorkspaceRoot: true
+
+  test-typescript:
+    description: 'Pre-release gate — full-surface TypeScript consumer harness (link dep on packages/typescript).'
+    # Install the harness deps (zod, biome, @types/node) FIRST, then `pnpm test`
+    # builds packages/typescript's addon + facade (delegated — @napi-rs/cli lives
+    # there) and runs node:test. The harness depends on the package via `link:`
+    # (live symlink), so the built dist/ resolves regardless of order.
+    command: 'bash -c "pnpm -C integration/typescript install && pnpm -C integration/typescript test"'
+    inputs:
+      - '/integration/typescript/**/*.mjs'
+      - '/integration/typescript/package.json'
+      - '/packages/typescript/src/**'
+    options:
+      runFromWorkspaceRoot: true
+
+  # Aggregate gate: all three language legs.
+  test:
+    description: 'Pre-release gate — build + run the full-surface integration harness in all three languages.'
+    deps:
+      - 'integration:test-rust'
+      - 'integration:test-python'
+      - 'integration:test-typescript'

@@ -1,0 +1,24 @@
+{
+	"name": "@prompting-press-integration/typescript",
+	"version": "0.0.0",
+	"description": "Full-surface integration test gate for the prompting-press TypeScript package.",
+	"private": true,
+	"type": "module",
+	"license": "Apache-2.0",
+	"engines": {
+		"node": ">=20"
+	},
+	"scripts": {
+		"build": "pnpm --dir ../../packages/typescript install --frozen-lockfile && pnpm --dir ../../packages/typescript run build:addon:debug && pnpm --dir ../../packages/typescript run build:facade",
+		"test": "pnpm run build && node --test \"test/*.test.mjs\"",
+		"check": "biome check ."
+	},
+	"dependencies": {
+		"prompting-press": "link:../../packages/typescript",
+		"zod": "4.4.3"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.5.1",
+		"@types/node": "26.1.1"
+	}
+}

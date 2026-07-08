@@ -11,19 +11,20 @@
 #       gate and the codegen formatter never disagree. Exact pin → invisible to
 #       the floating-version gate (SEC-003).
 #
-# Scope: packages/python/python (the importable package, incl. the generated
-# Pydantic models — which are ruff-formatted by datamodel-code-generator, so they
-# stay clean here). ruff uses its built-in defaults; there is no project ruff
-# config, and none is needed for a tree this small.
+# Scope: packages/python (the importable package + tests). The generated Pydantic
+# models under python/prompting_press/generated/** are excluded by pyproject.toml
+# [tool.ruff] exclude, which applies even when a path is passed explicitly
+# (force-exclude = true). ruff reads pyproject.toml from the nearest parent, so
+# running against packages/python picks up the config automatically.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "${REPO_ROOT}"
 
-TARGET="packages/python/python"
+TARGET="packages/python"
 
-echo "Lint gate (Python): ruff check + ruff format --check on ${TARGET}..."
+echo "Lint gate (Python): ruff check + ruff format --check on ${TARGET} (generated/** excluded)..."
 echo ""
 
 uv run --with ruff==0.15.12 -- ruff check "${TARGET}"

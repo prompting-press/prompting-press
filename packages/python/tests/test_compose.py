@@ -14,10 +14,8 @@ The tests verify the same behavioral guarantees as before the reshape:
 
 from __future__ import annotations
 
-import pytest
-from pydantic import BaseModel, field_validator
-
 import prompting_press
+import pytest
 from prompting_press import (
     Composition,
     Message,
@@ -25,7 +23,7 @@ from prompting_press import (
     PromptRenderError,
     PromptValidationError,
 )
-
+from pydantic import BaseModel, field_validator
 
 # ─── Vars models ──────────────────────────────────────────────────────────────
 
@@ -90,9 +88,7 @@ WITH_VARIANT = Prompt(
 
 def test_append_path_preserves_order_roles_and_per_entry_text() -> None:
     comp = Composition()
-    assert comp.append(SYS_PREAMBLE, Empty()) is None, (
-        "append is non-fluent (returns None)"
-    )
+    assert comp.append(SYS_PREAMBLE, Empty()) is None, "append is non-fluent (returns None)"
     assert comp.append(GREET, Named(name="Ada")) is None
     assert len(comp) == 2
 
@@ -191,9 +187,7 @@ def test_no_fluent_chain_on_class_or_instance() -> None:
 
 
 def test_three_tuple_selects_named_variant() -> None:
-    via_factory = Composition.from_messages(
-        [(WITH_VARIANT, Named(name="Di"), "formal")]
-    )
+    via_factory = Composition.from_messages([(WITH_VARIANT, Named(name="Di"), "formal")])
     assert [m.text for m in via_factory.resolve()] == ["Good day, Di"]
 
     via_append_kw = Composition()

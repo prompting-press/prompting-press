@@ -593,3 +593,58 @@ jobs:
         run: mise exec -- moon run docs:test-samples
         env:
           CARGO_TERM_COLOR: always
+
+  # Full-surface pre-release integration gate. Unlike samples-test (illustrative
+  # apps), the integration harness exercises the ENTIRE public API surface of all
+  # three packages as a real downstream consumer, one modular test file per feature
+  # (construction, render, guard, derive+merge, provenance, loaders, compose, check,
+  # errors, version). A public-API regression a consumer would hit fails here,
+  # citing the language leg.
+  integration-test:
+    name: 'Integration harness — full public surface (ubuntu)'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          fetch-depth: 0  # let moon resolve the base branch on pull_request events
+
+      - name: Install mise toolchain
+        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac  # v2
+        with:
+          experimental: true
+
+      - name: 'Cache pnpm + uv stores'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: |
+            ~/.local/share/pnpm/store
+            ~/.cache/uv
+          key: pnpm-uv-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml', '**/uv.lock') }}
+          restore-keys: |
+            pnpm-uv-${{ runner.os }}-
+
+      # The TypeScript harness depends on packages/typescript via a `file:` dep, so
+      # that package must be FULLY built (napi addon + facade dist/) before the
+      # harness resolves it. The integration:test-typescript leg also runs the
+      # harness's own `pnpm test` (which rebuilds + refreshes the file-dep snapshot),
+      # but pre-building here warms the cache and mirrors samples-test.
+      - name: 'Install + build the TS package (addon + facade)'
+        run: |
+          mise exec -- pnpm -C packages/typescript install --frozen-lockfile
+          mise exec -- pnpm -C packages/typescript run build
+
+      - name: 'Expose Rust on PATH (for rust-cache)'
+        shell: bash
+        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
+      - name: 'Rust build cache'
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+        with:
+          shared-key: integration-test-v1
+
+      - name: 'integration:test (full public surface, all three languages)'
+        run: mise exec -- moon run integration:test
+        env:
+          CARGO_TERM_COLOR: always
