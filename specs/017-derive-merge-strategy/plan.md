@@ -9,12 +9,15 @@
 Add a `merge` strategy to the immutable `Prompt.derive` primitive so a derived prompt can
 **union** its base's map-typed fields (`variables`, `variants`, `metadata`) with the overlay's
 (child-wins, whole-entry) instead of only wholesale-replacing them. Two strategies: `Replace`
-(default, today's behavior — non-breaking) and `Shallow` (new union). Scalar fields always
+(default, today's behavior — non-breaking) and `Merge` (new union). Scalar fields always
 replace. The merged definition is re-validated through the existing single validating
 constructor (`Prompt::new(merged)`), so the agreement check and `validation_required` coverage
-run over the merged whole. Implemented **once** in the Rust consumer (`prompting_press::Prompt`);
-the Python and TS bindings delegate to it (Principle I). No kernel change, no JSON-Schema change,
-no I/O. Carries the v3.0.0 constitution repositioning statement + a Principle VI clarification.
+run over the merged whole. The union algorithm is implemented **once** in the Rust consumer as a
+shared `merge_definitions` helper; the Python binding delegates through `derive`, and the Node
+binding calls the same helper (replacing its private JSON merge) — genuine single-source parity
+(Principle I). No kernel change, no JSON-Schema change, no I/O. Carries the v3.0.0 constitution
+repositioning statement, a Principle VI clarification, **and a redefinition of spec-008 FR-017(b)**
+(overlay may union under `Merge`, superseding "wholesale-replace only").
 
 ## Technical Context
 
@@ -53,9 +56,17 @@ Small, bounded surface.
 
 Evaluated against constitution v2.0.0 (→ v3.0.0 after this feature's amendment):
 
-- **Principle I (Shared core, structural parity)** — ✅ PASS. Merge logic lands **once** in
-  `prompting_press::Prompt::derive`; Py/node bindings delegate via `inner.derive(...)` (verified
-  crates/prompting-press-{py,node}/src/prompt.rs). No per-binding merge logic; parity is structural.
+- **Principle I (Shared core, structural parity)** — ✅ PASS **via a shared helper (corrected)**.
+  The union algorithm lands **once** in the consumer as `merge_definitions(base, overlay, strategy)`
+  operating in `serde_json::Value` space. **Correction (adversarial review):** the Python binding
+  delegates to `inner.derive` (`crates/prompting-press-py/src/prompt.rs:454`), but the **Node
+  binding does NOT** — it has a private `shallow_merge_json` → `Prompt::from_json`
+  (`crates/prompting-press-node/src/prompt.rs:245-262,335-349`), deliberately avoiding a
+  `Deserialize` dep on `PromptOverlay`. The prior draft wrongly claimed "node delegates via
+  `inner.derive` (verified)". Resolution (FR-018): both the typed Rust `derive`/`derive_with` and
+  Node's construction path call the single `merge_definitions` helper — genuine single-source
+  parity, byte-identical by construction (honors D1: per-binding date/decimal serialization would
+  otherwise let a JSON-space union and a typed-map union diverge). No second union implementation.
 - **Principle II (FFI isolation)** — ✅ PASS. No FFI crate touches the kernel; merge is in the
   consumer + marshaling in the bindings. `MergeStrategy` marshals as a small enum/string across FFI.
 - **Principle III (Minimal boundary)** — ✅ PASS. No I/O, no LLM, no request assembly. Merge is a
@@ -78,7 +89,9 @@ Evaluated against constitution v2.0.0 (→ v3.0.0 after this feature's amendment
   (TS) / Default options struct (Rust), never a positional mode boolean.
 
 **Amendment note (in-scope governance work, not a violation):** this feature carries the
-v3.0.0 repositioning statement + a Principle VI clarification (FR-015/016/017). Recorded in
+v3.0.0 repositioning statement, a Principle VI clarification, AND a redefinition of spec-008
+FR-017(b) — overlay may union under `Merge`, superseding its "wholesale-replace only / no deep
+merge" wording (FR-015/016/017). Recorded in
 DECISIONS.md; no principle is violated — one is additively clarified.
 
 **Gate result: PASS.** No violations; Complexity Tracking not required.
@@ -107,11 +120,13 @@ specs/017-derive-merge-strategy/
 crates/
 ├── prompting-press-core/        # KERNEL — untouched by 017 (SC-006 asserts no diff)
 ├── prompting-press/             # Rust consumer — PRIMARY change site
-│   └── src/prompt.rs            #   Prompt::derive + PromptOverlay + NEW MergeStrategy/DeriveOptions
-├── prompting-press-py/          # PyO3 binding — add merge= keyword-only to derive; MergeStrategy enum
-│   └── src/prompt.rs            #   fn derive(.., *, validators=None, merge=Replace); marshal MergeStrategy
-└── prompting-press-node/        # napi binding — add merge into derive options object; MergeStrategy
-    └── src/prompt.rs            #   derive marshals MergeStrategy
+│   └── src/prompt.rs            #   NEW: MergeStrategy, DeriveOptions{strategy}, derive_with,
+│                                #        and the SHARED merge_definitions(base,overlay,strategy)
+│                                #        helper (serde_json::Value space) — the single source
+├── prompting-press-py/          # PyO3 binding — add strategy= keyword-only to derive; MergeStrategy enum
+│   └── src/prompt.rs            #   derive(.., *, validators=None, strategy=Replace); delegates to consumer
+└── prompting-press-node/        # napi binding — REFACTOR derive_prompt to call the shared helper
+    └── src/prompt.rs            #   replace private shallow_merge_json; marshal MergeStrategy; call helper
 
 packages/
 ├── python/                      # Pydantic facade — export MergeStrategy; keyword-only merge=

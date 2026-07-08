@@ -10,13 +10,13 @@ A small closed enumeration selecting how `derive` combines overlay fields with t
 | Member | Meaning |
 |---|---|
 | `Replace` (default) | Each overlay-present top-level field replaces that whole field (today's behavior). |
-| `Shallow` | Map-typed fields union at top-level keys (child-wins, whole-entry); scalar fields replace. |
+| `Merge` | Map-typed fields union at top-level keys (child-wins, whole-entry); scalar fields replace. |
 
 - **Excluded (reserved axis, C-08):** `Deep`, `None` — not implemented; addable later as new
   members without a new method or breaking signature.
-- **Per-language representation** (clarify): Rust `enum MergeStrategy { Replace, Shallow }` with
-  `impl Default` → `Replace`; Python importable `MergeStrategy` enum (`REPLACE`/`SHALLOW`);
-  TypeScript exported const/enum (`Replace`/`Shallow`).
+- **Per-language representation** (clarify): Rust `enum MergeStrategy { Replace, Merge }` with
+  `impl Default` → `Replace`; Python importable `MergeStrategy` enum (`REPLACE`/`MERGE`);
+  TypeScript exported const/enum (`Replace`/`Merge`).
 - **Default:** `Replace` in all three (non-breaking).
 - **Invalid value:** unrepresentable in Rust (type); structured error in Python/TS (FR-011).
 
@@ -30,15 +30,15 @@ A small closed enumeration selecting how `derive` combines overlay fields with t
 
 - Used with struct-update `..Default::default()`; forward-extensible (future options append here).
 - Python/TS do not need this struct — Python uses keyword-only args; TS uses an inline options
-  object literal `{ validators?, merge? }`.
+  object literal `{ validators?, strategy? }`.
 
 ## Entity: PromptOverlay (existing — unchanged shape)
 
 The existing partial set of top-level prompt-definition fields passed to `derive`
 (`name`, `role`, `body`, `variables`, `variants`, `output_model`, `metadata`; all optional).
-Unchanged by this feature; the `merge` strategy governs how its **map** fields combine.
+Unchanged by this feature; the `strategy` selector governs how its **map** fields combine.
 
-- **Map-typed fields** (subject to union under `Shallow`): `variables`, `variants`, `metadata`.
+- **Map-typed fields** (subject to union under `Merge`): `variables`, `variants`, `metadata`.
 - **Scalar fields** (always replace when present): `name`, `role`, `body`, `output_model`.
 
 ## Merge algorithm (data behavior)
@@ -54,7 +54,7 @@ for each top-level field F:
     else (F is a map: variables/variants/metadata):
         if strategy == Replace:
             merged.F = overlay.F                # wholesale replace (today)
-        else (strategy == Shallow):
+        else (strategy == Merge):
             merged.F = { ...base.F, ...overlay.F }   # top-level key union, child-wins,
                                                      # whole-entry (NO recursion)
 merged  ->  Prompt::new(merged)                 # re-validate whole: agreement, parse,
@@ -69,7 +69,7 @@ merged  ->  Prompt::new(merged)                 # re-validate whole: agreement, 
 - **INV-3 (soundness):** `merged` always passes through the full validating constructor; a merge
   that yields an agreement violation or (Py/TS) an uncovered `validation_required` variable fails
   at construction (SC-004).
-- **INV-4 (no recursion):** on a map-key collision under `Shallow`, the overlay's entry replaces
+- **INV-4 (no recursion):** on a map-key collision under `Merge`, the overlay's entry replaces
   the base's entry wholesale; entry internals are never merged (that would be `Deep`, excluded).
-- **INV-5 (empty map):** an overlay map supplied as empty contributes no keys under `Shallow`
+- **INV-5 (empty map):** an overlay map supplied as empty contributes no keys under `Merge`
   (base map unchanged); it is not a way to clear a map (that is `Replace` with an empty map).

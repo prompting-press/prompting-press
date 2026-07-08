@@ -9,16 +9,16 @@ and [data-model.md](./data-model.md) for the surface + algorithm.
 - Workspace builds green (`cargo build`, the Python wheel, the npm addon) on the feature branch.
 - No new dependencies required.
 
-## Scenario 1 — Shallow merge unions variables (US1, the motivating case)
+## Scenario 1 — Merge strategy unions variables (US1, the motivating case)
 
 **Setup:** a base prompt declaring `variables: { extraction }`; an overlay adding
 `variables: { sentiment }` and a body referencing both.
 
-**Run:** derive with `Shallow`.
+**Run:** derive with `Merge`.
 
-- Rust: `base.derive_with(overlay, DeriveOptions { merge: MergeStrategy::Shallow })?`
-- Python: `base.derive(overlay, merge=MergeStrategy.SHALLOW)`
-- TS: `base.derive(overlay, { merge: MergeStrategy.Shallow })`
+- Rust: `base.derive_with(overlay, DeriveOptions { strategy: MergeStrategy::Merge })?`
+- Python: `base.derive(overlay, strategy=MergeStrategy.MERGE)`
+- TS: `base.derive(overlay, { strategy: MergeStrategy.Merge })`
 
 **Expected:** derived prompt declares `{ extraction, sentiment }`; base still declares
 `{ extraction }` (immutability); rendering the child with both variables succeeds.
@@ -38,15 +38,15 @@ identical to today. Existing `derive` test suites pass unchanged.
 **Setup:** base `variables: { extraction: {type: string, trusted: false} }`; overlay
 `variables: { extraction: {type: string, trusted: true} }`.
 
-**Run:** derive with `Shallow`.
+**Run:** derive with `Merge`.
 
 **Expected:** derived `extraction` == the overlay's entry (`trusted: true`), whole-entry — no
 field-level merge inside the entry.
 
-## Scenario 4 — Shallow merge that breaks agreement fails at construction (SC-004 / INV-3)
+## Scenario 4 — Merge that breaks agreement fails at construction (SC-004 / INV-3)
 
 **Setup:** base body references `{{ extraction }}`; overlay `body: "... {{ missing }}"` with no
-`missing` in base or overlay variables; `Shallow`.
+`missing` in base or overlay variables; `Merge`.
 
 **Expected:** construction fails with the structured agreement error (referenced root not in the
 merged declared variables) — no silent acceptance.
@@ -54,7 +54,7 @@ merged declared variables) — no silent acceptance.
 ## Scenario 5 — validation_required coverage against the merged set (FR-009)
 
 **Setup (Python/TS):** overlay adds a `validation_required` variable the effective validator does
-not cover; `Shallow`.
+not cover; `Merge`.
 
 **Expected:** raises/throws at construction (coverage evaluated over the merged variable set).
 **Rust:** the analogous mismatch is a compile-time error at the `render::<V>` site — NO runtime
@@ -62,7 +62,7 @@ coverage throw.
 
 ## Scenario 6 — Cross-binding parity (SC-003 / R7)
 
-**Run:** the same base + overlay + `Shallow` through all three bindings; capture the merged
+**Run:** the same base + overlay + `Merge` through all three bindings; capture the merged
 definition (canonical serialized form) + render + `template_hash`/`render_hash`.
 
 **Expected:** all three produce equal serialized merged definitions and equal hashes (conformance

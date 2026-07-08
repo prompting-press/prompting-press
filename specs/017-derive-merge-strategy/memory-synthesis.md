@@ -2,7 +2,7 @@
 
 ## Current Scope
 
-Spec 017 — add a `merge` strategy (`Replace` default | `Shallow`) to the immutable
+Spec 017 — add a `merge` strategy (`Replace` default | `Merge`) to the immutable
 `Prompt.derive` primitive, across the Rust consumer (`prompting-press`) and the Python + TS
 bindings that delegate to it. Consumer/binding layer only; `prompting-press-core` kernel and the
 JSON Schema are untouched. Carries the v3.0.0 constitution repositioning statement + a Principle
@@ -47,8 +47,8 @@ VI clarification.
 
 ## Conflict Warnings
 
-- **Soft:** 017 reverses spec-008 §9b's "replace is the only semantic" by adding `Shallow`. Resolved
-  by keeping `Replace` the default (non-breaking) and gating `Shallow` behind the explicit selector.
+- **Soft:** 017 reverses spec-008 §9b's "replace is the only semantic" by adding `Merge`. Resolved
+  by keeping `Replace` the default (non-breaking) and gating `Merge` behind the explicit selector.
   No hard conflict: §9b chose replace to avoid deep-merge's delete-expressibility problem; 017
   excludes `deep` for the same reason, so the §9b rationale is honored.
 - No hard conflicts with constitution principles: 017 stays in-boundary (no I/O, no kernel change,

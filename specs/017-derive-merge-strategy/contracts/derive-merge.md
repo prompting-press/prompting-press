@@ -10,12 +10,12 @@ The public call shape for the merge strategy in each binding. Semantics are iden
 pub enum MergeStrategy {
     #[default]
     Replace,
-    Shallow,
+    Merge,
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct DeriveOptions {
-    pub merge: MergeStrategy,
+    pub strategy: MergeStrategy,
 }
 
 impl<V: /* existing validate bound */> Prompt<V> {
@@ -30,13 +30,16 @@ impl<V: /* existing validate bound */> Prompt<V> {
 
 - Unknown strategy: unrepresentable (type). No runtime `validation_required` coverage throw
   (compile-time via `V`).
+- **Single-source merge (FR-018):** the union algorithm lives in ONE consumer helper
+  (`merge_definitions(base, overlay, strategy)` operating in `serde_json::Value` space). Both
+  `derive`/`derive_with` and the Node binding call it. There is no second union implementation.
 
 ## Python (`prompting-press` wheel)
 
 ```python
 class MergeStrategy(enum.Enum):
     REPLACE = "replace"
-    SHALLOW = "shallow"
+    MERGE = "merge"
 
 class Prompt:
     def derive(
@@ -44,37 +47,41 @@ class Prompt:
         overlay: dict,
         *,
         validators: ValidatorMap | None = None,
-        merge: MergeStrategy = MergeStrategy.REPLACE,
+        strategy: MergeStrategy = MergeStrategy.REPLACE,
     ) -> "Prompt": ...
 ```
 
-- `merge` is **keyword-only** (C-11). Unknown value → structured `PromptValidationError`-family
+- `strategy` is **keyword-only** (C-11). Unknown value → structured `PromptValidationError`-family
   error. Uncovered `validation_required` in the merged set → raises at construction.
 
 ## TypeScript (`prompting-press` npm)
 
 ```ts
-export const MergeStrategy = { Replace: "replace", Shallow: "shallow" } as const;
+export const MergeStrategy = { Replace: "replace", Merge: "merge" } as const;
 export type MergeStrategy = (typeof MergeStrategy)[keyof typeof MergeStrategy];
 
 class Prompt {
   // BREAKING (0.x): optional tail moves into an options object (C-11).
   derive(
     overlay: Partial<PromptDefinition>,
-    options?: { validators?: ValidatorMap; merge?: MergeStrategy },
+    options?: { validators?: ValidatorMap; strategy?: MergeStrategy },
   ): Prompt;
 }
 ```
 
-- `merge` rides the options object (C-11). Unknown value → structured thrown error. Uncovered
+- `strategy` rides the options object (C-11). Unknown value → structured thrown error. Uncovered
   `validation_required` in the merged set → throws at construction.
 
 ## Cross-binding contract (all three)
 
 - **Default** (`Replace` / omitted): output byte-identical to today's `derive` for the same
   overlay.
-- **`Shallow`**: `variables`/`variants`/`metadata` union top-level keys (child-wins, whole-entry);
+- **`Merge`**: `variables`/`variants`/`metadata` union top-level keys (child-wins, whole-entry);
   scalars replace; merged whole re-validated.
 - **Immutable**: base prompt unchanged; a new prompt (or structured error) is returned.
 - **Parity**: identical overlay + strategy → identical merged definition (canonical serialized
-  form, D1) + identical render/`template_hash`/`render_hash` across bindings.
+  form, D1) + identical render/`template_hash`/`render_hash` across bindings — guaranteed by the
+  single shared `merge_definitions` helper (FR-018), not by two implementations kept in sync.
+- **Node binding**: its construction path calls the shared consumer helper with the selected
+  `MergeStrategy` (replacing its former private `shallow_merge_json`), keeping the no-`Deserialize`
+  property (the helper takes JSON values).

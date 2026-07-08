@@ -31,11 +31,12 @@ via the amendment (FR-015/016/017) and to `docs/memory/decisions/` at archive ti
 
 ## Resolved at clarify (Session 2026-07-08)
 
-1. RESOLVED — Rust surface: a `Default`-implementing **`DeriveOptions { merge: MergeStrategy }`**
-   struct (`..Default::default()`), NOT a bare enum param and NOT a `derive_merged` method.
-   Non-breaking + forward-extensible + idiomatic defaultable config.
+1. RESOLVED — Rust surface: a `Default`-implementing **`DeriveOptions { strategy: MergeStrategy }`**
+   struct (`..Default::default()`), consumed by `derive_with`; `derive(overlay)` keeps its exact
+   signature (= `Replace`). NOT a bare enum param, NOT a `derive_merged` method. The union algorithm
+   is the shared `merge_definitions` helper both the typed path and Node call (FR-018).
 2. RESOLVED — value type: a shared first-class **`MergeStrategy` enum/const** in every binding
-   (Py `MergeStrategy.SHALLOW`, TS `MergeStrategy.Shallow`). Python keyword-only `merge=`; TS
+   (Py `MergeStrategy.MERGE`, TS `MergeStrategy.Merge`) — renamed from `Shallow` post-adversarial-review. Python keyword-only `strategy=`; TS
    inside the existing derive options object.
 3. RESOLVED — default stays `Replace` (non-breaking) in all three.
 
