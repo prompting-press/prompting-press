@@ -210,6 +210,14 @@ get variant(): string
 
 The resolved variant name (the reserved `default`, or the named arm).
 
+#### `provenanceAttributes`
+
+```ts
+provenanceAttributes(): Record<string, string>
+```
+
+Return the four provenance fields as a flat `prompting_press.prompt.*` attribute map. Returns a `Record<string, string>` (marshaled from a `HashMap<String, String>` by napi) containing exactly four entries keyed by the library-owned `prompting_press.prompt.*` constants. Suitable for direct use as telemetry span attributes. The map is an explicit allowlist — it NEVER includes `text`, `guard`, `output_model`, or any other field. It requires no telemetry dependency. Keys are NOT `OTel` `gen_ai.*` keys; a consumer may remap them.
+
 ## GuardConfig
 
 ### `GuardConfig`

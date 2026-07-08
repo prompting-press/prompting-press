@@ -277,6 +277,17 @@ variant: <read-only property>
 
 The resolved variant name (the reserved `default`, or the named arm).
 
+#### `provenance_attributes`
+
+```python
+provenance_attributes(self, /)
+```
+
+Return the four provenance fields as a flat `prompting_press.prompt.*` attribute map. Returns a `dict[str, str]` containing exactly four entries keyed by the library-owned
+`prompting_press.prompt.*` constants. Suitable for direct use as telemetry span
+attributes (e.g. `span.set_attributes(result.provenance_attributes)`). The map is an explicit allowlist — it NEVER includes `text`, `guard`,
+`output_model`, or any other field. It requires no telemetry dependency. Keys are NOT `OTel` `gen_ai.*` keys; a consumer may remap them.
+
 ## GuardConfig
 
 ### `GuardConfig`
