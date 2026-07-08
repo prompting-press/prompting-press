@@ -53,7 +53,7 @@ variables:
 def render_greet() -> object:
     """Render the greeting prompt and return the RenderResult."""
     p = Prompt.from_yaml(GREET_YAML)
-    return p.render(Greeting, Greeting(name="Ada", count=3))
+    return p.render(Greeting, data={"name": "Ada", "count": 3})
 
 
 # ── T008 (US1) ───────────────────────────────────────────────────────────────────────────
@@ -123,8 +123,8 @@ def test_provenance_attributes_is_deterministic() -> None:
     """Two identical renders produce identical attribute maps (SC-003)."""
     p = Prompt.from_yaml(GREET_YAML)
     g = Greeting(name="Ada", count=3)
-    attrs1 = p.render(Greeting, g).provenance_attributes()
-    attrs2 = p.render(Greeting, g).provenance_attributes()
+    attrs1 = p.render(g).provenance_attributes()
+    attrs2 = p.render(g).provenance_attributes()
     assert attrs1 == attrs2, "identical renders must produce identical attribute maps"
 
 

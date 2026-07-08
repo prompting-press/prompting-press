@@ -134,7 +134,7 @@ impl RenderResult {
     ///
     /// The map is an explicit allowlist — it NEVER includes `text`, `guard`,
     /// `output_model`, or any other field (FR-007). It requires no telemetry dependency
-    /// (FR-006). Keys are NOT OTel gen_ai.* keys; a consumer may remap them.
+    /// (FR-006). Keys are NOT `OTel` `gen_ai.*` keys; a consumer may remap them.
     #[napi]
     #[must_use]
     pub fn provenance_attributes(&self) -> std::collections::HashMap<String, String> {

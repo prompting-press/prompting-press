@@ -4,7 +4,7 @@
 //!             default-variant render yields `prompting_press.prompt.variant == "default"`.
 //! T011 (US2): no telemetry dependency (manifest check is in CI; this asserts no dep is
 //!             pulled into the test binary).
-//! T012 (US2): exactly 4 keys; map excludes text/guard/metadata/output_model; pure.
+//! T012 (US2): exactly 4 keys; map excludes text/guard/metadata/`output_model`; pure.
 //! T013 (US3): the four fields remain publicly readable; a custom-keyed map is buildable.
 
 use garde::Validate;
@@ -129,7 +129,7 @@ fn free_fn_and_trait_produce_identical_maps() {
 
 // ── T012 (US2) ───────────────────────────────────────────────────────────────────────────
 
-/// T012 — map excludes text, guard text, metadata, and output_model (FR-007, SC-004, SEC-001).
+/// T012 — map excludes text, guard text, metadata, and `output_model` (FR-007, SC-004, SEC-001).
 /// The map is an explicit allowlist — these keys must never appear.
 #[test]
 fn provenance_attributes_excludes_non_provenance_fields() {

@@ -9,7 +9,7 @@
 //!
 //! - Exactly **four entries** are emitted — an explicit allowlist, never reflection.
 //!   A future field added to `RenderResult` cannot leak into the map (FR-007, SC-004).
-//! - Keys are **library-owned** (`prompting_press.prompt.*`). They are NOT OTel gen_ai.*
+//! - Keys are **library-owned** (`prompting_press.prompt.*`). They are NOT `OTel` `gen_ai.*`
 //!   keys. A consumer may remap them onto their tracer's convention (FR-003).
 //! - Pure: no I/O, no mutation, no callbacks (FR-004, FR-005).
 //! - No telemetry / observability dependency is introduced (FR-006, SC-002).
@@ -141,7 +141,7 @@ mod tests {
         assert_eq!(map[KEY_RENDER_HASH], "def456");
     }
 
-    /// T003 — deterministic iteration order (BTreeMap ensures alphabetical key order).
+    /// T003 — deterministic iteration order (`BTreeMap` ensures alphabetical key order).
     #[test]
     fn provenance_attributes_of_is_deterministic() {
         let map1 = provenance_attributes_of("p", "v", "th", "rh");
@@ -168,7 +168,7 @@ mod tests {
         );
     }
 
-    /// T007 — extension trait gives result.provenance_attributes(); default variant → "default".
+    /// T007 — extension trait gives `result.provenance_attributes()`; default variant → "default".
     #[test]
     fn extension_trait_provenance_attributes_matches_free_fn() {
         use garde::Validate;

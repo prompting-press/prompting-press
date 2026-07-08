@@ -61,7 +61,7 @@ test("provenanceAttributes() contains all four library-owned keys", () => {
 	const attrs = result.provenanceAttributes();
 
 	for (const key of EXPECTED_KEYS) {
-		assert.ok(Object.prototype.hasOwnProperty.call(attrs, key), `missing key: ${key}`);
+		assert.ok(Object.hasOwn(attrs, key), `missing key: ${key}`);
 	}
 });
 
@@ -112,7 +112,11 @@ test("provenanceAttributes() is deterministic — two identical renders produce 
 	const attrs1 = p.render({ name: "Ada", count: 3 }).provenanceAttributes();
 	const attrs2 = p.render({ name: "Ada", count: 3 }).provenanceAttributes();
 
-	assert.deepEqual(attrs1, attrs2, "identical renders must produce identical attribute maps (SC-003)");
+	assert.deepEqual(
+		attrs1,
+		attrs2,
+		"identical renders must produce identical attribute maps (SC-003)",
+	);
 });
 
 // ── T012 (US2) — exactly 4 keys; named exclusions ────────────────────────────────────────
