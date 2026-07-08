@@ -13,6 +13,23 @@ returns raw text; it is NOT fused into prompt construction, and there is NO name
 container/registry in this feature (that is deferred to its own spec). Heavier storage backends
 (cloud/object stores) are deferred to opt-in extras.
 
+## Clarifications
+
+### Session 2026-07-08 (proposed defaults — user away; revisit if needed)
+
+- Q: What is the loader interface member + error type? → A: `load(key) -> str` (sync Py/Rust; async
+  `Promise<string>` TS). Failure raises/returns a **`LoadError`** that normalizes into the existing
+  common error family (`[{field, code, message}]`, C-06) with a code such as `not_found` / `io` —
+  reusing the crate's `ConsumerError::Load` lineage rather than a bespoke parallel exception
+  hierarchy. It stays a DISTINCT surface from construct-from-text (parse/validation) errors.
+- Q: How does `FileSystemLoader` map a key to a file, and how is traversal handled? → A: `base`
+  directory + a `suffix` (default `.yaml`); `load(key)` reads `{base}/{key}{suffix}`. Keys are
+  treated as relative paths under `base`; a key that escapes `base` (e.g. via `..`) MUST be
+  rejected with a `LoadError` (path-traversal guard — a security default), not read.
+- Q: Rust interface shape? → A: an object-safe `trait PromptLoader { fn load(&self, key: &str) ->
+  Result<String, LoadError>; }` (usable as `dyn PromptLoader`) plus a **blanket impl** for
+  `Fn(&str) -> Result<String, LoadError>` so a closure works as a loader without a struct.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Load prompt source from the filesystem behind a swappable interface (Priority: P1)
@@ -118,13 +135,18 @@ confirm it works interchangeably with the built-ins, including its failure behav
 
 ### Functional Requirements
 
-- **FR-001**: The library MUST define a **loader interface** whose single operation takes a logical
-  key and returns the prompt source as **raw text**. The interface MUST be language-native in each
-  binding (an implementable protocol/trait/interface), so consumers can provide their own
-  implementations.
+- **FR-001**: The library MUST define a **loader interface** whose single operation `load(key)`
+  takes a logical key and returns the prompt source as **raw text**. The interface MUST be
+  language-native in each binding (an implementable protocol/trait/interface), so consumers can
+  provide their own implementations. In Rust it MUST be object-safe (usable as `dyn PromptLoader`)
+  with a **blanket impl** for `Fn(&str) -> Result<String, LoadError>` so a closure works as a loader
+  without defining a struct; Python/TS provide equivalent callable/function coercion.
 - **FR-002**: The library MUST ship a **filesystem loader** built-in that maps a logical key to a
-  file under a configured base location (with a configurable file-name convention) and returns that
-  file's raw text.
+  file under a configured **base** directory with a configurable **suffix** (default `.yaml`),
+  reading `{base}/{key}{suffix}` and returning that file's raw text.
+- **FR-002a** (security): The filesystem loader MUST treat keys as relative paths under `base` and
+  MUST **reject a key that escapes `base`** (e.g. via `..` traversal or an absolute path) with a
+  `LoadError`, rather than reading outside the configured base directory.
 - **FR-003**: The library MUST ship an **in-memory loader** built-in constructed from a key→text
   mapping, returning the mapped text.
 - **FR-004**: Both built-in loaders MUST ship in the **standard package** (no extra install
@@ -138,8 +160,11 @@ confirm it works interchangeably with the built-ins, including its failure behav
 - **FR-007**: A **load error** MUST be a distinct, documented error surface from a
   construct-from-text (parse/validation) error, so a consumer can distinguish an I/O/lookup failure
   from a content failure.
-- **FR-008**: The built-in loaders MUST raise/return the library's **normalized load-error type** on
-  failure. The custom-loader contract MUST **document** raising that type for normalized handling,
+- **FR-008**: The built-in loaders MUST raise/return the library's **normalized `LoadError`** on
+  failure, which MUST normalize into the existing common error family (`[{field, code, message}]`,
+  C-06; reusing the `ConsumerError::Load` lineage) with a code such as `not_found` / `io` — not a
+  bespoke parallel exception hierarchy. The custom-loader contract MUST **document** raising that type
+  for normalized handling,
   while allowing a custom loader's own error to propagate as-is (the library MUST NOT silently
   catch-and-wrap arbitrary third-party errors).
 - **FR-009**: The loader operation MUST follow each language's native I/O idiom regarding
@@ -218,6 +243,8 @@ confirm it works interchangeably with the built-ins, including its failure behav
   opt-in seam; Principle III softened for a caller-invoked language-side loader while the kernel and
   construction stay I/O-free), cites the spec-017 repositioning statement, and the amendment is
   recorded in `DECISIONS.md` and the roadmap with rendered copies in sync.
+- **SC-008**: The filesystem loader rejects a path-traversal key (e.g. `../secret`) with a
+  `LoadError` and never reads a file outside its configured `base` directory — verified by a test.
 
 ## Assumptions
 
