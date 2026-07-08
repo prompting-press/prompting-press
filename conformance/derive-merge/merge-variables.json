@@ -1,0 +1,66 @@
+{
+  "case": "merge-variables",
+  "description": "derive() with MergeStrategy::Merge unions variables (base {extraction} + overlay {sentiment} → {extraction, sentiment}), then renders with both. Includes a metadata value with a decimal string to exercise the D1 canonical serialized-form invariant: the shared merge_definitions helper must keep the value byte-identical across bindings (SC-003, research R7, spec 017 T017).",
+  "base": {
+    "name": "analyst",
+    "role": "user",
+    "body": "{{ extraction }}",
+    "variables": {
+      "extraction": {
+        "type": "string",
+        "trusted": true
+      }
+    },
+    "metadata": {
+      "precision_value": "0.00000000000000001"
+    }
+  },
+  "overlay": {
+    "body": "{{ extraction }} | {{ sentiment }}",
+    "variables": {
+      "sentiment": {
+        "type": "string",
+        "trusted": true
+      }
+    },
+    "metadata": {
+      "overlay_key": "added_by_overlay"
+    }
+  },
+  "strategy": "merge",
+  "expected_merged": {
+    "name": "analyst",
+    "role": "user",
+    "body": "{{ extraction }} | {{ sentiment }}",
+    "variables": {
+      "extraction": {
+        "type": "string",
+        "trusted": true
+      },
+      "sentiment": {
+        "type": "string",
+        "trusted": true
+      }
+    },
+    "metadata": {
+      "precision_value": "0.00000000000000001",
+      "overlay_key": "added_by_overlay"
+    }
+  },
+  "render_input": {
+    "extraction": {
+      "type": "string",
+      "value": "bullish trend detected"
+    },
+    "sentiment": {
+      "type": "string",
+      "value": "positive"
+    }
+  },
+  "expected_render": {
+    "text": "bullish trend detected | positive",
+    "template_hash": "",
+    "render_hash": ""
+  },
+  "note": "expected_render.{template_hash,render_hash} are populated by the Rust golden generator (conformance:regen). The initial empty strings are replaced on first regen run. The structural assertions (variables union, metadata union) are the primary parity contract."
+}

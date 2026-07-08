@@ -618,6 +618,9 @@ for (const itemId of rootModuleItems) {
 const SYMBOL_TO_GROUP = new Map([
 	["Prompt", "Prompt"],
 	["PromptOverlay", "Prompt"],
+	["DeriveOptions", "Prompt"],
+	["MergeStrategy", "Prompt"],
+	["merge_definitions", "Prompt"],
 	["core_version", "Prompt"],
 
 	["RenderResult", "RenderResult"],

@@ -3,6 +3,62 @@
 Records constitution amendments per the Governance section's amendment policy (written rationale +
 version bump + propagation). Newest first.
 
+## 2026-07-08 — v2.0.0 → v3.0.0 (MAJOR): repositioning statement + spec-008 FR-017(b) redefined
+
+**Change**: TWO amendments land with spec 017 (derive() merge strategy):
+
+1. **One-time repositioning statement** (Preamble, v3.0.0): Prompting Press extends its thesis from
+   "minimal, validation-blind core" to "a **minimal, validation-blind core PLUS earned, opt-in seams**,"
+   motivated by a real second consumer (Bellwether). Every new seam still requires two concrete consumers
+   to justify it (Scope Discipline). This statement is the shared constitutional anchor for specs 018 and
+   019 (#270, #268).
+
+2. **Redefinition of spec-008 FR-017(b)** (Principle VI clarification, v3.0.0): The shipped spec-008
+   FR-017(b) mandated that the only way to vary a prompt is a copy-with-overlay that
+   **"shallow-replaces each supplied top-level field (no deep merge)"**. Introducing
+   `MergeStrategy::Merge` — a top-level key union of `variables`/`variants`/`metadata` — is a
+   **backward-incompatible redefinition** of that FR: "overlay MAY union under `Merge`" supersedes
+   "wholesale-replace only / no deep merge". This is analogous to how spec-015 redefined spec-002's
+   guard body-invariant, and it drives the MAJOR version bump. The old FR-017(b) wording is **retired**.
+
+   Additionally, Principle VI gains an additive clause: `derive` gains a merge-strategy axis
+   (`MergeStrategy { Replace (default), Merge }`); the compile-time-vs-runtime `validation_required`
+   coverage asymmetry from the spec-008 amendment is preserved. (On its own this would be MINOR, but
+   the FR-017(b) redefinition makes the overall change MAJOR.)
+
+**Why (rationale)**: Bellwether needs to derive a family of prompts that each inherit a shared `extraction`
+variable and add their own — without hand-spreading the base's variables into every child overlay. A
+top-level key union (`{...base, ...overlay}`) delivers this with zero new concepts; `Replace` stays the
+default so all existing call sites are non-breaking. The union algorithm is implemented once in the
+consumer crate (`merge_definitions` in `serde_json::Value` space) and called by both the typed Rust path
+and the Node binding (Principle I / FR-018) — byte-identical results guaranteed by construction (D1).
+
+**Breaking changes**:
+- Rust: `derive(overlay)` is unchanged. New `derive_with(overlay, DeriveOptions { strategy })` is additive.
+  `MergeStrategy` and `DeriveOptions` are new public types in `prompting-press`.
+- Python: `derive(overlay, *, strategy=MergeStrategy.REPLACE)` — keyword-only `strategy` is additive;
+  no existing call site changes behavior (default Replace). `MergeStrategy` is a new export.
+- TypeScript: `derive(overlay, options?)` — **BREAKING at 0.x**: `validators` moves inside the options
+  object (`{ validators?, strategy? }`). Migrate `derive(overlay, validators)` →
+  `derive(overlay, { validators })`. `MergeStrategy` const/union is a new export.
+
+**Version bump**: MAJOR (3.0.0) — spec-008 FR-017(b) redefined backward-incompatibly (analogous to
+spec-015 redefining spec-002's guard invariant → v2.0.0).
+
+**Propagation list**:
+- ✅ `.specify/memory/constitution.md` — repositioning statement + Principle VI clause + version line.
+- ✅ `.specify/memory/DECISIONS.md` (this entry).
+- ✅ `.specify/memory/roadmap.md` — spec 017 entry added / updated.
+- ⚠ `CLAUDE.md` + `AGENTS.md` — `apm compile` not runnable in the worktree; reviewer regenerates
+  after merge (T022 deferred; noted in tasks.md).
+- ⚠ `.specify/templates/{plan,spec,tasks}-template.md` — no structural template change required.
+
+**Note**: Authored directly (implementation subagent, not via `/speckit.constitution`) under explicit
+tasking. A later `/speckit.constitution` pass may re-derive the sync-impact report; the change itself
+is faithful to the amendment policy.
+
+---
+
 ## 2026-06-30 — v1.2.0 → v2.0.0 (MAJOR): guard delimits untrusted values in the body
 
 **Change**: The opt-in guard, when enabled, now **delimits untrusted values directly in the rendered

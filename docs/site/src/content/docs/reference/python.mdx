@@ -8,6 +8,33 @@ description: "API reference for the prompting-press python binding. Generated fr
 
 ## Prompt
 
+### `MergeStrategy`
+
+```python
+class MergeStrategy
+```
+
+The merge strategy for [`Prompt.derive`]. - `REPLACE` (default) — each overlay-present field replaces the base's field wholesale. Byte-identical to the pre-017 behavior.
+- `MERGE` — map-typed fields (`variables`, `variants`, `metadata`) union at top-level keys (child-wins-whole-entry, no recursion). Scalar fields replace when overlay-present. Pass as a keyword argument: `prompt.derive(overlay, strategy=MergeStrategy.MERGE)`.
+
+#### `MERGE`
+
+```python
+MERGE(self)
+```
+
+The merge strategy for [`Prompt.derive`]. - `REPLACE` (default) — each overlay-present field replaces the base's field wholesale. Byte-identical to the pre-017 behavior.
+- `MERGE` — map-typed fields (`variables`, `variants`, `metadata`) union at top-level keys (child-wins-whole-entry, no recursion). Scalar fields replace when overlay-present. Pass as a keyword argument: `prompt.derive(overlay, strategy=MergeStrategy.MERGE)`.
+
+#### `REPLACE`
+
+```python
+REPLACE(self)
+```
+
+The merge strategy for [`Prompt.derive`]. - `REPLACE` (default) — each overlay-present field replaces the base's field wholesale. Byte-identical to the pre-017 behavior.
+- `MERGE` — map-typed fields (`variables`, `variants`, `metadata`) union at top-level keys (child-wins-whole-entry, no recursion). Scalar fields replace when overlay-present. Pass as a keyword argument: `prompt.derive(overlay, strategy=MergeStrategy.MERGE)`.
+
 ### `Prompt`
 
 ```python
@@ -101,17 +128,20 @@ renders, never mutates.
 #### `derive`
 
 ```python
-derive(self, /, overlay, *, validators=None)
+derive(self, /, overlay, *, validators=None, strategy=None)
 ```
 
-The sole mutator: shallow-replace top-level fields, re-validate, return a new `Prompt`. ```python
-derived = p.derive(overlay, *, validators=None)
+The sole mutator: shallow-replace (or union) top-level fields, re-validate, return a
+new `Prompt`. ```python
+derived = p.derive(overlay, *, validators=None, strategy=MergeStrategy.REPLACE)
 ``` `overlay` is a `dict` of top-level fields to replace (any subset of `name`, `role`,
-`body`, `variables`, `variants`, `output_model`, `metadata`). Fields absent
-from the dict are kept from the original. The merged definition is routed through the
-Rust consumer's `Prompt::derive` (full re-validation: agreement, parse, reserved name). Validators carry forward from `self` by default. Pass `validators=SomeModel` to
+`body`, `variables`, `variants`, `output_model`, `metadata`). Fields absent from the
+dict are kept from the original. The merged definition is routed through the Rust
+consumer's `Prompt::derive_with` (full re-validation: agreement, parse, reserved name). `strategy` selects how map-typed fields (`variables`, `variants`, `metadata`) combine:
+- `MergeStrategy.REPLACE` (default) — overlay replaces each present field wholesale.
+- `MergeStrategy.MERGE` — union top-level keys (child-wins, no recursion); scalars replace. Validators carry forward from `self` by default. Pass `validators=SomeModel` to
 override or augment the bound validator on the derived prompt. Coverage is re-checked
-against the merged definition. The original `Prompt` is untouched (immutability guaranteed). # Errors - [`PromptValidationError`](crate::error::PromptValidationError) — the merged definition violates any construction invariant, or the (carried/supplied) validators do not cover a `validation_required` variable in the merged definition.
+against the merged variable set. The original `Prompt` is untouched (immutability guaranteed). # Errors - [`PromptValidationError`](crate::error::PromptValidationError) — the merged definition violates any construction invariant, or the (carried/supplied) validators do not cover a `validation_required` variable in the merged definition.
 - [`LoadError`](crate::error::LoadError) — `overlay` could not be deserialized.
 
 #### `from_json`

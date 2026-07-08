@@ -429,10 +429,13 @@ test("T045: derive() carries validators forward from source by default (R6)", ()
 	assert.throws(() => derived.render({ name: "", count: -1 }), PromptValidationError);
 });
 
-test("T045: derive(overlay, validators) overrides bound validator on derived prompt (R6)", () => {
+test("T045: derive(overlay, { validators }) overrides bound validator on derived prompt (R6)", () => {
 	const p = new Prompt(GREET_SHAPE, Greeting);
 	const NoCheck = z.object({ name: z.string(), count: z.number() });
-	const derived = p.derive({ body: "Hi {{ name }}, you have {{ count }} messages" }, NoCheck);
+	const derived = p.derive(
+		{ body: "Hi {{ name }}, you have {{ count }} messages" },
+		{ validators: NoCheck },
+	);
 	// Derived has NoCheck as its bound validator — the count=-1 should now pass (no refine).
 	const result = derived.render({ name: "Eli", count: -1 });
 	assert.equal(result.text, "Hi Eli, you have -1 messages");
@@ -459,6 +462,124 @@ test("T045: derive() coverage check on derived definition when validators overri
 		body: "Hi {{ name }} {{ newfield }}",
 	};
 	assert.throws(() => original.derive(badOverlay), PromptValidationError);
+});
+
+// ─── T016 (spec 017): derive() Merge strategy parity tests ───────────────────────────────
+
+import { MergeStrategy } from "../src/index.ts";
+
+test("T016: derive Merge unions variables; base unchanged (US1 / SC-001/005)", () => {
+	const baseShape = {
+		name: "base",
+		role: "user",
+		body: "{{ extraction }}",
+		variables: {
+			extraction: { type: "string", trusted: true },
+		},
+	};
+	const base = new Prompt(baseShape);
+
+	const derived = base.derive(
+		{
+			body: "{{ extraction }} {{ sentiment }}",
+			variables: { sentiment: { type: "string", trusted: true } },
+		},
+		{ strategy: MergeStrategy.Merge },
+	);
+
+	const vars = derived.variables ?? {};
+	assert.ok("extraction" in vars, "base var retained");
+	assert.ok("sentiment" in vars, "overlay var added");
+	assert.equal(Object.keys(vars).length, 2);
+
+	// Base is untouched (SC-005).
+	const baseVars = base.variables ?? {};
+	assert.ok(!("sentiment" in baseVars), "base variables unchanged");
+});
+
+test("T016: derive Merge Replace default is byte-identical (SC-002)", () => {
+	const baseShape = {
+		name: "base",
+		role: "user",
+		body: "{{ name }}",
+		variables: { name: { type: "string", trusted: true } },
+	};
+	const base = new Prompt(baseShape);
+	const overlay = { body: "Hello {{ name }}!" };
+
+	const viaNoStrategy = base.derive(overlay);
+	const viaReplace = base.derive(overlay, { strategy: MergeStrategy.Replace });
+
+	assert.equal(viaNoStrategy.body, viaReplace.body, "no-strategy == Replace (SC-002)");
+});
+
+test("T016: derive Merge unions variants", () => {
+	const baseShape = {
+		name: "base",
+		role: "user",
+		body: "{{ name }}",
+		variables: { name: { type: "string", trusted: true } },
+		variants: { v1: { body: "v1: {{ name }}" } },
+	};
+	const base = new Prompt(baseShape);
+
+	const derived = base.derive(
+		{ variants: { v2: { body: "v2: {{ name }}" } } },
+		{ strategy: MergeStrategy.Merge },
+	);
+
+	const variants = derived.variants ?? {};
+	assert.ok("v1" in variants, "base variant retained");
+	assert.ok("v2" in variants, "overlay variant added");
+});
+
+test("T016: derive Merge unions metadata; child wins on collision", () => {
+	const baseShape = {
+		name: "base",
+		role: "user",
+		body: "{{ name }}",
+		variables: { name: { type: "string", trusted: true } },
+		metadata: { base_key: "base_val", shared_key: "from_base" },
+	};
+	const base = new Prompt(baseShape);
+
+	const derived = base.derive(
+		{ metadata: { overlay_key: "overlay_val", shared_key: "from_overlay" } },
+		{ strategy: MergeStrategy.Merge },
+	);
+
+	const meta = derived.metadata ?? {};
+	assert.equal(meta.base_key, "base_val", "base metadata key retained");
+	assert.equal(meta.overlay_key, "overlay_val", "overlay metadata key added");
+	assert.equal(meta.shared_key, "from_overlay", "child wins on collision");
+});
+
+test("T016: derive Merge uncovered validation_required throws (SC-004)", () => {
+	const baseShape = {
+		name: "base",
+		role: "user",
+		body: "{{ name }}",
+		variables: {
+			name: { type: "string", trusted: true, validation_required: true },
+		},
+	};
+	const schema = z.object({ name: z.string() });
+	const base = new Prompt(baseShape, schema);
+
+	// Adding a validation_required variable not covered by the effective validator → throws.
+	assert.throws(
+		() =>
+			base.derive(
+				{
+					variables: {
+						extra: { type: "string", trusted: true, validation_required: true },
+					},
+					body: "{{ name }} {{ extra }}",
+				},
+				{ strategy: MergeStrategy.Merge },
+			),
+		PromptValidationError,
+	);
 });
 
 // ─── T046: Composition over Prompt objects, no Registry ────────────────────────────────────

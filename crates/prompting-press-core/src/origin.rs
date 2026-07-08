@@ -4,11 +4,11 @@
 //!
 //! 1. [`untrusted_fields`] — returns the set of field names declared `trusted: false`
 //!    in a definition's `variables` map. Sorted (`BTreeSet`) → deterministic.
-//! 2. [`GuardConfig`] + [`build_guard_text`] — the opt-in advisory string placed in
+//! 2. [`GuardConfig`] + `build_guard_text` — the opt-in advisory string placed in
 //!    [`crate::RenderResult::guard`]. When the guard is enabled AND untrusted fields
 //!    exist, the advisory references the `<untrusted>…</untrusted>` markers.
 //!    **Never concatenated into `text`.** Pure analysis, no mutation (FR-023).
-//! 3. [`apply_guard_prepass`] + [`guard_wrap_filter`] — the source pre-pass that
+//! 3. `apply_guard_prepass` + `guard_wrap_filter` — the source pre-pass that
 //!    rewrites `{{ EXPR }}` → `{{ (EXPR) | pp_guard_wrap }}` for any interpolation
 //!    whose root identifier(s) are untrusted, and the MiniJinja filter that performs
 //!    the actual entity-escape + delimiting at render time.
@@ -34,7 +34,7 @@ pub(crate) const CLOSE_TAG: &str = "</untrusted>";
 /// Opt-in, per render. When [`enabled`](Self::enabled) is `false`:
 /// - The rendered body is byte-identical to a plain render (the pre-pass is
 ///   not applied, no values are inspected, no entity-escaping occurs).
-/// - [`build_guard_text`] returns `None`.
+/// - `build_guard_text` returns `None`.
 ///
 /// When `enabled` is `true` AND the definition declares at least one untrusted
 /// field (`trusted: false`):
@@ -43,7 +43,7 @@ pub(crate) const CLOSE_TAG: &str = "</untrusted>";
 ///   The `pp_guard_wrap` filter entity-escapes `&`, `<`, `>` (in that order)
 ///   and wraps the result in `<untrusted>…</untrusted>`. Values of trusted
 ///   roots are never touched.
-/// - [`build_guard_text`] returns a fixed advisory string referencing the markers.
+/// - `build_guard_text` returns a fixed advisory string referencing the markers.
 ///
 /// **This is NOT a sanitizer.** Enabling the guard makes untrusted values
 /// visually locatable in the output; it is not a guarantee that a downstream

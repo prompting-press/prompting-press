@@ -154,6 +154,7 @@ API_GROUPS: list[dict[str, Any]] = [
 # Maps a public name → group title.  Every name in __all__ MUST appear here.
 _GROUP_FOR: dict[str, str] = {
     "Prompt": "Prompt",
+    "MergeStrategy": "Prompt",
     "RenderResult": "RenderResult",
     "GuardConfig": "GuardConfig",
     "CheckReport": "CheckReport",

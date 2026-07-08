@@ -28,6 +28,7 @@ from .prompting_press import (  # the compiled extension submodule
     Finding,
     GuardConfig,
     LoadError,
+    MergeStrategy,
     Message,
     Prompt,
     PromptingPressError,
@@ -53,6 +54,7 @@ __all__ = [
     "Finding",
     "GuardConfig",
     "LoadError",
+    "MergeStrategy",
     "Message",
     # Primary public type (spec 008 Phase 4).
     "Prompt",
