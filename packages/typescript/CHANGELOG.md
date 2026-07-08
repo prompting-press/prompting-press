@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/prompting-press/prompting-press/compare/prompting-press-ts-v0.2.0...prompting-press-ts-v0.3.0) (2026-07-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* add merge strategy to derive() for composing prompt variables ([#272](https://github.com/prompting-press/prompting-press/issues/272))
+
+### Features
+
+* add merge strategy to derive() for composing prompt variables ([#272](https://github.com/prompting-press/prompting-press/issues/272)) ([3f1e27f](https://github.com/prompting-press/prompting-press/commit/3f1e27f6ad98e2cb60de1db14f293aab21214c98))
+* pluggable prompt loader with filesystem and in-memory backends ([#275](https://github.com/prompting-press/prompting-press/issues/275)) ([42515d2](https://github.com/prompting-press/prompting-press/commit/42515d26432d0dc06fcfc56f4ed5ffe14bdba401))
+* provenance attributes helper for telemetry span attribution ([#274](https://github.com/prompting-press/prompting-press/issues/274)) ([af29000](https://github.com/prompting-press/prompting-press/commit/af290001a6336f77337a3ce788ed89aa61586a04))
+
 ## [0.2.0](https://github.com/prompting-press/prompting-press/compare/prompting-press-ts-v0.1.0...prompting-press-ts-v0.2.0) (2026-07-01)
 
 
