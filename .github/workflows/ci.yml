@@ -212,7 +212,7 @@ jobs:
       - name: 'Rust build cache'
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
         with:
-          shared-key: gates
+          shared-key: gates-v2
 
       # Install TypeScript workspace deps so json-schema-to-typescript is present
       # when schemas:codegen-check regenerates the TS shape. On a cold checkout
@@ -311,7 +311,7 @@ jobs:
       - name: 'Rust build cache'
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
         with:
-          shared-key: clippy
+          shared-key: clippy-v2
 
       - name: 'Clippy (-D warnings)'
         run: mise exec -- moon run ci:check-clippy
@@ -340,7 +340,7 @@ jobs:
       - name: 'Rust build cache'
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
         with:
-          shared-key: test-python
+          shared-key: test-python-v2
       - name: 'Cache pnpm + uv stores'
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
         with:
@@ -405,7 +405,7 @@ jobs:
       - name: 'Rust build cache'
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
         with:
-          shared-key: test-node
+          shared-key: test-node-v2
 
       - name: 'Spec 005 / I1: build addon + run node:test & cargo test'
         run: mise exec -- moon run ci:test-node
@@ -470,7 +470,7 @@ jobs:
       - name: 'Rust build cache'
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
         with:
-          shared-key: conformance
+          shared-key: conformance-v2
 
       - name: 'Spec 006: conformance corpus gate (all three legs)'
         run: mise exec -- moon run ci:conformance
@@ -521,7 +521,7 @@ jobs:
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
         with:
           # Per-OS cache (rust-cache already keys on the runner OS + rustc + lock).
-          shared-key: build
+          shared-key: build-v2
 
       - name: Build workspace
         run: mise exec -- cargo build --workspace --locked
@@ -579,7 +579,7 @@ jobs:
       - name: 'Rust build cache'
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
         with:
-          shared-key: samples-test
+          shared-key: samples-test-v2
 
       - name: 'T021: samples:test (all three consumer apps)'
         run: mise exec -- moon run samples:test

@@ -1542,7 +1542,7 @@ Used by:
 - **pyo3-macros 0.29.0** — <https://github.com/pyo3/pyo3>
 - **pyo3 0.29.0** — <https://github.com/pyo3/pyo3>
 - **quote 1.0.46** — <https://github.com/dtolnay/quote>
-- **rustversion 1.0.22** — <https://github.com/dtolnay/rustversion>
+- **rustversion 1.0.23** — <https://github.com/dtolnay/rustversion>
 - **ryu 1.0.23** — <https://github.com/dtolnay/ryu>
 - **serde 1.0.228** — <https://github.com/serde-rs/serde>
 - **serde_core 1.0.228** — <https://github.com/serde-rs/serde>
@@ -1810,7 +1810,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ## MIT License
 
 Used by:
-- **memchr 2.8.2** — <https://github.com/BurntSushi/memchr>
+- **memchr 2.8.3** — <https://github.com/BurntSushi/memchr>
 
 ```
 The MIT License (MIT)
