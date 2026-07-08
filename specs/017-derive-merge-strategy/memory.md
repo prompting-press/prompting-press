@@ -29,10 +29,17 @@ via the amendment (FR-015/016/017) and to `docs/memory/decisions/` at archive ti
 - 017's own edit = Principle VI clarification (merge-strategy axis; coverage asymmetry preserved).
 - Anchoring the MAJOR bump in 017 (first to land) is deliberate — thesis on record before any seam.
 
-## Open questions → clarify
+## Resolved at clarify (Session 2026-07-08)
 
-1. Rust surface: `MergeStrategy` enum param on `derive` vs. a `derive_merged` variant. (Lean enum.)
-2. TS: `with(overlay, { validators?, merge? })` (options object) vs. positional. (C-11 → options.)
-3. Confirm default stays `replace` (non-breaking).
-4. Does `variants` union genuinely have a consumer, or is it dead surface we ship for consistency?
-   (Grill decided: union all three maps for a consistent rule; note this is consistency-driven.)
+1. RESOLVED — Rust surface: a `Default`-implementing **`DeriveOptions { merge: MergeStrategy }`**
+   struct (`..Default::default()`), NOT a bare enum param and NOT a `derive_merged` method.
+   Non-breaking + forward-extensible + idiomatic defaultable config.
+2. RESOLVED — value type: a shared first-class **`MergeStrategy` enum/const** in every binding
+   (Py `MergeStrategy.SHALLOW`, TS `MergeStrategy.Shallow`). Python keyword-only `merge=`; TS
+   inside the existing derive options object.
+3. RESOLVED — default stays `Replace` (non-breaking) in all three.
+
+## Still open → plan time (fine-grained, non-blocking)
+
+4. `variants`/`metadata` union is consistency-driven (primary consumer is `variables`); note in plan.
+5. Exact identifiers (struct/field names, TS enum vs const-object) — plan-time naming.

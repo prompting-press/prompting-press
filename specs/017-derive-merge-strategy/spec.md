@@ -10,6 +10,13 @@
 code-side merge strategy on the existing `derive` primitive — NOT a YAML `extends:` field,
 NOT Jinja template inheritance, NOT a loader/registry.
 
+## Clarifications
+
+### Session 2026-07-08
+
+- Q: How should the merge-strategy value be represented in the Python and TypeScript bindings? → A: A first-class, importable `MergeStrategy` enum/const in each binding (Python `MergeStrategy.SHALLOW`, TypeScript `MergeStrategy.Shallow`), not a bare string literal — discoverable via autocomplete, one shared concept across all bindings, still validated (unknown → structured error).
+- Q: What public surface should the merge strategy take on the Rust consumer `Prompt::derive`? → A: A `Default`-implementing options struct (`DeriveOptions { merge: MergeStrategy }`, `#[derive(Default)]`, used with `..Default::default()`), rather than a bare enum param or a separate `derive_merged` method. This keeps existing `derive(overlay)` call sites non-breaking (default = `Replace`), is forward-extensible for a future `deep` value or additional options without a signature change, and is the idiomatic Rust defaultable-config shape. The shared `MergeStrategy` enum is the value inside the struct.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Derive a child prompt that inherits a base's variables and adds its own (Priority: P1)
@@ -123,10 +130,22 @@ foot-gun (forgetting to spread silently drops inherited variables).
 ### Functional Requirements
 
 - **FR-001**: The `derive` operation MUST accept an optional merge-strategy selector with
-  two supported values: `replace` (current behavior) and `shallow` (new). The selector MUST
-  be exposed per-language as a **keyword-only / named** parameter (Python keyword-only; TS
-  within the existing options object; Rust a typed strategy value), never as a positional
-  mode boolean (C-11).
+  two supported values, expressed as a first-class **`MergeStrategy`** type in every binding
+  (members `replace`/`Replace` = current behavior, and `shallow`/`Shallow` = new). The
+  selector MUST be exposed per-language in native idiom, never as a positional mode boolean
+  (C-11):
+  - **Python** — an importable `MergeStrategy` enum passed via a **keyword-only** argument
+    (`derive(overlay, *, merge=MergeStrategy.SHALLOW)`); the default is `MergeStrategy.REPLACE`.
+  - **TypeScript** — an exported `MergeStrategy` const/enum supplied inside the **existing
+    options object** on the derive surface (`{ merge: MergeStrategy.Shallow }`); default
+    `Replace`.
+  - **Rust** — a `MergeStrategy` enum carried inside a **`Default`-implementing options
+    struct** (`DeriveOptions { merge: MergeStrategy }`, used with `..Default::default()`),
+    whose default is `MergeStrategy::Replace`. This keeps existing `derive(overlay)` call
+    sites non-breaking and is forward-extensible without a signature change (idiomatic Rust
+    defaultable config; satisfies the C-11 Rust threshold by not forcing a bare optional).
+  A merge-strategy value outside the supported set is unrepresentable by the type in Rust and
+  rejected via the structured-error path in Python/TS (see FR-011).
 - **FR-002**: The default strategy, when the caller does not specify one, MUST be `replace`
   — byte-for-byte the current `derive` behavior. No existing call site changes observable
   behavior.
@@ -233,6 +252,8 @@ foot-gun (forgetting to spread silently drops inherited variables).
   `output_model`. (Verified against the current JSON Schema.)
 - `variants` and `metadata` are library-opaque; union-by-top-level-key does not require the
   library to interpret their contents, so it does not violate the opaque-metadata doctrine.
-- The exact per-language surface (e.g. Rust enum-param vs. method variant; whether the TS
-  strategy rides the existing options object) is an implementation-shape detail to be settled
-  at plan time within the C-06/C-11 constraints recorded here.
+- The per-language surface was settled at clarify (see Clarifications, Session 2026-07-08):
+  a shared `MergeStrategy` enum/const in every binding; Python keyword-only `merge=`; TS via
+  the existing options object; Rust via a `Default`-implementing `DeriveOptions` struct
+  (non-breaking, forward-extensible). Remaining fine-grained naming (exact struct/field
+  identifiers, TS enum-vs-const-object) is confirmed at plan time within C-06/C-11.
