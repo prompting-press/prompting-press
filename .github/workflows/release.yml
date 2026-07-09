@@ -174,6 +174,11 @@ jobs:
     permissions:
       contents: write # push the snapshot branch
       pull-requests: write # open + auto-merge the snapshot PR
+    # sccache for the napi addon Rust build (build:addon shells out to cargo).
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout main
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -195,6 +200,21 @@ jobs:
 
       - name: 'Ensure rust components (rustfmt/clippy)'
         run: mise exec -- rustup component add rustfmt clippy
+
+      - name: 'Cache pnpm + uv stores'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: |
+            ~/.local/share/pnpm/store
+            ~/.cache/uv
+          key: pnpm-uv-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml', '**/uv.lock') }}
+          restore-keys: |
+            pnpm-uv-${{ runner.os }}-
+      - name: 'Expose Rust on PATH (for sccache)'
+        shell: bash
+        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
+      - name: 'sccache (GHA backend)'
+        uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
 
       - name: 'Install docs/site deps (pnpm)'
         run: mise exec -- pnpm -C docs/site install --frozen-lockfile
@@ -338,6 +358,10 @@ jobs:
           # bad/invalid manifest before the release tries to `cargo publish`.
           - name: crate-package
             task: ci:check-package
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
@@ -354,6 +378,20 @@ jobs:
           experimental: true
       - name: Ensure rust components (rustfmt/clippy)
         run: mise exec -- rustup component add rustfmt clippy
+      - name: 'Cache pnpm + uv stores'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: |
+            ~/.local/share/pnpm/store
+            ~/.cache/uv
+          key: pnpm-uv-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml', '**/uv.lock') }}
+          restore-keys: |
+            pnpm-uv-${{ runner.os }}-
+      - name: 'Expose Rust on PATH (for sccache)'
+        shell: bash
+        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
+      - name: 'sccache (GHA backend)'
+        uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
       - name: Install TS deps (pnpm)
         run: mise exec -- pnpm -C packages/typescript install --frozen-lockfile
       # The consumer-samples leg runs the greeter-cli apps, and the TypeScript one
@@ -723,6 +761,10 @@ jobs:
             target: aarch64-apple-darwin
           - runner: windows-latest
             target: x86_64-pc-windows-msvc
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
@@ -731,6 +773,19 @@ jobs:
         uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
         with:
           experimental: true
+
+      - name: 'Cache pnpm store'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+      - name: 'Expose Rust on PATH (for sccache)'
+        shell: bash
+        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
+      - name: 'sccache (GHA backend)'
+        uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
 
       # The build target's Rust std must be present (native for glibc/macOS/
       # Windows; the cross std for musl). Add it explicitly so napi resolves it.

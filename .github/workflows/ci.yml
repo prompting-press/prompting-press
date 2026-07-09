@@ -269,6 +269,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: [changes]
+    # sccache wraps rustc for all compilation in this job (GHA backend stores
+    # per-CGU objects, shared across branches). rust-cache is kept for registry/
+    # git dep downloads only (cache-targets: false avoids double-caching target/).
+    # CARGO_INCREMENTAL=0 is required — incremental builds confuse sccache's
+    # content-addressed cache.
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
 
     steps:
       - name: Checkout
@@ -311,13 +320,10 @@ jobs:
       # Expose the mise-managed cargo/rustc on PATH so Swatinem/rust-cache (a JS
       # action that shells out to `rustc -vV` for its cache key) can find them
       # without a `mise exec` prefix. `mise which cargo` resolves the active shim.
-      - name: 'Expose Rust on PATH (for rust-cache)'
-        shell: bash
-        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'Rust build cache'
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - name: 'Rust build cache (sccache + rust-cache)'
+        uses: ./.github/actions/rust-build-cache
         with:
-          shared-key: gates-v2
+          shared-key: gates-v3
 
       # Install TypeScript workspace deps so json-schema-to-typescript is present
       # when schemas:codegen-check regenerates the TS shape. On a cold checkout
@@ -432,6 +438,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: [changes]
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
 
     steps:
       - name: Checkout
@@ -452,13 +462,10 @@ jobs:
       - name: 'Ensure clippy component'
         run: mise exec -- rustup component add clippy
 
-      - name: 'Expose Rust on PATH (for rust-cache)'
-        shell: bash
-        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'Rust build cache'
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - name: 'Rust build cache (sccache + rust-cache)'
+        uses: ./.github/actions/rust-build-cache
         with:
-          shared-key: clippy-v2
+          shared-key: clippy-v3
 
       - name: 'Clippy (-D warnings)'
         if: >-
@@ -474,6 +481,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: [changes]
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
 
     steps:
       - name: Checkout
@@ -486,13 +497,10 @@ jobs:
         with:
           experimental: true
 
-      - name: 'Expose Rust on PATH (for rust-cache)'
-        shell: bash
-        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'Rust build cache'
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - name: 'Rust build cache (sccache + rust-cache)'
+        uses: ./.github/actions/rust-build-cache
         with:
-          shared-key: test-python-v2
+          shared-key: test-python-v3
       - name: 'Cache pnpm + uv stores'
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
         with:
@@ -533,6 +541,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: [changes]
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
 
     steps:
       - name: Checkout
@@ -560,13 +572,10 @@ jobs:
       - name: 'Install TS deps (pnpm)'
         run: mise exec -- pnpm -C packages/typescript install --frozen-lockfile
 
-      - name: 'Expose Rust on PATH (for rust-cache)'
-        shell: bash
-        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'Rust build cache'
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - name: 'Rust build cache (sccache + rust-cache)'
+        uses: ./.github/actions/rust-build-cache
         with:
-          shared-key: test-node-v2
+          shared-key: test-node-v3
 
       - name: 'Spec 005 / I1: build addon + run node:test & cargo test'
         if: >-
@@ -595,6 +604,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: [changes]
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
 
     steps:
       - name: Checkout
@@ -633,13 +646,10 @@ jobs:
       - name: 'Install TS deps (pnpm)'
         run: mise exec -- pnpm -C packages/typescript install --frozen-lockfile
 
-      - name: 'Expose Rust on PATH (for rust-cache)'
-        shell: bash
-        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'Rust build cache'
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - name: 'Rust build cache (sccache + rust-cache)'
+        uses: ./.github/actions/rust-build-cache
         with:
-          shared-key: conformance-v2
+          shared-key: conformance-v3
 
       - name: 'Spec 006: conformance corpus gate (all three legs)'
         if: >-
@@ -673,6 +683,10 @@ jobs:
           - ubuntu-latest
           - macos-latest
           - windows-latest
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
 
     steps:
       - name: Checkout
@@ -696,14 +710,13 @@ jobs:
         with:
           experimental: true
 
-      - name: 'Expose Rust on PATH (for rust-cache)'
-        shell: bash
-        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'Rust build cache'
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      # rust-cache keys on runner OS + rustc + Cargo.lock; the shared-key only
+      # distinguishes configuration. sccache handles per-OS compilation objects
+      # via its own GHA cache entries.
+      - name: 'Rust build cache (sccache + rust-cache)'
+        uses: ./.github/actions/rust-build-cache
         with:
-          # Per-OS cache (rust-cache already keys on the runner OS + rustc + lock).
-          shared-key: build-v2
+          shared-key: build-v3
 
       - name: Build workspace
         if: >-
@@ -731,6 +744,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: [changes]
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
 
     steps:
       - name: Checkout
@@ -759,6 +776,16 @@ jobs:
       # dist/index.d.ts, which the sample's tsc resolves via `main`/`types`).
       # `build` runs both build:addon + build:facade. The Python app's editable
       # install builds its extension via maturin during `uv sync`.
+      #
+      # sccache MUST be installed + on PATH BEFORE the TS build below: that build
+      # compiles the napi addon (Rust) with the job-level RUSTC_WRAPPER=sccache, so
+      # sccache has to exist first — otherwise cargo fails with "could not execute
+      # process `sccache rustc`: No such file or directory".
+      - name: 'Rust build cache (sccache + rust-cache)'
+        uses: ./.github/actions/rust-build-cache
+        with:
+          shared-key: samples-test-v3
+
       - name: 'Install + build the TS package (addon + facade)'
         if: >-
           needs.changes.outputs.rust == 'true' ||
@@ -770,14 +797,6 @@ jobs:
         run: |
           mise exec -- pnpm -C packages/typescript install --frozen-lockfile
           mise exec -- pnpm -C packages/typescript run build
-
-      - name: 'Expose Rust on PATH (for rust-cache)'
-        shell: bash
-        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'Rust build cache'
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
-        with:
-          shared-key: samples-test-v2
 
       - name: 'T021: samples:test (all three consumer apps)'
         if: >-
