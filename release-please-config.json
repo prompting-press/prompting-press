@@ -3,10 +3,16 @@
 
   "separate-pull-requests": false,
 
+  "//include-component-in-tag": "false → every linked package tags at ONE shared, component-less tag (vX.Y.Z) and cuts ONE aggregated GitHub Release, instead of six per-component tags/releases. This is the idiomatic release-please lockstep-monorepo setup (NOT skip-github-release, which suppresses the anchoring tag and breaks the next run — see the 0.3.1 recovery in DECISIONS/PR history).",
+  "include-component-in-tag": false,
+
+  "//release-as": "ONE-TIME bridge across the tag-scheme change: the last release (0.3.1) was tagged component-prefixed (prompting-press-*-v0.3.1), so no plain v0.3.1 tag exists for release-please to anchor on under the new scheme. release-as forces 0.3.2 for the first release, which creates the plain v0.3.2 tag that all future runs self-anchor on. REMOVE this key immediately after 0.3.2 ships — leaving it pins every future release to 0.3.2.",
+  "release-as": "0.3.2",
+
   "bump-minor-pre-major": true,
   "bump-patch-for-minor-pre-major": true,
 
-  "//draft": "Cut all 6 component GitHub Releases as DRAFTs; the release workflow (finalize-release) flips every draft for the released version to public only after all builds + tests + registry publishes succeed (announcement integrity). force-tag-creation is REQUIRED with draft: GitHub does not create the git tag for a draft release, and without the tag release-please cannot find the prior release on the next run (wrong changelog base). See release.yml finalize-release.",
+  "//draft": "Cut ONE aggregated GitHub Release (component-less, tag vX.Y.Z) as a DRAFT; the release workflow (finalize-release) flips it to public only after all builds + tests + registry publishes succeed (announcement integrity). force-tag-creation is REQUIRED with draft: GitHub does not create the git tag for a draft release, and without the tag release-please cannot find the prior release on the next run (wrong changelog base). See release.yml finalize-release.",
   "draft": true,
   "force-tag-creation": true,
 
