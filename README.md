@@ -3,9 +3,7 @@
 A typed, variant-aware **prompt-template library** — the prompt analogue of a typed config
 system. It turns *typed inputs + a template* into *rendered text + content-addressed provenance*,
 across **Rust, Python, and TypeScript** from one shared compiled Rust engine. Byte-identical
-output across all three by construction (constitution Principle I), not by re-implementation.
-
-
+output across all three by construction, not by re-implementation.
 
 ## Documentation
 
@@ -22,19 +20,16 @@ The docs site covers:
 
 ### Rust
 
-```toml
-# Cargo.toml
-[dependencies]
-prompting-press = "0.2.0"
-garde = { version = "0.22", features = ["derive"] }
-serde = { version = "1", features = ["derive"] }
+```bash
+cargo add prompting-press
+cargo add garde --features derive
+cargo add serde --features derive
 ```
 
 ```rust
-use prompting_press::Prompt;
+use prompting_press::{GuardConfig, Prompt};
 use garde::Validate;
 use serde::Serialize;
-use prompting_press_core::GuardConfig;
 
 #[derive(Serialize, Validate)]
 struct Vars {
@@ -51,7 +46,7 @@ variables:
   max_words: { type: integer, trusted: true }
 "#)?;
 
-let result = p.render(&Vars { company: "Acme Robotics".into(), max_words: 50 }, None, &GuardConfig::default())?;
+let result = p.render(&Vars { company: "Acme Robotics".into(), max_words: 50 }, None, &GuardConfig::default(), false)?;
 println!("{}", result.text);           // "You are a support assistant for Acme Robotics. Keep your replies under 50 words."
 println!("{}", result.template_hash);  // 64-char SHA-256
 ```
