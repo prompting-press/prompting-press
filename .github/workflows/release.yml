@@ -64,7 +64,14 @@ jobs:
         id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7  # v5.0.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # RELEASE_TOKEN (a fine-grained PAT), NOT the default GITHUB_TOKEN: a PR
+          # opened with GITHUB_TOKEN is authored by github-actions[bot], which the
+          # org's "require approval for outside collaborators" Actions policy treats
+          # as external — so its ci.yml + codeql.yml runs land in `action_required`
+          # and the required checks never report, leaving the release PR unmergeable
+          # until a maintainer manually approves each run. A PAT makes the PR
+          # first-party, so CI runs immediately. (Publish jobs use OIDC, not this.)
+          token: ${{ secrets.RELEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
@@ -90,12 +97,15 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # RELEASE_TOKEN so the lock-sync commit pushed below is authored by the PAT
+          # identity (matching the release PR) and re-triggers CI without the
+          # action_required gate. See the Run release-please step above.
+          token: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Sync Cargo.lock on the release PR
         if: ${{ steps.release.outputs.pr }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           RP_PR: ${{ steps.release.outputs.pr }}
         run: |
           set -euo pipefail
@@ -171,7 +181,12 @@ jobs:
           ref: main
           # Full history so version.mjs / git see the prior tags, matching ci.yml.
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # RELEASE_TOKEN (PAT) so the docs-snapshot branch push + PR below are
+          # first-party, not github-actions[bot]. A bot-authored PR hits the org's
+          # "require approval for outside collaborators" gate → its required checks
+          # sit in action_required and auto-merge never completes (the stuck
+          # docs-snapshot deploy). Same reasoning as the release-please step.
+          token: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Install mise toolchain
         uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
@@ -229,7 +244,9 @@ jobs:
 
       - name: Open + auto-merge a PR with the frozen docs tree
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # RELEASE_TOKEN so `gh pr create`/`merge` run as the PAT — the snapshot PR
+          # is first-party and its required checks run without the approval gate.
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           VER: ${{ steps.ver.outputs.version }}
         run: |
           set -euo pipefail
@@ -793,7 +810,12 @@ jobs:
       - name: Set up Node for npm OIDC
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
         with:
-          node-version: '22.14.0'
+          # Node 24 LTS: the `npm install -g npm@latest` below (needed for OIDC
+          # trusted publishing) pulls npm 12.x, whose engines require node
+          # ^22.22.2 || ^24.15.0 || >=26. The previous 22.14.0 pin failed that
+          # check (EBADENGINE) and blocked the npm publish. 24 LTS satisfies it and
+          # is the stable line for a publish job.
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install TS deps
@@ -834,7 +856,11 @@ jobs:
         working-directory: packages/typescript
         run: |
           set -euo pipefail
-          npm install -g npm@latest        # OIDC trusted publishing needs npm >= 11.5.1
+          # OIDC trusted publishing needs npm >= 11.5.1. Node 24 LTS already bundles
+          # npm 11.x, so no global upgrade is needed. (A previous `npm install -g
+          # npm@latest` here floated to npm 12.x, whose node engine requirement broke
+          # the pinned runtime with EBADENGINE — don't reintroduce a floating upgrade.)
+          npm --version
           VER="$(node -p "require('./package.json').version")"
           # IDEMPOTENT + FORWARD-ONLY: npm is append-only, so a recovery re-run must
           # not attempt to re-publish an existing version (npm would hard-fail with
