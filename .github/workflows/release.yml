@@ -425,9 +425,13 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="$(node -e "const m=require('./.release-please-manifest.json');console.log(Object.values(m)[0])")"
-          echo "Gate failed before any publish — rolling back draft releases + tags for v${VERSION}."
+          echo "Gate failed before any publish — rolling back the draft release + tag for v${VERSION}."
+          # Single component-less tag per release (include-component-in-tag: false) →
+          # the tag is exactly "v${VERSION}". (Pre-0.3.2 releases used per-component
+          # tags like "prompting-press-*-v${VERSION}"; those are historical and never
+          # re-rolled by this job.)
           mapfile -t DRAFT_TAGS < <(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName,isDraft \
-            --jq ".[] | select(.isDraft and (.tagName | endswith(\"-v${VERSION}\"))) | .tagName")
+            --jq ".[] | select(.isDraft and (.tagName == \"v${VERSION}\")) | .tagName")
           for tag in "${DRAFT_TAGS[@]:-}"; do
             [ -z "$tag" ] && continue
             echo "Deleting draft release + tag: $tag"
@@ -919,9 +923,11 @@ jobs:
           VERSION="$(node -e "const m=require('./.release-please-manifest.json');console.log(Object.values(m)[0])")"
           echo "Release version: $VERSION"
 
-          # Collect this version's DRAFT releases (tag ends in -v<version>).
+          # Collect this version's DRAFT release. Single component-less tag per
+          # release (include-component-in-tag: false) → the tag is exactly
+          # "v<version>". (Pre-0.3.2 releases used per-component "*-v<version>" tags.)
           mapfile -t DRAFT_TAGS < <(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName,isDraft \
-            --jq ".[] | select(.isDraft and (.tagName | endswith(\"-v${VERSION}\"))) | .tagName")
+            --jq ".[] | select(.isDraft and (.tagName == \"v${VERSION}\")) | .tagName")
 
           # A registry publish is irreversible and the git tags are already public,
           # so the moment ANY registry has this version it demonstrably exists and
