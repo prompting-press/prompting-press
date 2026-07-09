@@ -46,6 +46,10 @@ if [ -z "${CARGO_ABOUT}" ] || ! "${CARGO_ABOUT}" --version >/dev/null 2>&1; then
   exit 1
 fi
 
+# This workspace's own repository URL — the marker for first-party crates that
+# strip-first-party-licenses.py removes from the attribution (see generate()).
+FIRST_PARTY_REPO="https://github.com/prompting-press/prompting-press"
+
 # artifact-crate:output-path pairs — the two bundled bindings.
 generate() {
   local crate="$1" out="$2"
@@ -75,6 +79,13 @@ generate() {
   # newlines with a single one (portable, no in-place-sed newline quirks).
   local abs="${REPO_ROOT}/${out}"
   perl -0777 -i -pe 's/\n+\z/\n/' "${abs}"
+  # Drop this workspace's OWN crates from the attribution. cargo-about lists every
+  # crate in the bundled graph, including prompting-press{,-core,-py,-node} — but
+  # those are first-party code already covered by the repo root LICENSE + NOTICE
+  # (Apache-2.0), and they carry the only version-bearing lines, which made the
+  # file churn every release. cargo-about cannot exclude a PUBLISHED workspace
+  # member (`private.ignore` only drops unpublished ones), so post-process.
+  python3 "${SCRIPT_DIR}/strip-first-party-licenses.py" "${abs}" "${FIRST_PARTY_REPO}"
 }
 
 echo "Generating third-party license attribution (cargo-about)..."
