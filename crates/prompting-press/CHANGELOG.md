@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/prompting-press/prompting-press/compare/prompting-press-v0.3.0...prompting-press-v0.3.1) (2026-07-09)
+
+
+### Bug Fixes
+
+* restore working release config so 0.3.1 can publish ([#290](https://github.com/prompting-press/prompting-press/issues/290)) ([d9d2bb1](https://github.com/prompting-press/prompting-press/commit/d9d2bb13eeb09ab1853bf4b4a0e76d88b22e533d))
+
 ## [0.3.0](https://github.com/prompting-press/prompting-press/compare/prompting-press-v0.2.0...prompting-press-v0.3.0) (2026-07-08)
 
 
