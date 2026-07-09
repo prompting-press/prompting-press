@@ -540,6 +540,20 @@ jobs:
         with:
           python-version: '3.12'
 
+      # mise + cargo are needed on the runner host to generate the attribution file
+      # below (maturin-action runs in its own container and cannot see them).
+      - name: Install mise toolchain
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
+        with:
+          experimental: true
+
+      # Populate the cargo registry cache on the RUNNER host: gen-third-party-licenses.sh
+      # runs cargo-about --offline, which harvests license text from the local crate
+      # sources. maturin-action fetches inside its own container, not on the host, so
+      # without this the offline generate would find an empty cache and fail.
+      - name: Fetch crate sources (for offline cargo-about)
+        run: mise exec -- cargo fetch --locked
+
       # Generate THIRD-PARTY-LICENSES.md BEFORE maturin-action runs. The file must
       # exist on the runner filesystem at packages/python/THIRD-PARTY-LICENSES.md so
       # maturin can include it in the wheel (via [tool.maturin].include). maturin-action
@@ -584,6 +598,11 @@ jobs:
         uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
         with:
           experimental: true
+
+      # Populate the cargo registry cache on the runner host for cargo-about --offline
+      # (same reasoning as build-wheels — maturin-action fetches only in its container).
+      - name: Fetch crate sources (for offline cargo-about)
+        run: mise exec -- cargo fetch --locked
 
       # Generate THIRD-PARTY-LICENSES.md before maturin-action packages the sdist.
       # Same reasoning as build-wheels: the file must exist on the runner host before
@@ -779,6 +798,11 @@ jobs:
 
       - name: Install TS deps
         run: mise exec -- pnpm -C packages/typescript install --frozen-lockfile
+
+      # Populate the cargo registry cache for cargo-about --offline (the generate
+      # step harvests license text from local crate sources).
+      - name: Fetch crate sources (for offline cargo-about)
+        run: mise exec -- cargo fetch --locked
 
       # Generate THIRD-PARTY-LICENSES.md for the npm package. The file is listed in
       # package.json `files` and must exist before `npm publish` assembles the tarball.

@@ -14,7 +14,7 @@
 # in release.yml before the respective packaging/publish step). The files are NOT
 # committed to the repository (issue #16).
 #
-# Tool: cargo-about (pinned in mise.toml under "ubi:EmbarkStudios/cargo-about").
+# Tool: cargo-about (pinned in mise.toml under "github:EmbarkStudios/cargo-about").
 # Config: about.toml at the repo root; template: ci/about.hbs.
 #         about.toml's `accepted` list MUST match deny.toml's [licenses].allow.
 #
@@ -36,7 +36,7 @@ cd "${REPO_ROOT}"
 CONFIG="${REPO_ROOT}/about.toml"
 TEMPLATE="${REPO_ROOT}/ci/about.hbs"
 
-# Resolve the cargo-about BINARY. cargo-about is installed via the `ubi:` backend
+# Resolve the cargo-about BINARY. cargo-about is installed via the `github:` backend
 # (see mise.toml) — a prebuilt release binary that mise puts on PATH like any
 # pinned tool, so `cargo-about` resolves directly. `mise which` gives the concrete
 # path (the moon task runs under `mise exec`, so mise + the tool dirs are on PATH);
@@ -44,7 +44,7 @@ TEMPLATE="${REPO_ROOT}/ci/about.hbs"
 CARGO_ABOUT="$(mise which cargo-about 2>/dev/null || command -v cargo-about || true)"
 if [ -z "${CARGO_ABOUT}" ] || ! "${CARGO_ABOUT}" --version >/dev/null 2>&1; then
   echo "ERROR: cargo-about not found. Install it: mise install (it is pinned as" >&2
-  echo "'ubi:EmbarkStudios/cargo-about' in mise.toml)." >&2
+  echo "'github:EmbarkStudios/cargo-about' in mise.toml)." >&2
   exit 1
 fi
 
