@@ -348,6 +348,11 @@ packages/*/node_modules/
 *.tsbuildinfo
 .npm/
 
+# THIRD-PARTY-LICENSES.md files — generated at package-build time in CI
+# (scripts/ci/gen-third-party-licenses.sh); not committed (issue #16).
+packages/python/THIRD-PARTY-LICENSES.md
+packages/typescript/THIRD-PARTY-LICENSES.md
+
 # maturin / napi-rs native build output (compiled artifacts, not the wrappers)
 *.so
 *.dylib

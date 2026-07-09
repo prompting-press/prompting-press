@@ -144,9 +144,6 @@ jobs:
         run: mise exec -- moon run ci:check-licenses-py
       - name: 'License gate: Node (package.json scan)'
         run: mise exec -- moon run ci:check-licenses-node
-      - name: 'Third-party attribution freshness (cargo-about)'
-        run: mise exec -- moon run ci:check-third-party-licenses
-
       # --- supply-chain advisories (known CVEs; lockfile scans) ---
       - name: 'Advisory scan: Rust (cargo-deny)'
         run: mise exec -- moon run ci:check-advisories
