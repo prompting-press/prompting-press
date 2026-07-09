@@ -810,7 +810,12 @@ jobs:
       - name: Set up Node for npm OIDC
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
         with:
-          node-version: '22.14.0'
+          # Node 24 LTS: the `npm install -g npm@latest` below (needed for OIDC
+          # trusted publishing) pulls npm 12.x, whose engines require node
+          # ^22.22.2 || ^24.15.0 || >=26. The previous 22.14.0 pin failed that
+          # check (EBADENGINE) and blocked the npm publish. 24 LTS satisfies it and
+          # is the stable line for a publish job.
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install TS deps
@@ -851,7 +856,11 @@ jobs:
         working-directory: packages/typescript
         run: |
           set -euo pipefail
-          npm install -g npm@latest        # OIDC trusted publishing needs npm >= 11.5.1
+          # OIDC trusted publishing needs npm >= 11.5.1. Node 24 LTS already bundles
+          # npm 11.x, so no global upgrade is needed. (A previous `npm install -g
+          # npm@latest` here floated to npm 12.x, whose node engine requirement broke
+          # the pinned runtime with EBADENGINE — don't reintroduce a floating upgrade.)
+          npm --version
           VER="$(node -p "require('./package.json').version")"
           # IDEMPOTENT + FORWARD-ONLY: npm is append-only, so a recovery re-run must
           # not attempt to re-publish an existing version (npm would hard-fail with
