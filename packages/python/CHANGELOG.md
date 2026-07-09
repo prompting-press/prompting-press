@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/prompting-press/prompting-press/compare/prompting-press-py-v0.3.0...prompting-press-py-v0.3.1) (2026-07-09)
+
+
+### Bug Fixes
+
+* generate THIRD-PARTY-LICENSES in CI instead of committing them ([#286](https://github.com/prompting-press/prompting-press/issues/286)) ([bb91278](https://github.com/prompting-press/prompting-press/commit/bb912781220b923b0e7e12b6dd2a0d926859ad6f))
+
 ## [0.3.0](https://github.com/prompting-press/prompting-press/compare/prompting-press-py-v0.2.0...prompting-press-py-v0.3.0) (2026-07-08)
 
 
