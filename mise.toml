@@ -35,8 +35,8 @@ jq = "1.8.1"
 # --- Security toolchain (T036 / SEC-001) ---
 "cargo:cargo-deny" = { version = "0.19.9", locked = true }   # Advisory scan (ci:check-advisories) + license gate (ci:check-licenses); reads deny.toml
 # License-attribution generator: renders the bundled THIRD-PARTY-LICENSES.md files
-# for the Python wheel + npm addon (Rust graph is statically linked). Drives
-# ci:check-third-party-licenses.
+# for the Python wheel + npm addon (Rust graph is statically linked). Invoked by
+# scripts/ci/gen-third-party-licenses.sh at package-build time in CI (issue #16).
 #
 # Installed via the `ubi:` backend (prebuilt GitHub release binary), NOT `cargo:`.
 # The `cargo:` backend was intractable here: its cli-gated binary either needs
