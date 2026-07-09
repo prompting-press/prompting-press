@@ -269,6 +269,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: [changes]
+    # sccache wraps rustc for all compilation in this job (GHA backend stores
+    # per-CGU objects, shared across branches). rust-cache is kept for registry/
+    # git dep downloads only (cache-targets: false avoids double-caching target/).
+    # CARGO_INCREMENTAL=0 is required — incremental builds confuse sccache's
+    # content-addressed cache.
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
 
     steps:
       - name: Checkout
@@ -314,10 +323,13 @@ jobs:
       - name: 'Expose Rust on PATH (for rust-cache)'
         shell: bash
         run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'Rust build cache'
+      - name: 'sccache (GHA backend)'
+        uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
+      - name: 'Rust registry cache (deps only; target/ handled by sccache)'
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
         with:
-          shared-key: gates-v2
+          shared-key: gates-v3
+          cache-targets: "false"
 
       # Install TypeScript workspace deps so json-schema-to-typescript is present
       # when schemas:codegen-check regenerates the TS shape. On a cold checkout
@@ -432,6 +444,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: [changes]
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
 
     steps:
       - name: Checkout
@@ -455,10 +471,13 @@ jobs:
       - name: 'Expose Rust on PATH (for rust-cache)'
         shell: bash
         run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'Rust build cache'
+      - name: 'sccache (GHA backend)'
+        uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
+      - name: 'Rust registry cache (deps only; target/ handled by sccache)'
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
         with:
-          shared-key: clippy-v2
+          shared-key: clippy-v3
+          cache-targets: "false"
 
       - name: 'Clippy (-D warnings)'
         if: >-
@@ -474,6 +493,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: [changes]
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
 
     steps:
       - name: Checkout
@@ -489,10 +512,13 @@ jobs:
       - name: 'Expose Rust on PATH (for rust-cache)'
         shell: bash
         run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'Rust build cache'
+      - name: 'sccache (GHA backend)'
+        uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
+      - name: 'Rust registry cache (deps only; target/ handled by sccache)'
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
         with:
-          shared-key: test-python-v2
+          shared-key: test-python-v3
+          cache-targets: "false"
       - name: 'Cache pnpm + uv stores'
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
         with:
@@ -533,6 +559,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: [changes]
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
 
     steps:
       - name: Checkout
@@ -563,10 +593,13 @@ jobs:
       - name: 'Expose Rust on PATH (for rust-cache)'
         shell: bash
         run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'Rust build cache'
+      - name: 'sccache (GHA backend)'
+        uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
+      - name: 'Rust registry cache (deps only; target/ handled by sccache)'
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
         with:
-          shared-key: test-node-v2
+          shared-key: test-node-v3
+          cache-targets: "false"
 
       - name: 'Spec 005 / I1: build addon + run node:test & cargo test'
         if: >-
@@ -595,6 +628,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: [changes]
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
 
     steps:
       - name: Checkout
@@ -636,10 +673,13 @@ jobs:
       - name: 'Expose Rust on PATH (for rust-cache)'
         shell: bash
         run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'Rust build cache'
+      - name: 'sccache (GHA backend)'
+        uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
+      - name: 'Rust registry cache (deps only; target/ handled by sccache)'
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
         with:
-          shared-key: conformance-v2
+          shared-key: conformance-v3
+          cache-targets: "false"
 
       - name: 'Spec 006: conformance corpus gate (all three legs)'
         if: >-
@@ -673,6 +713,10 @@ jobs:
           - ubuntu-latest
           - macos-latest
           - windows-latest
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
 
     steps:
       - name: Checkout
@@ -699,11 +743,16 @@ jobs:
       - name: 'Expose Rust on PATH (for rust-cache)'
         shell: bash
         run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'Rust build cache'
+      - name: 'sccache (GHA backend)'
+        uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
+      - name: 'Rust registry cache (deps only; target/ handled by sccache)'
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
         with:
-          # Per-OS cache (rust-cache already keys on the runner OS + rustc + lock).
-          shared-key: build-v2
+          # rust-cache already keys on runner OS + rustc + Cargo.lock, so the
+          # shared-key only needs to distinguish configuration. sccache handles
+          # per-OS compilation objects via its own GHA cache entries.
+          shared-key: build-v3
+          cache-targets: "false"
 
       - name: Build workspace
         if: >-
@@ -731,6 +780,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: [changes]
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
 
     steps:
       - name: Checkout
@@ -774,10 +827,13 @@ jobs:
       - name: 'Expose Rust on PATH (for rust-cache)'
         shell: bash
         run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'Rust build cache'
+      - name: 'sccache (GHA backend)'
+        uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
+      - name: 'Rust registry cache (deps only; target/ handled by sccache)'
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
         with:
-          shared-key: samples-test-v2
+          shared-key: samples-test-v3
+          cache-targets: "false"
 
       - name: 'T021: samples:test (all three consumer apps)'
         if: >-
