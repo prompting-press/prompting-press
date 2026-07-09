@@ -23,18 +23,7 @@ on:
   # publishing anything — a way to exercise the musl/zig/aarch64 targets on demand
   # before betting a real release on them. Only the build-* jobs honor this event;
   # every publish/gate/finalize job stays gated on an actual release-please release.
-  #
-  # TEMPORARY (revert immediately after use): `publish_npm=true` recovers a lagged
-  # npm publish for a version already released to the OTHER registries. The 0.3.1
-  # npm publish failed on the old node pin; crates.io + PyPI published; release-please
-  # will not re-cut an already-released version, so there is no other trigger. This
-  # path publishes ONLY npm (from a fresh build-node) — it never tags or releases.
   workflow_dispatch:
-    inputs:
-      publish_npm:
-        description: 'TEMP recovery: publish the npm package at packages/typescript/package.json version. Never tags/releases.'
-        type: boolean
-        default: false
 
 # release-please needs write access to open/update the release PR and to
 # create GitHub Releases + version tags on merge.
@@ -800,21 +789,10 @@ jobs:
     name: Publish to npm (Trusted Publisher)
     # Needs release-please (for the release-created output referenced in `if`),
     # the prebuilt .node artifacts, AND the single gate (all builds + tests).
-    # release-gate does not run on workflow_dispatch, so it is an optional need
-    # (always() + skipped is tolerated) for the TEMP recovery path below.
     needs: [release-please, release-gate, build-node]
-    # Publish on a real release (gated on releases_created + a green release-gate),
-    # OR via the TEMP `publish_npm=true` dispatch recovery (a normal smoke-test
-    # dispatch WITHOUT the input must still NEVER publish). The recovery path skips
-    # release-gate (already green when the version was cut) but still requires the
-    # fresh build-node addons to have succeeded.
-    if: >-
-      ${{ always()
-        && needs.build-node.result == 'success'
-        && (
-          (github.event_name == 'push' && needs.release-please.outputs.releases_created == 'true' && needs.release-gate.result == 'success')
-          || (github.event_name == 'workflow_dispatch' && inputs.publish_npm)
-        ) }}
+    # Explicit release-only guard: a workflow_dispatch smoke test builds the addon
+    # but must NEVER publish, even though build-node succeeds on dispatch.
+    if: ${{ needs.release-please.outputs.releases_created == 'true' }}
     runs-on: ubuntu-latest
     environment: release
     permissions:
