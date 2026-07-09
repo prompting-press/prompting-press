@@ -320,16 +320,10 @@ jobs:
       # Expose the mise-managed cargo/rustc on PATH so Swatinem/rust-cache (a JS
       # action that shells out to `rustc -vV` for its cache key) can find them
       # without a `mise exec` prefix. `mise which cargo` resolves the active shim.
-      - name: 'Expose Rust on PATH (for rust-cache)'
-        shell: bash
-        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'sccache (GHA backend)'
-        uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
-      - name: 'Rust registry cache (deps only; target/ handled by sccache)'
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - name: 'Rust build cache (sccache + rust-cache)'
+        uses: ./.github/actions/rust-build-cache
         with:
           shared-key: gates-v3
-          cache-targets: "false"
 
       # Install TypeScript workspace deps so json-schema-to-typescript is present
       # when schemas:codegen-check regenerates the TS shape. On a cold checkout
@@ -468,16 +462,10 @@ jobs:
       - name: 'Ensure clippy component'
         run: mise exec -- rustup component add clippy
 
-      - name: 'Expose Rust on PATH (for rust-cache)'
-        shell: bash
-        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'sccache (GHA backend)'
-        uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
-      - name: 'Rust registry cache (deps only; target/ handled by sccache)'
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - name: 'Rust build cache (sccache + rust-cache)'
+        uses: ./.github/actions/rust-build-cache
         with:
           shared-key: clippy-v3
-          cache-targets: "false"
 
       - name: 'Clippy (-D warnings)'
         if: >-
@@ -509,16 +497,10 @@ jobs:
         with:
           experimental: true
 
-      - name: 'Expose Rust on PATH (for rust-cache)'
-        shell: bash
-        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'sccache (GHA backend)'
-        uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
-      - name: 'Rust registry cache (deps only; target/ handled by sccache)'
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - name: 'Rust build cache (sccache + rust-cache)'
+        uses: ./.github/actions/rust-build-cache
         with:
           shared-key: test-python-v3
-          cache-targets: "false"
       - name: 'Cache pnpm + uv stores'
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
         with:
@@ -590,16 +572,10 @@ jobs:
       - name: 'Install TS deps (pnpm)'
         run: mise exec -- pnpm -C packages/typescript install --frozen-lockfile
 
-      - name: 'Expose Rust on PATH (for rust-cache)'
-        shell: bash
-        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'sccache (GHA backend)'
-        uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
-      - name: 'Rust registry cache (deps only; target/ handled by sccache)'
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - name: 'Rust build cache (sccache + rust-cache)'
+        uses: ./.github/actions/rust-build-cache
         with:
           shared-key: test-node-v3
-          cache-targets: "false"
 
       - name: 'Spec 005 / I1: build addon + run node:test & cargo test'
         if: >-
@@ -670,16 +646,10 @@ jobs:
       - name: 'Install TS deps (pnpm)'
         run: mise exec -- pnpm -C packages/typescript install --frozen-lockfile
 
-      - name: 'Expose Rust on PATH (for rust-cache)'
-        shell: bash
-        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'sccache (GHA backend)'
-        uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
-      - name: 'Rust registry cache (deps only; target/ handled by sccache)'
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - name: 'Rust build cache (sccache + rust-cache)'
+        uses: ./.github/actions/rust-build-cache
         with:
           shared-key: conformance-v3
-          cache-targets: "false"
 
       - name: 'Spec 006: conformance corpus gate (all three legs)'
         if: >-
@@ -740,19 +710,13 @@ jobs:
         with:
           experimental: true
 
-      - name: 'Expose Rust on PATH (for rust-cache)'
-        shell: bash
-        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'sccache (GHA backend)'
-        uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
-      - name: 'Rust registry cache (deps only; target/ handled by sccache)'
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      # rust-cache keys on runner OS + rustc + Cargo.lock; the shared-key only
+      # distinguishes configuration. sccache handles per-OS compilation objects
+      # via its own GHA cache entries.
+      - name: 'Rust build cache (sccache + rust-cache)'
+        uses: ./.github/actions/rust-build-cache
         with:
-          # rust-cache already keys on runner OS + rustc + Cargo.lock, so the
-          # shared-key only needs to distinguish configuration. sccache handles
-          # per-OS compilation objects via its own GHA cache entries.
           shared-key: build-v3
-          cache-targets: "false"
 
       - name: Build workspace
         if: >-
@@ -812,6 +776,16 @@ jobs:
       # dist/index.d.ts, which the sample's tsc resolves via `main`/`types`).
       # `build` runs both build:addon + build:facade. The Python app's editable
       # install builds its extension via maturin during `uv sync`.
+      #
+      # sccache MUST be installed + on PATH BEFORE the TS build below: that build
+      # compiles the napi addon (Rust) with the job-level RUSTC_WRAPPER=sccache, so
+      # sccache has to exist first — otherwise cargo fails with "could not execute
+      # process `sccache rustc`: No such file or directory".
+      - name: 'Rust build cache (sccache + rust-cache)'
+        uses: ./.github/actions/rust-build-cache
+        with:
+          shared-key: samples-test-v3
+
       - name: 'Install + build the TS package (addon + facade)'
         if: >-
           needs.changes.outputs.rust == 'true' ||
@@ -823,17 +797,6 @@ jobs:
         run: |
           mise exec -- pnpm -C packages/typescript install --frozen-lockfile
           mise exec -- pnpm -C packages/typescript run build
-
-      - name: 'Expose Rust on PATH (for rust-cache)'
-        shell: bash
-        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'sccache (GHA backend)'
-        uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
-      - name: 'Rust registry cache (deps only; target/ handled by sccache)'
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
-        with:
-          shared-key: samples-test-v3
-          cache-targets: "false"
 
       - name: 'T021: samples:test (all three consumer apps)'
         if: >-
