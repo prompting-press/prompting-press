@@ -2,7 +2,8 @@
 # native artifacts (the Python wheel and the npm .node addon statically link the
 # Rust dependency graph, so their licenses must travel with the shipped binary).
 #
-# Generated files (guarded by ci:check-third-party-licenses):
+# Generated at package-build time in CI (scripts/ci/gen-third-party-licenses.sh);
+# NOT committed to the repository (issue #16):
 #   packages/python/THIRD-PARTY-LICENSES.md      (-> prompting-press-py graph)
 #   packages/typescript/THIRD-PARTY-LICENSES.md  (-> prompting-press-node graph)
 #

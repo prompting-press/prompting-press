@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Third-party license attribution GENERATOR (Apache-2.0 release compliance).
 #
-# Regenerates the bundled THIRD-PARTY-LICENSES.md files for the two native
+# Generates the bundled THIRD-PARTY-LICENSES.md files for the two native
 # artifacts that statically link the Rust dependency graph:
 #
 #   packages/python/THIRD-PARTY-LICENSES.md      <- prompting-press-py    graph
@@ -9,10 +9,12 @@
 #
 # These files reproduce the upstream copyright + license notices that MIT / BSD /
 # ISC / Apache-2.0 require to be preserved in BINARY distributions (the wheel and
-# the .node addon bundle the compiled Rust code). This script WRITES the files;
-# the ci:check-third-party-licenses gate runs it and asserts `git diff` is clean.
+# the .node addon bundle the compiled Rust code). This script WRITES the files at
+# package-build time in CI (invoked by build-wheels, build-sdist, and publish-npm
+# in release.yml before the respective packaging/publish step). The files are NOT
+# committed to the repository (issue #16).
 #
-# Tool: cargo-about (pinned in mise.toml under "cargo:cargo-about").
+# Tool: cargo-about (pinned in mise.toml under "github:EmbarkStudios/cargo-about").
 # Config: about.toml at the repo root; template: ci/about.hbs.
 #         about.toml's `accepted` list MUST match deny.toml's [licenses].allow.
 #
@@ -21,8 +23,8 @@
 #     Cargo registry cache); it optionally queries clearlydefined.io to fill
 #     gaps. Our graph resolves fully from local sources, so the clearlydefined
 #     WARN lines are harmless and the output is deterministic offline.
-#   - Regenerate after ANY change to Cargo.lock, about.toml, or ci/about.hbs,
-#     then commit the updated THIRD-PARTY-LICENSES.md files.
+#   - After a change to Cargo.lock, about.toml, or ci/about.hbs, the next CI
+#     build will automatically pick up the change — no manual regeneration needed.
 #   - A NEW bundled crate under a license absent from about.toml's `accepted`
 #     will surface here (and fail ci:check-licenses first); triage per deny.toml.
 set -euo pipefail
@@ -34,7 +36,7 @@ cd "${REPO_ROOT}"
 CONFIG="${REPO_ROOT}/about.toml"
 TEMPLATE="${REPO_ROOT}/ci/about.hbs"
 
-# Resolve the cargo-about BINARY. cargo-about is installed via the `ubi:` backend
+# Resolve the cargo-about BINARY. cargo-about is installed via the `github:` backend
 # (see mise.toml) — a prebuilt release binary that mise puts on PATH like any
 # pinned tool, so `cargo-about` resolves directly. `mise which` gives the concrete
 # path (the moon task runs under `mise exec`, so mise + the tool dirs are on PATH);
@@ -42,9 +44,13 @@ TEMPLATE="${REPO_ROOT}/ci/about.hbs"
 CARGO_ABOUT="$(mise which cargo-about 2>/dev/null || command -v cargo-about || true)"
 if [ -z "${CARGO_ABOUT}" ] || ! "${CARGO_ABOUT}" --version >/dev/null 2>&1; then
   echo "ERROR: cargo-about not found. Install it: mise install (it is pinned as" >&2
-  echo "'ubi:EmbarkStudios/cargo-about' in mise.toml)." >&2
+  echo "'github:EmbarkStudios/cargo-about' in mise.toml)." >&2
   exit 1
 fi
+
+# This workspace's own repository URL — the marker for first-party crates that
+# strip-first-party-licenses.py removes from the attribution (see generate()).
+FIRST_PARTY_REPO="https://github.com/prompting-press/prompting-press"
 
 # artifact-crate:output-path pairs — the two bundled bindings.
 generate() {
@@ -69,12 +75,19 @@ generate() {
   # end-of-file-fixer pre-commit hook enforces. cargo-about's Handlebars output
   # ends with a blank line ("...\n\n"); the hook collapses that to a single "\n".
   # If gen leaves the doubled newline, the committed (hook-normalized) file and a
-  # fresh regen differ by one blank line and the ci:check-third-party-licenses
-  # freshness diff fails forever. Strip all trailing newlines, then re-add one.
+  # fresh regen differ by one blank line (a historical artefact from when the file
+  # was committed). Strip all trailing newlines, then re-add one.
   # perl -0777 slurps the whole file; s/\n+\z/\n/ replaces the final run of
   # newlines with a single one (portable, no in-place-sed newline quirks).
   local abs="${REPO_ROOT}/${out}"
   perl -0777 -i -pe 's/\n+\z/\n/' "${abs}"
+  # Drop this workspace's OWN crates from the attribution. cargo-about lists every
+  # crate in the bundled graph, including prompting-press{,-core,-py,-node} — but
+  # those are first-party code already covered by the repo root LICENSE + NOTICE
+  # (Apache-2.0), and they carry the only version-bearing lines, which made the
+  # file churn every release. cargo-about cannot exclude a PUBLISHED workspace
+  # member (`private.ignore` only drops unpublished ones), so post-process.
+  python3 "${SCRIPT_DIR}/strip-first-party-licenses.py" "${abs}" "${FIRST_PARTY_REPO}"
 }
 
 echo "Generating third-party license attribution (cargo-about)..."
