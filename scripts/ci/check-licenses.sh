@@ -14,7 +14,8 @@
 # Companion gates (same policy, other ecosystems):
 #   ci:check-licenses-py    — Python runtime deps (pip-licenses)
 #   ci:check-licenses-node  — Node deps (installed package.json scan)
-# And the attribution side: ci:check-third-party-licenses (cargo-about).
+# And the attribution side: scripts/ci/gen-third-party-licenses.sh (cargo-about),
+# run at package-build time in CI (release.yml); not a PR gate.
 #
 # Tool: cargo-deny (pinned in mise.toml under "cargo:cargo-deny").
 # Cheap: reads Cargo.lock + deny.toml; NO `cargo build` required. Unlike the

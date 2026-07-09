@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Third-party license attribution GENERATOR (Apache-2.0 release compliance).
 #
-# Regenerates the bundled THIRD-PARTY-LICENSES.md files for the two native
+# Generates the bundled THIRD-PARTY-LICENSES.md files for the two native
 # artifacts that statically link the Rust dependency graph:
 #
 #   packages/python/THIRD-PARTY-LICENSES.md      <- prompting-press-py    graph
@@ -9,10 +9,12 @@
 #
 # These files reproduce the upstream copyright + license notices that MIT / BSD /
 # ISC / Apache-2.0 require to be preserved in BINARY distributions (the wheel and
-# the .node addon bundle the compiled Rust code). This script WRITES the files;
-# the ci:check-third-party-licenses gate runs it and asserts `git diff` is clean.
+# the .node addon bundle the compiled Rust code). This script WRITES the files at
+# package-build time in CI (invoked by build-wheels, build-sdist, and publish-npm
+# in release.yml before the respective packaging/publish step). The files are NOT
+# committed to the repository (issue #16).
 #
-# Tool: cargo-about (pinned in mise.toml under "cargo:cargo-about").
+# Tool: cargo-about (pinned in mise.toml under "ubi:EmbarkStudios/cargo-about").
 # Config: about.toml at the repo root; template: ci/about.hbs.
 #         about.toml's `accepted` list MUST match deny.toml's [licenses].allow.
 #
@@ -21,8 +23,8 @@
 #     Cargo registry cache); it optionally queries clearlydefined.io to fill
 #     gaps. Our graph resolves fully from local sources, so the clearlydefined
 #     WARN lines are harmless and the output is deterministic offline.
-#   - Regenerate after ANY change to Cargo.lock, about.toml, or ci/about.hbs,
-#     then commit the updated THIRD-PARTY-LICENSES.md files.
+#   - After a change to Cargo.lock, about.toml, or ci/about.hbs, the next CI
+#     build will automatically pick up the change — no manual regeneration needed.
 #   - A NEW bundled crate under a license absent from about.toml's `accepted`
 #     will surface here (and fail ci:check-licenses first); triage per deny.toml.
 set -euo pipefail
@@ -73,8 +75,8 @@ generate() {
   # end-of-file-fixer pre-commit hook enforces. cargo-about's Handlebars output
   # ends with a blank line ("...\n\n"); the hook collapses that to a single "\n".
   # If gen leaves the doubled newline, the committed (hook-normalized) file and a
-  # fresh regen differ by one blank line and the ci:check-third-party-licenses
-  # freshness diff fails forever. Strip all trailing newlines, then re-add one.
+  # fresh regen differ by one blank line (a historical artefact from when the file
+  # was committed). Strip all trailing newlines, then re-add one.
   # perl -0777 slurps the whole file; s/\n+\z/\n/ replaces the final run of
   # newlines with a single one (portable, no in-place-sed newline quirks).
   local abs="${REPO_ROOT}/${out}"
