@@ -6,7 +6,7 @@
   "bump-minor-pre-major": true,
   "bump-patch-for-minor-pre-major": true,
 
-  "//draft": "Cut ONE aggregated GitHub Release (packages/python) as a DRAFT; all other components set skip-github-release: true so they produce only a git tag (via force-tag-creation) with no separate GitHub Release UI entry. The release workflow (finalize-release) flips the single draft to public only after all builds + tests + registry publishes succeed (announcement integrity). force-tag-creation is REQUIRED: GitHub does not create the git tag for a draft release, and without the tag release-please cannot find the prior release on the next run (wrong changelog base). See release.yml finalize-release.",
+  "//draft": "Cut all 6 component GitHub Releases as DRAFTs; the release workflow (finalize-release) flips every draft for the released version to public only after all builds + tests + registry publishes succeed (announcement integrity). force-tag-creation is REQUIRED with draft: GitHub does not create the git tag for a draft release, and without the tag release-please cannot find the prior release on the next run (wrong changelog base). See release.yml finalize-release.",
   "draft": true,
   "force-tag-creation": true,
 
@@ -15,29 +15,25 @@
       "release-type": "rust",
       "component": "prompting-press-core",
       "package-name": "prompting-press-core",
-      "changelog-path": "CHANGELOG.md",
-      "skip-github-release": true
+      "changelog-path": "CHANGELOG.md"
     },
     "crates/prompting-press": {
       "release-type": "rust",
       "component": "prompting-press",
       "package-name": "prompting-press",
-      "changelog-path": "CHANGELOG.md",
-      "skip-github-release": true
+      "changelog-path": "CHANGELOG.md"
     },
     "crates/prompting-press-py": {
       "release-type": "rust",
       "component": "prompting-press-py-crate",
       "package-name": "prompting-press-py",
-      "changelog-path": "CHANGELOG.md",
-      "skip-github-release": true
+      "changelog-path": "CHANGELOG.md"
     },
     "crates/prompting-press-node": {
       "release-type": "rust",
       "component": "prompting-press-node-crate",
       "package-name": "prompting-press-node",
-      "changelog-path": "CHANGELOG.md",
-      "skip-github-release": true
+      "changelog-path": "CHANGELOG.md"
     },
     "packages/python": {
       "release-type": "python",
@@ -49,8 +45,7 @@
       "release-type": "node",
       "component": "prompting-press-ts",
       "package-name": "prompting-press",
-      "changelog-path": "CHANGELOG.md",
-      "skip-github-release": true
+      "changelog-path": "CHANGELOG.md"
     }
   },
 
