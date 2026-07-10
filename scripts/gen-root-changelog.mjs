@@ -115,6 +115,30 @@ function generate() {
 	return `${blocks.join("\n\n")}\n`;
 }
 
+// `--section <version>` prints ONLY that version's merged union body to stdout
+// (no file write, no root header). The release workflow pipes this into
+// `gh release edit --notes` so the ONE aggregated GitHub Release at vX.Y.Z shows
+// the union of every package's notes, not just the first package's (release-please
+// gives the single component-less release only the first-listed package's notes;
+// a root '.' package yields the COMPLEMENT of package paths, not the union —
+// verified via dry-run — so overwriting the body here is the robust fix).
+const sectionIdx = process.argv.indexOf("--section");
+if (sectionIdx !== -1) {
+	const version = process.argv[sectionIdx + 1];
+	if (!version) {
+		console.error("[gen-root-changelog] --section requires a version, e.g. --section 0.3.3");
+		process.exit(2);
+	}
+	const section = mergeChangelogsForVersion(REPO_ROOT, PACKAGE_PATHS, version);
+	if (!section) {
+		console.error(`[gen-root-changelog] no changelog entry found for ${version}`);
+		process.exit(1);
+	}
+	// Bare stdout write (no trailing decoration) so the caller can redirect it.
+	process.stdout.write(`${section}\n`);
+	process.exit(0);
+}
+
 const content = generate();
 
 if (process.argv.includes("--check")) {
