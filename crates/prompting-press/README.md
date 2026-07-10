@@ -48,8 +48,8 @@ lint — are at **<https://prompting-press.github.io/>**.
 
 ## Changelog
 
-Per-version release notes are on the
-[GitHub Releases page](https://github.com/prompting-press/prompting-press/releases).
+Per-version release notes — aggregated across every package — are in
+[CHANGELOG.md](https://github.com/prompting-press/prompting-press/blob/main/CHANGELOG.md).
 
 ## License
 
