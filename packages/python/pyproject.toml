@@ -53,6 +53,14 @@ Homepage = "https://prompting-press.github.io/"
 Documentation = "https://prompting-press.github.io/"
 Repository = "https://github.com/prompting-press/prompting-press"
 Issues = "https://github.com/prompting-press/prompting-press/issues"
+# PyPI surfaces a recognized "Changelog" label with a dedicated changelog icon in
+# the project sidebar (case-insensitive; also matches Changes/Release notes/History).
+# Point it at the aggregated root CHANGELOG.md — the union of all packages' notes
+# per version (scripts/gen-root-changelog.mjs). NOT the GitHub Release page: with
+# one component-less tag per release, that page shows only the first package's
+# notes, so it omits changes scoped to another package. (crates.io/npm render only
+# the README, so they get a README link to the same file.)
+Changelog = "https://github.com/prompting-press/prompting-press/blob/main/CHANGELOG.md"
 
 [dependency-groups]
 # Build-time-only codegen toolchain (NOT a wheel runtime dep — runtime

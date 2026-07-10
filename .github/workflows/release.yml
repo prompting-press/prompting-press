@@ -277,6 +277,14 @@ jobs:
       - name: Run docs:snapshot
         run: mise exec -- moon run docs:snapshot -- --version "${{ steps.ver.outputs.version }}"
 
+      # Regenerate the aggregated root CHANGELOG.md from the six per-package
+      # changelogs (release-please has just bumped them on the tagged commit). This
+      # is the ONE file that unions every package's notes per version — the
+      # component-less GitHub Release at vX.Y.Z shows only the first package's
+      # notes. It rides the same auto-merged snapshot PR below (added to `git add`).
+      - name: Regenerate root CHANGELOG.md
+        run: mise exec -- node scripts/gen-root-changelog.mjs
+
       - name: Open + auto-merge a PR with the frozen docs tree
         env:
           # App token so `gh pr create`/`merge` run as the App — the snapshot PR
@@ -287,7 +295,7 @@ jobs:
           set -euo pipefail
           git config user.name "prompting-press-release[bot]"
           git config user.email "release-bot@prompting-press.github.io"
-          git add docs/site/src/versions docs/site/src/data/versions.json
+          git add docs/site/src/versions docs/site/src/data/versions.json CHANGELOG.md
           if git diff --cached --quiet; then
             echo "Snapshot produced no changes (idempotent re-run); nothing to commit."
             exit 0
