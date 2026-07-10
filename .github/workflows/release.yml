@@ -1007,6 +1007,26 @@ jobs:
           mapfile -t DRAFT_TAGS < <(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName,isDraft \
             --jq ".[] | select(.isDraft and (.tagName == \"v${VERSION}\")) | .tagName")
 
+          # Overwrite the release body with the UNION of all packages' notes.
+          # release-please gives the single component-less release at v<version>
+          # only the FIRST-listed package's notes (the other 5 collide on the tag
+          # and are skipped) — so a change scoped to another package is missing from
+          # the release page. gen-root-changelog.mjs --section rebuilds this
+          # version's deduplicated union from the six per-package CHANGELOG.md files
+          # (the same merge the root CHANGELOG.md uses). Best-effort: a failure here
+          # must NOT fail the release (the notes are cosmetic; the tag + registry
+          # artifacts are what matter), so it logs and continues.
+          if NOTES="$(node scripts/gen-root-changelog.mjs --section "$VERSION" 2>/dev/null)" && [ -n "$NOTES" ]; then
+            for tag in "${DRAFT_TAGS[@]:-}"; do
+              [ -z "$tag" ] && continue
+              echo "Rewriting release body for $tag with the aggregated union notes."
+              printf '%s\n' "$NOTES" | gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --notes-file - \
+                || echo "::warning::Could not rewrite release body for $tag; leaving release-please's default."
+            done
+          else
+            echo "::warning::Could not build aggregated release notes for v${VERSION}; leaving release-please's default body."
+          fi
+
           # A registry publish is irreversible and the git tags are already public,
           # so the moment ANY registry has this version it demonstrably exists and
           # the GitHub Release must be public to match — a draft next to a live
