@@ -14,14 +14,6 @@
   "force-tag-creation": true,
 
   "packages": {
-    "//.": "Root aggregate. release-type 'simple' + path '.' → this package is assigned ALL commits (release-please special-cases '.'), so its CHANGELOG.md and release notes are the UNION of every package's changes. Listed FIRST so it is created first and WINS the shared component-less tag vX.Y.Z: its union notes become the ONE aggregated GitHub Release body (the 6 per-package releases then collide on the same tag and are skipped as harmless duplicates — verified non-fatal in release-please source). No version.txt: 'simple' updates it with createIfMissing:false, so its absence is a skipped warning, not an error; the version lives in the manifest.",
-    ".": {
-      "release-type": "simple",
-      "component": "prompting-press-workspace",
-      "package-name": "prompting-press-workspace",
-      "changelog-path": "CHANGELOG.md",
-      "skip-snapshot": true
-    },
     "crates/prompting-press-core": {
       "release-type": "rust",
       "component": "prompting-press-core",
@@ -65,7 +57,6 @@
       "type": "linked-versions",
       "groupName": "prompting-press",
       "components": [
-        "prompting-press-workspace",
         "prompting-press-core",
         "prompting-press",
         "prompting-press-py-crate",

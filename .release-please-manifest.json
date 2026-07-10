@@ -1,5 +1,4 @@
 {
-  ".": "0.3.2",
   "crates/prompting-press-core": "0.3.2",
   "crates/prompting-press": "0.3.2",
   "crates/prompting-press-py": "0.3.2",
