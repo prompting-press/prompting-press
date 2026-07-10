@@ -17,6 +17,15 @@
 #                paths that differ per OS (pyo3 cdylib on macOS needs
 #                -undefined dynamic_lookup; Windows needs the Python import lib).
 #                Matrix: ubuntu-latest, macos-latest, windows-latest.
+#
+# Path-filter gating (issue #13): a `changes` job (always runs, ubuntu, no heavy
+# deps) uses dorny/paths-filter to detect which areas changed. Heavy jobs gate
+# their expensive STEPS on the relevant `changes` outputs. Required check names
+# are PRESERVED — all required jobs always run (step-level gating only) — so
+# GitHub always receives a conclusion and the merge queue never stalls on a
+# "missing" check. On merge_group every condition also fires via the
+# `|| github.event_name == 'merge_group'` guard: the queue is the final
+# pre-merge gate and must exercise the full suite.
 
 on:
   push:
@@ -50,6 +59,94 @@ concurrency:
 
 jobs:
   # ---------------------------------------------------------------------------
+  # changes — Lightweight path-filter job (always runs, no heavy deps). Emits
+  # boolean outputs consumed by downstream job step conditions to skip work that
+  # a change does not affect (issue #13).
+  #
+  # Filter rationale:
+  #   rust    — Rust crates + workspace manifests + toolchain. Clippy and the
+  #             build matrix gate on this directly.
+  #   python  — python binding + rust (wheel embeds the core; a Rust change
+  #             requires a Python rebuild).
+  #   node    — typescript binding + rust (addon embeds the core; a Rust change
+  #             requires a Node rebuild).
+  #   schema  — JSON Schema definitions. Drives codegen + fixture validation in
+  #             gates.
+  #   docs    — docs/site content, including committed API-ref pages. A change
+  #             here may indicate that a freshness regeneration is needed.
+  #   samples — docs/site/samples + top-level samples/; changes here drive the
+  #             docs:test-samples and samples:test gates.
+  #   ci      — .github/workflows, moon tasks, mise config, CI scripts. Any
+  #             tooling change can affect any job — runs the full suite.
+  #
+  # Anti-hang guarantee: required check names are preserved. All required jobs
+  # always run (step-level gating only); GitHub always receives a conclusion so
+  # the merge queue never waits for a "missing" required check.
+  #
+  # merge_group safety: every consuming condition also matches on
+  # `github.event_name == 'merge_group'`, making the merge queue exhaustive
+  # regardless of what paths-filter computes from the queue diff.
+  # ---------------------------------------------------------------------------
+  changes:
+    name: 'Detect changed paths'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      rust: ${{ steps.filter.outputs.rust }}
+      python: ${{ steps.filter.outputs.python }}
+      node: ${{ steps.filter.outputs.node }}
+      schema: ${{ steps.filter.outputs.schema }}
+      docs: ${{ steps.filter.outputs.docs }}
+      samples: ${{ steps.filter.outputs.samples }}
+      ci: ${{ steps.filter.outputs.ci }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          fetch-depth: 0  # paths-filter needs full history to diff against the base ref
+
+      - name: 'Detect path changes'
+        uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706  # v4.0.2
+        id: filter
+        with:
+          filters: |
+            rust:
+              - 'crates/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'rust-toolchain*.toml'
+            python:
+              # python binding embeds the core; Rust changes also require python rebuild
+              - 'crates/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'rust-toolchain*.toml'
+              - 'packages/python/**'
+            node:
+              # node binding embeds the core; Rust changes also require node rebuild
+              - 'crates/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'rust-toolchain*.toml'
+              - 'packages/typescript/**'
+            schema:
+              - 'schemas/**'
+            docs:
+              - 'docs/site/**'
+            samples:
+              - 'docs/site/samples/**'
+              - 'samples/**'
+            ci:
+              # Any workflow, task runner, toolchain, or CI script change can affect
+              # any job — conservatively marks all downstream work as needed.
+              - '.github/workflows/**'
+              - '.moon/**'
+              - '**/moon.yml'
+              - 'mise.toml'
+              - 'ci/**'
+              - 'scripts/ci/**'
+
+  # ---------------------------------------------------------------------------
   # pr-gate — FAST, no-compile checks (single runner). Everything here reads
   # manifests / lockfiles / dependency metadata and NEVER invokes `cargo build`,
   # a maturin wheel build, or a napi addon build. Split out from `gates` so a PR
@@ -64,6 +161,10 @@ jobs:
   # NOT here (kept in `gates`, they need compilation/codegen toolchains): the
   # schema + codegen freshness checks (rustfmt + the three codegen toolchains) and
   # the API-ref freshness gate (builds the node addon + runs nightly rustdoc).
+  #
+  # Path-filter note: pr-gate does NOT depend on `changes` — it is already fast
+  # (~1-2 min) and always useful for lockfile CVE/license scans regardless of what
+  # changed. Running it unconditionally preserves its "early fail" guarantee.
   # ---------------------------------------------------------------------------
   pr-gate:
     name: 'PR gate — cheap checks (ubuntu)'
@@ -77,7 +178,7 @@ jobs:
           fetch-depth: 0  # let moon resolve the base branch on pull_request events
 
       - name: Install mise toolchain
-        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac  # v2
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
         with:
           experimental: true
 
@@ -144,9 +245,6 @@ jobs:
         run: mise exec -- moon run ci:check-licenses-py
       - name: 'License gate: Node (package.json scan)'
         run: mise exec -- moon run ci:check-licenses-node
-      - name: 'Third-party attribution freshness (cargo-about)'
-        run: mise exec -- moon run ci:check-third-party-licenses
-
       # --- supply-chain advisories (known CVEs; lockfile scans) ---
       - name: 'Advisory scan: Rust (cargo-deny)'
         run: mise exec -- moon run ci:check-advisories
@@ -159,11 +257,27 @@ jobs:
   # gates — OS-independent freshness/determinism checks that DO need a toolchain
   # (rustfmt + the three codegen chains; nightly rustdoc + the built node addon
   # for API refs). The cheap no-compile checks live in `pr-gate` above.
+  #
+  # Path-filter gating: setup steps always run (cheap); the actual check steps
+  # are gated at step level:
+  #   schema/codegen group — runs when schema, rust, or ci changed
+  #   API-ref group        — runs when rust, node, python, docs, or ci changed
+  # The job always completes, so the required check always reports green.
   # ---------------------------------------------------------------------------
   gates:
     name: 'Gates (ubuntu)'
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    needs: [changes]
+    # sccache wraps rustc for all compilation in this job (GHA backend stores
+    # per-CGU objects, shared across branches). rust-cache is kept for registry/
+    # git dep downloads only (cache-targets: false avoids double-caching target/).
+    # CARGO_INCREMENTAL=0 is required — incremental builds confuse sccache's
+    # content-addressed cache.
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
 
     steps:
       - name: Checkout
@@ -177,7 +291,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install mise toolchain
-        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac  # v2
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
         with:
           experimental: true
 
@@ -206,13 +320,10 @@ jobs:
       # Expose the mise-managed cargo/rustc on PATH so Swatinem/rust-cache (a JS
       # action that shells out to `rustc -vV` for its cache key) can find them
       # without a `mise exec` prefix. `mise which cargo` resolves the active shim.
-      - name: 'Expose Rust on PATH (for rust-cache)'
-        shell: bash
-        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'Rust build cache'
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - name: 'Rust build cache (sccache + rust-cache)'
+        uses: ./.github/actions/rust-build-cache
         with:
-          shared-key: gates-v2
+          shared-key: gates-v3
 
       # Install TypeScript workspace deps so json-schema-to-typescript is present
       # when schemas:codegen-check regenerates the TS shape. On a cold checkout
@@ -231,15 +342,31 @@ jobs:
       # freshness/determinism checks that require a toolchain.
 
       # T030 — Schema meta-validation (FR-008)
+      # Gated: schema, rust, or CI tooling changed.
       - name: 'T030: Schema check'
+        if: >-
+          needs.changes.outputs.schema == 'true' ||
+          needs.changes.outputs.rust == 'true' ||
+          needs.changes.outputs.ci == 'true' ||
+          github.event_name == 'merge_group'
         run: mise exec -- moon run schemas:check-schema
 
       # T030 — Fixture accept/reject contract (FR-013)
       - name: 'T030: Fixture validation'
+        if: >-
+          needs.changes.outputs.schema == 'true' ||
+          needs.changes.outputs.rust == 'true' ||
+          needs.changes.outputs.ci == 'true' ||
+          github.event_name == 'merge_group'
         run: mise exec -- moon run schemas:validate-fixtures
 
       # T029 — Codegen freshness / determinism (SC-003)
       - name: 'T029: Codegen freshness'
+        if: >-
+          needs.changes.outputs.schema == 'true' ||
+          needs.changes.outputs.rust == 'true' ||
+          needs.changes.outputs.ci == 'true' ||
+          github.event_name == 'merge_group'
         run: mise exec -- moon run schemas:codegen-check
 
       # T015 (spec 011) — API-ref freshness gate.
@@ -248,7 +375,15 @@ jobs:
       # The nightly toolchain is installed by mise-action above alongside the
       # stable toolchain; the gate script shells out to `node gen-api-refs.mjs`
       # which runs the three extractors (TS/Python/Rust) then checks git diff.
+      # Gated: Rust, node, python, docs content, or CI tooling changed.
       - name: 'Install docs/site deps (pnpm)'
+        if: >-
+          needs.changes.outputs.rust == 'true' ||
+          needs.changes.outputs.node == 'true' ||
+          needs.changes.outputs.python == 'true' ||
+          needs.changes.outputs.docs == 'true' ||
+          needs.changes.outputs.ci == 'true' ||
+          github.event_name == 'merge_group'
         run: mise exec -- pnpm -C docs/site install --frozen-lockfile
 
       # The TS extractor reads packages/typescript/index.d.ts (the napi-emitted
@@ -260,9 +395,23 @@ jobs:
       # Rust (nightly rustdoc JSON) and Python (griffe) extractor inputs are made
       # available to the gate above.
       - name: 'Build node addon for API-ref extraction (spec 011)'
+        if: >-
+          needs.changes.outputs.rust == 'true' ||
+          needs.changes.outputs.node == 'true' ||
+          needs.changes.outputs.python == 'true' ||
+          needs.changes.outputs.docs == 'true' ||
+          needs.changes.outputs.ci == 'true' ||
+          github.event_name == 'merge_group'
         run: mise exec -- pnpm -C packages/typescript run build:addon
 
       - name: 'T015: API-ref freshness (spec 011)'
+        if: >-
+          needs.changes.outputs.rust == 'true' ||
+          needs.changes.outputs.node == 'true' ||
+          needs.changes.outputs.python == 'true' ||
+          needs.changes.outputs.docs == 'true' ||
+          needs.changes.outputs.ci == 'true' ||
+          github.event_name == 'merge_group'
         run: mise exec -- bash docs/site/scripts/check-api-refs-fresh.sh
 
   # ---------------------------------------------------------------------------
@@ -280,11 +429,19 @@ jobs:
   # its own job rather than a step in the no-compile pr-gate. Needs Python 3.12 on
   # the runner because prompting-press-py is pyo3 `abi3-py312` (pyo3's build script
   # refuses an interpreter older than the abi3 floor) — mirrors the `build` job.
+  #
+  # Path-filter gating: setup steps always run; the clippy step is gated on rust
+  # or CI tooling changes. The job always completes (required check always reports).
   # ---------------------------------------------------------------------------
   clippy:
     name: 'Clippy (ubuntu)'
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    needs: [changes]
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
 
     steps:
       - name: Checkout
@@ -293,27 +450,28 @@ jobs:
           fetch-depth: 0  # let moon resolve the base branch on pull_request events
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
           python-version: '3.12'
 
       - name: Install mise toolchain
-        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac  # v2
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
         with:
           experimental: true
 
       - name: 'Ensure clippy component'
         run: mise exec -- rustup component add clippy
 
-      - name: 'Expose Rust on PATH (for rust-cache)'
-        shell: bash
-        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'Rust build cache'
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - name: 'Rust build cache (sccache + rust-cache)'
+        uses: ./.github/actions/rust-build-cache
         with:
-          shared-key: clippy-v2
+          shared-key: clippy-v3
 
       - name: 'Clippy (-D warnings)'
+        if: >-
+          needs.changes.outputs.rust == 'true' ||
+          needs.changes.outputs.ci == 'true' ||
+          github.event_name == 'merge_group'
         run: mise exec -- moon run ci:check-clippy
         env:
           CARGO_TERM_COLOR: always
@@ -322,6 +480,11 @@ jobs:
     name: 'Python binding tests (ubuntu)'
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    needs: [changes]
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
 
     steps:
       - name: Checkout
@@ -330,17 +493,14 @@ jobs:
           fetch-depth: 0  # let moon resolve the base branch on pull_request events
 
       - name: Install mise toolchain
-        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac  # v2
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
         with:
           experimental: true
 
-      - name: 'Expose Rust on PATH (for rust-cache)'
-        shell: bash
-        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'Rust build cache'
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - name: 'Rust build cache (sccache + rust-cache)'
+        uses: ./.github/actions/rust-build-cache
         with:
-          shared-key: test-python-v2
+          shared-key: test-python-v3
       - name: 'Cache pnpm + uv stores'
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
         with:
@@ -353,7 +513,12 @@ jobs:
 
       # rustfmt/clippy not needed here; the test gate compiles + runs the crate
       # and builds the extension via uvx maturin into a hermetic uv venv.
+      # Gated: python filter (which already subsumes rust) or CI tooling changed.
       - name: 'Spec 004 / I1: build extension + run pytest & cargo test'
+        if: >-
+          needs.changes.outputs.python == 'true' ||
+          needs.changes.outputs.ci == 'true' ||
+          github.event_name == 'merge_group'
         run: mise exec -- moon run ci:test-python
         env:
           CARGO_TERM_COLOR: always
@@ -367,11 +532,19 @@ jobs:
   # can rot green. One Linux leg: the suites are OS-independent (the napi link itself
   # is covered per-OS by the `build` matrix). Verifying the addon LOADS on Linux is
   # the highest-probability surprise — this job catches it.
+  #
+  # Path-filter gating: setup steps always run; the heavy test step is gated on
+  # node filter (which already subsumes rust) or CI tooling changes.
   # ---------------------------------------------------------------------------
   test-node:
     name: 'Node binding tests (ubuntu)'
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    needs: [changes]
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
 
     steps:
       - name: Checkout
@@ -380,7 +553,7 @@ jobs:
           fetch-depth: 0  # let moon resolve the base branch on pull_request events
 
       - name: Install mise toolchain
-        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac  # v2
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
         with:
           experimental: true
 
@@ -399,15 +572,16 @@ jobs:
       - name: 'Install TS deps (pnpm)'
         run: mise exec -- pnpm -C packages/typescript install --frozen-lockfile
 
-      - name: 'Expose Rust on PATH (for rust-cache)'
-        shell: bash
-        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'Rust build cache'
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - name: 'Rust build cache (sccache + rust-cache)'
+        uses: ./.github/actions/rust-build-cache
         with:
-          shared-key: test-node-v2
+          shared-key: test-node-v3
 
       - name: 'Spec 005 / I1: build addon + run node:test & cargo test'
+        if: >-
+          needs.changes.outputs.node == 'true' ||
+          needs.changes.outputs.ci == 'true' ||
+          github.event_name == 'merge_group'
         run: mise exec -- moon run ci:test-node
         env:
           CARGO_TERM_COLOR: always
@@ -421,11 +595,19 @@ jobs:
   # and TS suites respectively (full suites covered by test-python/test-node).
   # One Linux leg: conformance correctness is OS-independent (link behavior is
   # covered per-OS by the `build` matrix).
+  #
+  # Path-filter gating: setup steps always run; the conformance step is gated
+  # on rust, python, node, schema, or CI tooling changes.
   # ---------------------------------------------------------------------------
   conformance:
     name: 'Conformance corpus gate (ubuntu)'
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    needs: [changes]
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
 
     steps:
       - name: Checkout
@@ -439,12 +621,12 @@ jobs:
       # means any 3.12+ interpreter works — 3.12 matches the build job (floor
       # raised 3.10 -> 3.12 in spec 008).
       - name: Set up Python 3.12
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
           python-version: '3.12'
 
       - name: Install mise toolchain
-        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac  # v2
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
         with:
           experimental: true
 
@@ -464,26 +646,36 @@ jobs:
       - name: 'Install TS deps (pnpm)'
         run: mise exec -- pnpm -C packages/typescript install --frozen-lockfile
 
-      - name: 'Expose Rust on PATH (for rust-cache)'
-        shell: bash
-        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'Rust build cache'
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - name: 'Rust build cache (sccache + rust-cache)'
+        uses: ./.github/actions/rust-build-cache
         with:
-          shared-key: conformance-v2
+          shared-key: conformance-v3
 
       - name: 'Spec 006: conformance corpus gate (all three legs)'
+        if: >-
+          needs.changes.outputs.rust == 'true' ||
+          needs.changes.outputs.python == 'true' ||
+          needs.changes.outputs.node == 'true' ||
+          needs.changes.outputs.schema == 'true' ||
+          needs.changes.outputs.ci == 'true' ||
+          github.event_name == 'merge_group'
         run: mise exec -- moon run ci:conformance
         env:
           CARGO_TERM_COLOR: always
 
   # ---------------------------------------------------------------------------
-  # build — OS-sensitive: exercises FFI link paths per platform
+  # build — OS-sensitive: exercises FFI link paths per platform.
+  #
+  # Path-filter gating: setup steps always run; the cargo build step is gated on
+  # rust or CI tooling changes. The 3-leg matrix always runs (all three Build
+  # check names are required), but each leg finishes in ~1-2 min when the build
+  # step is skipped (only setup overhead remains).
   # ---------------------------------------------------------------------------
   build:
     name: 'Build (${{ matrix.os }})'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    needs: [changes]
     strategy:
       fail-fast: false
       matrix:
@@ -491,6 +683,10 @@ jobs:
           - ubuntu-latest
           - macos-latest
           - windows-latest
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
 
     steps:
       - name: Checkout
@@ -505,25 +701,28 @@ jobs:
       # handle the link without a live Python interpreter, but Windows requires
       # the import lib. Installing Python on all legs is harmless (uniform CI).
       - name: Set up Python 3.12
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
           python-version: '3.12'
 
       - name: Install mise toolchain
-        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac  # v2
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
         with:
           experimental: true
 
-      - name: 'Expose Rust on PATH (for rust-cache)'
-        shell: bash
-        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
-      - name: 'Rust build cache'
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      # rust-cache keys on runner OS + rustc + Cargo.lock; the shared-key only
+      # distinguishes configuration. sccache handles per-OS compilation objects
+      # via its own GHA cache entries.
+      - name: 'Rust build cache (sccache + rust-cache)'
+        uses: ./.github/actions/rust-build-cache
         with:
-          # Per-OS cache (rust-cache already keys on the runner OS + rustc + lock).
-          shared-key: build-v2
+          shared-key: build-v3
 
       - name: Build workspace
+        if: >-
+          needs.changes.outputs.rust == 'true' ||
+          needs.changes.outputs.ci == 'true' ||
+          github.event_name == 'merge_group'
         run: mise exec -- cargo build --workspace --locked
         env:
           CARGO_TERM_COLOR: always
@@ -535,11 +734,20 @@ jobs:
   # legs span Rust/Python/TS, so this needs all three toolchains + the two built
   # FFI extensions. One Linux leg: the apps' behavior is OS-independent (the FFI
   # link itself is covered per-OS by the `build` matrix).
+  #
+  # Path-filter gating: setup steps always run; the samples:test step is gated
+  # on rust, python, node, samples, or CI changes; the doc-samples step also
+  # fires on docs changes (doc-sample programs live under docs/site/samples).
   # ---------------------------------------------------------------------------
   samples-test:
     name: 'Consumer sample apps (ubuntu)'
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    needs: [changes]
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
 
     steps:
       - name: Checkout
@@ -548,7 +756,7 @@ jobs:
           fetch-depth: 0  # let moon resolve the base branch on pull_request events
 
       - name: Install mise toolchain
-        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac  # v2
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
         with:
           experimental: true
 
@@ -568,6 +776,112 @@ jobs:
       # dist/index.d.ts, which the sample's tsc resolves via `main`/`types`).
       # `build` runs both build:addon + build:facade. The Python app's editable
       # install builds its extension via maturin during `uv sync`.
+      #
+      # sccache MUST be installed + on PATH BEFORE the TS build below: that build
+      # compiles the napi addon (Rust) with the job-level RUSTC_WRAPPER=sccache, so
+      # sccache has to exist first — otherwise cargo fails with "could not execute
+      # process `sccache rustc`: No such file or directory".
+      - name: 'Rust build cache (sccache + rust-cache)'
+        uses: ./.github/actions/rust-build-cache
+        with:
+          shared-key: samples-test-v3
+
+      - name: 'Install + build the TS package (addon + facade)'
+        # Includes `docs`: the Doc-sample suites step below fires on docs-only
+        # PRs, and the TS doc-samples resolve `prompting-press` via a `file:`
+        # link to packages/typescript — which needs its dist/ (index.js +
+        # index.d.ts) built here first. Without `docs`, a docs-only PR skipped
+        # this build and the TS doc-samples failed with "Cannot find module
+        # 'prompting-press'". (Rust/Python samples self-build via cargo/uv sync.)
+        if: >-
+          needs.changes.outputs.rust == 'true' ||
+          needs.changes.outputs.python == 'true' ||
+          needs.changes.outputs.node == 'true' ||
+          needs.changes.outputs.samples == 'true' ||
+          needs.changes.outputs.docs == 'true' ||
+          needs.changes.outputs.ci == 'true' ||
+          github.event_name == 'merge_group'
+        run: |
+          mise exec -- pnpm -C packages/typescript install --frozen-lockfile
+          mise exec -- pnpm -C packages/typescript run build
+
+      - name: 'T021: samples:test (all three consumer apps)'
+        if: >-
+          needs.changes.outputs.rust == 'true' ||
+          needs.changes.outputs.python == 'true' ||
+          needs.changes.outputs.node == 'true' ||
+          needs.changes.outputs.samples == 'true' ||
+          needs.changes.outputs.ci == 'true' ||
+          github.event_name == 'merge_group'
+        run: mise exec -- moon run samples:test
+        env:
+          CARGO_TERM_COLOR: always
+
+      # spec 014 — the in-page doc examples are standalone tested programs
+      # (docs/site/samples/**), compiled + run here so a shown example that drifts
+      # from the live API fails the PR citing the source file.
+      # Also fires on docs changes: those programs live under docs/site/samples.
+      - name: 'Doc-sample suites (docs:test-samples)'
+        if: >-
+          needs.changes.outputs.rust == 'true' ||
+          needs.changes.outputs.python == 'true' ||
+          needs.changes.outputs.node == 'true' ||
+          needs.changes.outputs.samples == 'true' ||
+          needs.changes.outputs.docs == 'true' ||
+          needs.changes.outputs.ci == 'true' ||
+          github.event_name == 'merge_group'
+        run: mise exec -- moon run docs:test-samples
+        env:
+          CARGO_TERM_COLOR: always
+
+  # Full-surface pre-release integration gate. Unlike samples-test (illustrative
+  # apps), the integration harness exercises the ENTIRE public API surface of all
+  # three packages as a real downstream consumer, one modular test file per feature
+  # (construction, render, guard, derive+merge, provenance, loaders, compose, check,
+  # errors, version). A public-API regression a consumer would hit fails here,
+  # citing the language leg.
+  #
+  # Path-filter gating: this job is NOT a required status check, so a job-level
+  # `if:` is safe — a "skipped" conclusion does not block the merge queue.
+  # Runs when rust, python, node, or CI tooling changed, and always on merge_group.
+  integration-test:
+    name: 'Integration harness — full public surface (ubuntu)'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: [changes]
+    if: >-
+      needs.changes.outputs.rust == 'true' ||
+      needs.changes.outputs.python == 'true' ||
+      needs.changes.outputs.node == 'true' ||
+      needs.changes.outputs.ci == 'true' ||
+      github.event_name == 'merge_group'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          fetch-depth: 0  # let moon resolve the base branch on pull_request events
+
+      - name: Install mise toolchain
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
+        with:
+          experimental: true
+
+      - name: 'Cache pnpm + uv stores'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: |
+            ~/.local/share/pnpm/store
+            ~/.cache/uv
+          key: pnpm-uv-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml', '**/uv.lock') }}
+          restore-keys: |
+            pnpm-uv-${{ runner.os }}-
+
+      # The TypeScript harness depends on packages/typescript via a `file:` dep, so
+      # that package must be FULLY built (napi addon + facade dist/) before the
+      # harness resolves it. The integration:test-typescript leg also runs the
+      # harness's own `pnpm test` (which rebuilds + refreshes the file-dep snapshot),
+      # but pre-building here warms the cache and mirrors samples-test.
       - name: 'Install + build the TS package (addon + facade)'
         run: |
           mise exec -- pnpm -C packages/typescript install --frozen-lockfile
@@ -579,17 +893,9 @@ jobs:
       - name: 'Rust build cache'
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
         with:
-          shared-key: samples-test-v2
+          shared-key: integration-test-v1
 
-      - name: 'T021: samples:test (all three consumer apps)'
-        run: mise exec -- moon run samples:test
-        env:
-          CARGO_TERM_COLOR: always
-
-      # spec 014 — the in-page doc examples are standalone tested programs
-      # (docs/site/samples/**), compiled + run here so a shown example that drifts
-      # from the live API fails the PR citing the source file.
-      - name: 'Doc-sample suites (docs:test-samples)'
-        run: mise exec -- moon run docs:test-samples
+      - name: 'integration:test (full public surface, all three languages)'
+        run: mise exec -- moon run integration:test
         env:
           CARGO_TERM_COLOR: always

@@ -29,6 +29,11 @@ jobs:
   build:
     name: Build docs site
     runs-on: ubuntu-latest
+    # sccache for the napi addon build (build:addon shells out to cargo).
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
@@ -46,7 +51,7 @@ jobs:
       # bespoke pnpm/node setup that lacks rust/uv (which made the prebuild's
       # Python + Rust extractors fail once spec 011 wired them into prebuild).
       - name: Install mise toolchain
-        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac  # v2
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
         with:
           experimental: true
 
@@ -54,6 +59,25 @@ jobs:
       # components idempotently against the mise-active toolchain.
       - name: 'Ensure rust components (rustfmt/clippy)'
         run: mise exec -- rustup component add rustfmt clippy
+
+      # Cache pnpm store + uv package cache across runs (keyed on lockfiles).
+      # Mirrors the ci.yml convention: key-miss is harmless, never breaks the job.
+      - name: 'Cache pnpm + uv stores'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: |
+            ~/.local/share/pnpm/store
+            ~/.cache/uv
+          key: pnpm-uv-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml', '**/uv.lock') }}
+          restore-keys: |
+            pnpm-uv-${{ runner.os }}-
+
+      # sccache for the napi addon build. Expose cargo PATH first (mirrors ci.yml).
+      - name: 'Expose Rust on PATH (for sccache)'
+        shell: bash
+        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
+      - name: 'sccache (GHA backend)'
+        uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
 
       - name: 'Install docs/site deps (pnpm)'
         run: mise exec -- pnpm -C docs/site install --frozen-lockfile
@@ -125,7 +149,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download built site artifact
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
           name: docs-dist
           path: dist

@@ -1,0 +1,37 @@
+{
+  "case": "provenance-attributes",
+  "definition": {
+    "body": "Hello {{ name }}, welcome to {{ company }}.",
+    "name": "welcome",
+    "role": "system",
+    "variables": {
+      "company": {
+        "description": "The company name.",
+        "trusted": true,
+        "type": "string"
+      },
+      "name": {
+        "description": "The user name.",
+        "trusted": true,
+        "type": "string"
+      }
+    }
+  },
+  "description": "Provenance-attributes parity case (spec 018 T010): identical render through all three bindings must yield an identical provenance map — same 4 keys with the same string values, including both SHA-256 hashes. Verifies that provenance_attributes() / provenanceAttributes() is a pure projection and the key strings are the same library-owned constants across bindings.",
+  "expected": {
+    "render_hash": "d6dd02d3cdf64511e4040136f29c4aa5116e59db71d69e686bcf6340efe1b840",
+    "template_hash": "43448d557fcee53043b770cea53bd820d09b549de7861e1e16cbaf08f79a537c",
+    "text": "Hello Ada, welcome to ACME."
+  },
+  "input": {
+    "company": {
+      "type": "string",
+      "value": "ACME"
+    },
+    "name": {
+      "type": "string",
+      "value": "Ada"
+    }
+  },
+  "variant": null
+}

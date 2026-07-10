@@ -9,7 +9,7 @@ review have a precise target.
 ### IntegrationPage
 - **What**: one MDX page per framework under `docs/site/src/content/docs/integrations/`.
 - **Instances**: `index.mdx` (intro/positioning), `langchain.mdx`, `strands.mdx`, `crewai.mdx`.
-- **Fields**: frontmatter `title`, `description`; prose (positioning, footgun callout, out-of-scope note); one or more `?raw` sample imports per supported language.
+- **Fields**: frontmatter `title`, `description`; prose (positioning, pitfall callout, out-of-scope note); one or more `?raw` sample imports per supported language.
 - **Rules**: internal links root-absolute (so the remark plugin version-prefixes them); no future-tense prose (FR-020); no principle numbers / no "provenance" (FR-013/014); every embedded snippet is a real sample import, not inline prose (FR-005).
 
 ### RecipeSample

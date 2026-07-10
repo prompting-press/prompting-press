@@ -87,6 +87,8 @@ export default defineConfig({
             { label: "Compose multi-message prompts", link: "/guides/composition/" },
             { label: "The advisory guard", link: "/guides/guard/" },
             { label: "Lint prompts in CI", link: "/guides/lint-in-ci/" },
+            { label: "Provenance attributes", link: "/guides/provenance-attributes/" },
+            { label: "Loading prompts", link: "/guides/loader/" },
           ],
         },
         { label: "Template features", link: "/templates/" },

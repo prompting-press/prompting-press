@@ -1,0 +1,145 @@
+---
+title: "Provenance attributes"
+description: "Attach render provenance to a telemetry span in one call — no hand-written key strings."
+---
+
+import { Code, Tabs, TabItem } from "@astrojs/starlight/components";
+
+Every render result carries four content-identity fields: `name`, `variant`, `template_hash`, and
+`render_hash`. The provenance-attributes helper formats them into a flat `string→string` attribute
+map under stable, library-owned `prompting_press.prompt.*` keys — suitable for direct use as
+telemetry span attributes.
+
+## One-call span attachment
+
+<Tabs>
+<TabItem label="Rust">
+```rust
+use prompting_press::ProvenanceExt; // import the extension trait
+
+let result = prompt.render(&vars, None, &GuardConfig::default(), false)?;
+
+// Returns BTreeMap<String, String> — exactly 4 entries, deterministic order.
+let attrs = result.provenance_attributes();
+
+// Pass directly to any span API that accepts an iterable of (key, value) pairs.
+// e.g. with opentelemetry:
+// span.set_attributes(attrs.iter().map(|(k, v)| KeyValue::new(k.clone(), v.clone())));
+```
+</TabItem>
+<TabItem label="Python">
+```python
+result = prompt.render(Vars, vars_instance)
+
+# Returns dict[str, str] — exactly 4 entries.
+attrs = result.provenance_attributes()
+
+# Pass directly to any span API:
+# span.set_attributes(attrs)
+```
+</TabItem>
+<TabItem label="TypeScript">
+```typescript
+const result = p.render({ name: "Ada", count: 3 });
+
+// Returns Record<string, string> — exactly 4 entries.
+const attrs = result.provenanceAttributes();
+
+// Pass directly to any span API:
+// span.setAttributes(attrs);
+```
+</TabItem>
+</Tabs>
+
+## The four library-owned keys
+
+| Key | Value |
+|-----|-------|
+| `prompting_press.prompt.name` | The prompt's `name` field |
+| `prompting_press.prompt.variant` | The resolved variant arm (`"default"` when no arm was selected) |
+| `prompting_press.prompt.template_hash` | Lowercase-hex `SHA256(resolved variant source)` |
+| `prompting_press.prompt.render_hash` | Lowercase-hex `SHA256(rendered output)` |
+
+The `template_hash` content-addresses the template source (unchanged by guard mode). The
+`render_hash` content-addresses the rendered output; when the guard is enabled the hash is over the
+delimited body, when disabled over the plain body — both deterministic. Both hashes are content
+identifiers, not content.
+
+These keys are **not** OTel GenAI-convention keys (only `gen_ai.prompt.name` exists in that
+convention; `gen_ai.prompt.variant` is not a convention key). A consumer may remap onto their
+tracer's own convention by reading the four fields directly.
+
+## What is not included
+
+The map is an **explicit allowlist** — it will never include `text` (the rendered body),
+`guard` (the guard advisory text), `output_model`, prompt metadata, or any other field. This is
+deliberate: auto-logging rendered prompt content to telemetry is a data-exposure risk, and
+flattening opaque metadata bags risks unbounded span cardinality.
+
+## Custom keys
+
+The helper is additive. The four provenance fields are always publicly readable on the result, so
+you can build a custom-keyed map without it:
+
+<Tabs>
+<TabItem label="Rust">
+```rust
+use std::collections::BTreeMap;
+
+let custom: BTreeMap<String, String> = [
+    ("my.prompt.name".to_string(), result.name.clone()),
+    ("my.prompt.variant".to_string(), result.variant.clone()),
+    ("my.prompt.template_hash".to_string(), result.template_hash.clone()),
+    ("my.prompt.render_hash".to_string(), result.render_hash.clone()),
+].into_iter().collect();
+```
+</TabItem>
+<TabItem label="Python">
+```python
+custom = {
+    "my.prompt.name": result.name,
+    "my.prompt.variant": result.variant,
+    "my.prompt.template_hash": result.template_hash,
+    "my.prompt.render_hash": result.render_hash,
+}
+```
+</TabItem>
+<TabItem label="TypeScript">
+```typescript
+const custom = {
+    "my.prompt.name": result.name,
+    "my.prompt.variant": result.variant,
+    "my.prompt.template_hash": result.templateHash,
+    "my.prompt.render_hash": result.renderHash,
+};
+```
+</TabItem>
+</Tabs>
+
+## No telemetry coupling
+
+The library adds **no** telemetry or observability dependency — neither as a hard dependency nor
+an optional extra. The helper builds a plain `string→string` map from fields that already exist on
+the result; it is a pure projection with no I/O and no callbacks. The caller decides whether and
+how to record the map.
+
+## Rust: importing the extension trait
+
+In Rust, `result.provenance_attributes()` requires importing the `ProvenanceExt` trait:
+
+```rust
+use prompting_press::ProvenanceExt;
+```
+
+Alternatively, use the free function form directly:
+
+```rust
+use prompting_press::provenance_attributes_of;
+
+let attrs = provenance_attributes_of(
+    &result.name,
+    &result.variant,
+    &result.template_hash,
+    &result.render_hash,
+);
+```

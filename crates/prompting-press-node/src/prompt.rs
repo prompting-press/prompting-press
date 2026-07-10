@@ -37,12 +37,33 @@
 
 use napi_derive::napi;
 
+use prompting_press::{merge_definitions, MergeStrategy};
 use prompting_press_core::GuardConfig as KernelGuardConfig;
 
 use crate::check::{CheckReport, Finding};
 use crate::error::{consumer_error_to_napi_err, kernel_error_to_napi_err};
 use crate::marshal::to_kernel_value;
 use crate::render::{GuardConfig, RenderResult};
+
+// ── MergeStrategy marshaling ─────────────────────────────────────────────────
+
+/// Marshal a TS `MergeStrategy` string value (`"replace"` / `"merge"`) into the Rust
+/// consumer's [`MergeStrategy`] enum.
+///
+/// # Errors
+///
+/// Returns a `load`-coded napi error for unrecognized values (FR-011).
+fn marshal_strategy(s: Option<String>) -> napi::Result<MergeStrategy> {
+    match s.as_deref() {
+        None | Some("replace") => Ok(MergeStrategy::Replace),
+        Some("merge") => Ok(MergeStrategy::Merge),
+        Some(other) => Err(consumer_error_to_napi_err(
+            prompting_press::ConsumerError::Load(format!(
+                "unknown MergeStrategy value: {other:?}; expected \"replace\" or \"merge\""
+            )),
+        )),
+    }
+}
 
 /// The Node `NapiPrompt` class — an immutable, fully-validated prompt handle.
 ///
@@ -220,37 +241,46 @@ impl NapiPrompt {
         CheckReport::from_findings(findings)
     }
 
-    /// `prompt.derivePrompt(overlay)` — shallow-replace top-level fields and re-validate.
+    /// `prompt.derivePrompt(overlay, strategy?)` — merge overlay onto base and re-validate.
     ///
     /// `overlay` is a `serde_json::Value` object whose keys are a subset of the
-    /// `PromptDefinition` top-level fields. Implementation:
-    /// 1. Serialize the current definition to a `serde_json::Value` (an object).
-    /// 2. Shallow-merge the overlay on top (each top-level key in `overlay` replaces the
-    ///    corresponding key in the base; absent keys are preserved).
-    /// 3. Deserialize the merged object to a `PromptDefinition` and hand it to
-    ///    `Prompt::new` (full re-validation).
+    /// `PromptDefinition` top-level fields. `strategy` is the optional marshaled
+    /// [`MergeStrategy`] string (`"replace"` or `"merge"`; default `"replace"`).
     ///
-    /// This is semantically equivalent to `Prompt::derive(PromptOverlay { ... })` but avoids
-    /// needing `PromptOverlay` to implement `serde::Deserialize` (it does not today and
-    /// adding `Deserialize` to `PromptOverlay` would add a serde dep that the consumer's
-    /// internal type doesn't need for its Rust-only API).
+    /// Implementation — calls the single shared [`merge_definitions`] helper (FR-018 / R8):
+    /// 1. Serialize the current definition to a `serde_json::Value` (an object).
+    /// 2. Call `merge_definitions(base, overlay, strategy)` — the same helper the typed
+    ///    Rust `derive_with` path calls. This guarantees byte-identical union across bindings
+    ///    (Principle I / D1) — no second, independent union algorithm.
+    /// 3. Deserialize the merged object to a `PromptDefinition` and hand it to
+    ///    `Prompt::from_json` (full re-validation through `Prompt::new`).
+    ///
+    /// The `PromptOverlay` type deliberately does not implement `serde::Deserialize`;
+    /// this JSON-space path avoids that dep while calling the same shared helper.
     ///
     /// The original `NapiPrompt` is untouched.
     ///
     /// # Errors
     ///
     /// Same error classes as construction: a merged definition that fails any construction
-    /// invariant returns the structured error.
+    /// invariant returns the structured error. An unknown `strategy` value returns a
+    /// `load`-coded error (FR-011).
     #[napi]
-    pub fn derive_prompt(&self, overlay: serde_json::Value) -> napi::Result<NapiPrompt> {
-        // Serialize the current definition to a JSON object, merge overlay on top, then
-        // validate through the same construction path.
+    pub fn derive_prompt(
+        &self,
+        overlay: serde_json::Value,
+        strategy: Option<String>,
+    ) -> napi::Result<NapiPrompt> {
+        let strategy = marshal_strategy(strategy)?;
+
+        // Serialize the current definition to a JSON object, apply the shared merge helper,
+        // then validate through the same construction path.
         let base = serde_json::to_value(self.inner.definition()).map_err(|e| {
             consumer_error_to_napi_err(prompting_press::ConsumerError::Load(e.to_string()))
         })?;
 
-        let merged = shallow_merge_json(base, overlay)
-            .map_err(|e| consumer_error_to_napi_err(prompting_press::ConsumerError::Load(e)))?;
+        let merged =
+            merge_definitions(base, overlay, strategy).map_err(consumer_error_to_napi_err)?;
 
         let merged_json = serde_json::to_string(&merged).map_err(|e| {
             consumer_error_to_napi_err(prompting_press::ConsumerError::Load(e.to_string()))
@@ -321,44 +351,6 @@ pub fn prompt_from_json(text: String) -> napi::Result<NapiPrompt> {
 pub fn prompt_from_toml(text: String) -> napi::Result<NapiPrompt> {
     let prompt = prompting_press::Prompt::from_toml(&text).map_err(consumer_error_to_napi_err)?;
     Ok(NapiPrompt { inner: prompt })
-}
-
-// ── helpers ───────────────────────────────────────────────────────────────────────────────
-
-/// Shallow-merge `overlay` onto `base`, both of which must be JSON objects. Each top-level
-/// key present in `overlay` replaces the corresponding key in `base`; absent keys are kept
-/// from `base`. Returns an error string if either value is not a JSON object.
-///
-/// This is the `derive_prompt` merge step: it mirrors `PromptOverlay`'s semantics (a
-/// `Some(field)` replaces, `None` keeps) in pure `serde_json::Value` space, without needing
-/// `PromptOverlay` to implement `serde::Deserialize`.
-fn shallow_merge_json(
-    mut base: serde_json::Value,
-    overlay: serde_json::Value,
-) -> Result<serde_json::Value, String> {
-    let base_obj = base
-        .as_object_mut()
-        .ok_or_else(|| "base is not a JSON object".to_string())?;
-    let overlay_obj = overlay
-        .into_object()
-        .ok_or_else(|| "overlay is not a JSON object".to_string())?;
-    for (key, value) in overlay_obj {
-        base_obj.insert(key, value);
-    }
-    Ok(base)
-}
-
-// Extension trait so the `into_object` call above compiles cleanly.
-trait IntoObject {
-    fn into_object(self) -> Option<serde_json::Map<String, serde_json::Value>>;
-}
-impl IntoObject for serde_json::Value {
-    fn into_object(self) -> Option<serde_json::Map<String, serde_json::Value>> {
-        match self {
-            serde_json::Value::Object(map) => Some(map),
-            _ => None,
-        }
-    }
 }
 
 #[cfg(test)]
@@ -531,7 +523,9 @@ mod tests {
         let original_body = original.body();
 
         let overlay = serde_json::json!({ "body": "Hey {{ name }}" });
-        let derived = original.derive_prompt(overlay).expect("valid overlay");
+        let derived = original
+            .derive_prompt(overlay, None)
+            .expect("valid overlay");
 
         assert_eq!(derived.body(), "Hey {{ name }}");
         assert_eq!(
@@ -553,10 +547,76 @@ mod tests {
         // Overlay introduces an undeclared variable.
         let overlay = serde_json::json!({ "body": "{{ name }} {{ ghost }}" });
         let err = original
-            .derive_prompt(overlay)
+            .derive_prompt(overlay, None)
             .expect_err("undeclared var must fail");
         let payload = payload_of(&err);
         let errors = payload["errors"].as_array().expect("errors");
         assert!(errors.iter().any(|r| r["code"] == code::UNDEFINED_VARIABLE));
+    }
+
+    // ── T045 Merge (spec 017): derive_prompt with strategy="merge" ──────────────────────
+
+    #[test]
+    fn derive_prompt_merge_unions_variables() {
+        let shape = serde_json::json!({
+            "name": "base",
+            "role": "user",
+            "body": "{{ extraction }}",
+            "variables": { "extraction": { "type": "string", "trusted": true } },
+        });
+        let original = prompt_new(shape).expect("valid");
+
+        let overlay = serde_json::json!({
+            "body": "{{ extraction }} {{ sentiment }}",
+            "variables": { "sentiment": { "type": "string", "trusted": true } },
+        });
+        let derived = original
+            .derive_prompt(overlay, Some("merge".to_string()))
+            .expect("Merge must succeed");
+
+        let vars = derived.variables().expect("vars");
+        let obj = vars.as_object().expect("vars is object");
+        assert!(obj.contains_key("extraction"), "base var retained");
+        assert!(obj.contains_key("sentiment"), "overlay var added");
+        assert_eq!(obj.len(), 2);
+    }
+
+    #[test]
+    fn derive_prompt_merge_replace_default_parity() {
+        // derive_prompt(overlay, None) == derive_prompt(overlay, Some("replace")) (SC-002).
+        let shape = serde_json::json!({
+            "name": "base",
+            "role": "user",
+            "body": "{{ name }}",
+            "variables": { "name": { "type": "string", "trusted": true } },
+        });
+        let base = prompt_new(shape).expect("valid");
+
+        let overlay = serde_json::json!({ "body": "Hello {{ name }}!" });
+        let via_none = base
+            .derive_prompt(overlay.clone(), None)
+            .expect("derive with None");
+        let via_replace = base
+            .derive_prompt(overlay, Some("replace".to_string()))
+            .expect("derive with replace");
+
+        assert_eq!(via_none.body(), via_replace.body());
+    }
+
+    #[test]
+    fn derive_prompt_unknown_strategy_is_error() {
+        let shape = serde_json::json!({
+            "name": "base", "role": "user", "body": "{{ name }}",
+            "variables": { "name": { "type": "string", "trusted": true } },
+        });
+        let base = prompt_new(shape).expect("valid");
+        let err = base
+            .derive_prompt(serde_json::json!({}), Some("deep".to_string()))
+            .expect_err("unknown strategy must fail");
+        let payload = payload_of(&err);
+        assert_eq!(
+            payload["code"], "load",
+            "unknown strategy maps to load error (FR-011)"
+        );
     }
 }

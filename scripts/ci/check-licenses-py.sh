@@ -11,7 +11,8 @@
 # licenses do not affect the released artifact (hypothesis in particular is MPL-2.0
 # — weak copyleft — and is deliberately out of scope here). The bundled Rust
 # extension's licenses are covered by ci:check-licenses + the wheel's
-# THIRD-PARTY-LICENSES.md (ci:check-third-party-licenses), not here.
+# THIRD-PARTY-LICENSES.md (generated at build time by gen-third-party-licenses.sh),
+# not here.
 #
 # Tool: pip-licenses (pinned via `uv run --with pip-licenses==5.5.5` — exact
 #       version, invisible to the floating-version gate; 5.5.x reads the PEP 639

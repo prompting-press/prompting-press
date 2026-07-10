@@ -213,7 +213,6 @@ def valid_prompt_and_hostile_vars(
 @FUZZ_SETTINGS
 def test_construct_never_panics(doc: dict[str, Any]) -> None:
     """Prompt(dict) never panics; always returns or raises PromptingPressError."""
-    # expected structured error path
     with contextlib.suppress(PromptingPressError):
         Prompt(doc)
 
@@ -297,10 +296,9 @@ def test_render_hostile_vars_never_panics(
         p = Prompt(prompt_def)
     except PromptingPressError:
         return  # construction failed — that's fine; skip render
-    # structured error — correct
-    # Use _AnyVars so Pydantic validation does not reject the hostile values
-    # before they reach the kernel; we want the kernel path exercised too.
     with contextlib.suppress(PromptingPressError):
+        # Use _AnyVars so Pydantic validation does not reject the hostile values
+        # before they reach the kernel; we want the kernel path exercised too.
         p.render(_AnyVars, data=vars_dict)
 
 
@@ -317,7 +315,6 @@ def test_check_never_panics(doc: dict[str, Any]) -> None:
         p = Prompt(doc)
     except PromptingPressError:
         return
-    # unexpected but structured — acceptable
     with contextlib.suppress(PromptingPressError):
         p.check()
 

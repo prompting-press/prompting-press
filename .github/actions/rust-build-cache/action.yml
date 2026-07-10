@@ -1,0 +1,30 @@
+name: 'Rust build cache (sccache + rust-cache)'
+description: >-
+  Sets up Rust compilation caching for a job: exposes the mise-managed cargo on
+  PATH, installs sccache (GHA backend, wraps rustc for per-CGU object caching),
+  and configures Swatinem/rust-cache for registry/git-dep downloads only
+  (cache-targets: false — sccache owns target/). Call this BEFORE any step that
+  compiles Rust (cargo build/test, napi addon, maturin) so RUSTC_WRAPPER=sccache
+  resolves — otherwise cargo fails with "could not execute process `sccache
+  rustc`". The caller sets RUSTC_WRAPPER=sccache / SCCACHE_GHA_ENABLED /
+  CARGO_INCREMENTAL=0 at the job's env: level.
+inputs:
+  shared-key:
+    description: 'Swatinem/rust-cache shared-key — group cache entries per job.'
+    required: true
+runs:
+  using: composite
+  steps:
+    # Expose the mise-managed cargo/rustc on PATH so the JS-based rust-cache +
+    # sccache actions (which shell out to cargo directly, without `mise exec`)
+    # resolve the active toolchain. `mise which cargo` gives the active shim.
+    - name: 'Expose Rust on PATH'
+      shell: bash
+      run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
+    - name: 'sccache (GHA backend)'
+      uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
+    - name: 'Rust registry cache (deps only; target/ handled by sccache)'
+      uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      with:
+        shared-key: ${{ inputs.shared-key }}
+        cache-targets: 'false'

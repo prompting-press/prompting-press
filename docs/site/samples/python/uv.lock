@@ -2360,10 +2360,10 @@ requires-dist = [{ name = "pydantic", specifier = ">=2,<3" }]
 
 [package.metadata.requires-dev]
 codegen = [
-    { name = "datamodel-code-generator", specifier = "==0.65.1" },
-    { name = "ruff", specifier = "==0.15.12" },
+    { name = "datamodel-code-generator", specifier = "==0.68.1" },
+    { name = "ruff", specifier = "==0.15.20" },
 ]
-test = [{ name = "hypothesis", specifier = "==6.155.7" }]
+test = [{ name = "hypothesis", specifier = "==6.156.3" }]
 
 [[package]]
 name = "prompting-press-doc-samples"

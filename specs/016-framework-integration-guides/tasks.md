@@ -62,7 +62,7 @@ description: "Task list for Framework Integration Guides (spec 016)"
 
 - [X] T006 [P] [US1] Author `docs/site/samples/python/examples/integrations_langchain_messages.py` — build a Composition, map `[{role,text}]`→`[{"role","content"}]`, assert order/role preserved and a brace-containing text round-trips verbatim (use `langchain_core.messages.utils.convert_to_messages` or a fake model; no network). Include the role→`SystemMessage/HumanMessage/AIMessage` typed variant.
 - [X] T007 [P] [US1] Author `docs/site/samples/typescript/examples/integrations_langchain_messages.ts` — same mapping + assertions in TS against `@langchain/core`.
-- [X] T008 [US1] Create `docs/site/src/content/docs/integrations/langchain.mdx` — Python + TS tabs importing T006/T007 via `?raw`; prose covering the key-rename mapping, LangGraph `MessagesState`/`add_messages` note, and the `ChatPromptTemplate.from_messages` brace-re-templating footgun (FR-008).
+- [X] T008 [US1] Create `docs/site/src/content/docs/integrations/langchain.mdx` — Python + TS tabs importing T006/T007 via `?raw`; prose covering the key-rename mapping, LangGraph `MessagesState`/`add_messages` note, and the `ChatPromptTemplate.from_messages` brace-re-templating pitfall (FR-008).
 
 ### Strands (FR-003, C2)
 
@@ -73,7 +73,7 @@ description: "Task list for Framework Integration Guides (spec 016)"
 ### CrewAI (FR-004, C3)
 
 - [X] T012 [P] [US1] Author `docs/site/samples/python/examples/integrations_crewai_fields.py` — render each prompt and use the `render(...).text` field (the RENDERED string, NOT `Prompt.body` which is the raw template); assign to `Agent(role=,goal=,backstory=)` + `Task(description=,expected_output=)`; assert field values equal the rendered `.text` strings (constructor only; no `kickoff()`, no network).
-- [X] T013 [US1] Create `docs/site/src/content/docs/integrations/crewai.mdx` — Python-only page importing T012; prose covering field assignment, the `crew.kickoff(inputs=...)` double-fill footgun (FR-008), and an explicit note that no official CrewAI TypeScript SDK exists (FR-021) so this page is Python-only.
+- [X] T013 [US1] Create `docs/site/src/content/docs/integrations/crewai.mdx` — Python-only page importing T012; prose covering field assignment, the `crew.kickoff(inputs=...)` double-fill pitfall (FR-008), and an explicit note that no official CrewAI TypeScript SDK exists (FR-021) so this page is Python-only.
 
 - [X] T014 [US1] Run `moon run docs:test-samples-python` and `moon run docs:test-samples-typescript`; fix any sample until green (validates C1–C3 against real SDK types — SC-009).
 

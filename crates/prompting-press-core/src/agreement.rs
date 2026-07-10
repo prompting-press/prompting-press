@@ -33,7 +33,7 @@
 //!    (they are syntactically distinct from variable lookups), so they need no allowlist
 //!    entry.
 //!
-//! 2. **Short-circuit the parse-error footgun (FR-016a).** `undeclared_variables` returns an
+//! 2. **Short-circuit the parse-error pitfall (FR-016a).** `undeclared_variables` returns an
 //!    **empty set on parse failure** (`Err(_) => HashSet::new()` in `template.rs:434`). A
 //!    broken or excluded-feature template would therefore masquerade as "requires no
 //!    variables" and silently pass the headline guarantee. The kernel forecloses this by

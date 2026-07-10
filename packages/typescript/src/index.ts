@@ -317,6 +317,33 @@ function validateOrThrow<T>(schema: ZodLikeSchema<T>, data: unknown): T {
 export type ValidatorMap = ZodLikeSchema;
 
 // --------------------------------------------------------------------------------------
+// MergeStrategy — the strategy selector for Prompt.derive() (spec 017).
+// --------------------------------------------------------------------------------------
+
+/**
+ * Selects how {@link Prompt.derive} combines map-typed overlay fields with the base.
+ *
+ * - `Replace` (default) — each overlay-present field replaces the base's field wholesale.
+ *   Byte-identical to pre-017 behavior.
+ * - `Merge` — map-typed fields (`variables`, `variants`, `metadata`) union at top-level
+ *   keys (child-wins-whole-entry, no recursion). Scalar fields replace when overlay-present.
+ *
+ * Reserved axes (`deep`, `none`) are excluded per C-08; the axis is extensible without
+ * a new method or a breaking signature change.
+ *
+ * Pass as `{ strategy: MergeStrategy.Merge }` in the options object to {@link Prompt.derive}.
+ */
+export const MergeStrategy = {
+	/** Wholesale field replacement (default). Byte-identical to pre-017 derive behavior. */
+	Replace: "replace",
+	/** Top-level key union for map-typed fields (child-wins, no recursion). */
+	Merge: "merge",
+} as const;
+
+/** The `MergeStrategy` value type. */
+export type MergeStrategy = (typeof MergeStrategy)[keyof typeof MergeStrategy];
+
+// --------------------------------------------------------------------------------------
 // RenderOptions — options object for Prompt.render().
 // --------------------------------------------------------------------------------------
 
@@ -440,10 +467,11 @@ function makeInternalArg(handle: NapiPrompt): InternalCtorArg {
  * p.render(data, opts?);           // static form (or uses bound validators when present)
  * ```
  *
- * ## derive(overlay, validators?) — sole mutator
+ * ## derive(overlay, options?) — sole mutator (spec 017: options object replaces positional validators)
  *
- * Shallow-replaces top-level fields; re-validates the merged whole. Validators carry forward
- * from the source by default; pass `validators` to override.
+ * Merges top-level fields via the selected strategy; re-validates the merged whole.
+ * `options.validators` carry forward from the source by default; pass `{ validators }` to
+ * override. `options.strategy` defaults to `MergeStrategy.Replace` (unchanged behavior).
  */
 export class Prompt {
 	/** The underlying napi handle. Private — never exposed outside this class. */
@@ -676,26 +704,40 @@ export class Prompt {
 	}
 
 	/**
-	 * The sole mutator: shallow-replace top-level fields from `overlay` onto a clone of this
-	 * prompt's definition, then re-validate the merged whole via the Rust consumer. The original
-	 * `Prompt` is untouched (immutability guaranteed).
+	 * The sole mutator: merge `overlay` onto a clone of this prompt's definition using
+	 * `options.strategy`, then re-validate the merged whole via the Rust consumer. The
+	 * original `Prompt` is untouched (immutability guaranteed).
 	 *
-	 * Validators carry forward from the source by default; pass `validators` to
-	 * override/augment. Coverage is re-checked against the merged definition.
+	 * **Breaking change (0.x, spec 017):** the optional `validators` parameter has moved
+	 * into the `options` object. Migrate `derive(overlay, validators)` →
+	 * `derive(overlay, { validators })`.
 	 *
-	 * @param overlay    A partial `PromptDefinition` object — any subset of top-level fields to replace.
-	 * @param validators Optional new validator. If omitted, the source's bound validator is inherited.
-	 * @throws {LoadError}             overlay causes a shape violation.
+	 * @param overlay  A partial `PromptDefinition` object — any subset of top-level fields.
+	 * @param options  Optional configuration:
+	 *   - `validators` — new validator to bind; if absent, the source's bound validator is
+	 *     inherited. Coverage is re-checked against the merged variable set (FR-009).
+	 *   - `strategy` — {@link MergeStrategy} value; default `Replace`. Under `Merge`, the
+	 *     three map-typed fields (`variables`, `variants`, `metadata`) union at top-level
+	 *     keys (child-wins, no recursion); scalar fields replace when overlay-present.
+	 *
+	 * @throws {LoadError}             overlay causes a shape violation or unknown strategy.
 	 * @throws {PromptRenderError}     merged template/agreement error.
 	 * @throws {PromptValidationError} uncovered `validation_required` variable after merge.
 	 */
-	derive(overlay: Partial<PromptDefinition>, validators?: ValidatorMap): Prompt {
-		// Effective validator: overlay's (if explicitly provided) else inherit from this.
+	derive(
+		overlay: Partial<PromptDefinition>,
+		options?: { validators?: ValidatorMap; strategy?: MergeStrategy },
+	): Prompt {
+		const { validators, strategy } = options ?? {};
+		// Effective validator: options's (if explicitly provided) else inherit from this.
 		const effectiveValidators = validators !== undefined ? validators : this.#validators;
 
 		let derivedHandle: NapiPrompt;
 		try {
-			derivedHandle = this.#handle.derivePrompt(overlay as Record<string, unknown>);
+			derivedHandle = this.#handle.derivePrompt(
+				overlay as Record<string, unknown>,
+				strategy ?? null,
+			);
 		} catch (thrown) {
 			throw decodeAddonError(thrown);
 		}
@@ -840,6 +882,287 @@ export class Composition {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────
+// PromptLoadError (spec 019) — the loader I/O error, distinct from LoadError (parse/shape).
+// ─────────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Raised when a {@link PromptLoader} `load()` call fails.
+ *
+ * Distinct from {@link LoadError} (which is the parse/shape error): `except PromptLoadError`
+ * does NOT catch a malformed-YAML `LoadError` (SC-010/FR-007). Both extend
+ * {@link PromptingPressError} so `catch (PromptingPressError)` catches all library errors.
+ *
+ * Codes in `errors[0].code`:
+ * - `"load_not_found"` — key absent from backing store.
+ * - `"load_io"` — I/O error or `max_bytes` exceeded.
+ */
+export class PromptLoadError extends PromptingPressError {}
+
+// NOTE: the TypeScript loaders (`FileSystemLoader`, `MemoryLoader`, and any custom loader)
+// are pure JS and throw `PromptLoadError` directly — loader errors never cross the native
+// addon boundary, so `decodeAddonError` needs no loader-aware extension here.
+
+// ─────────────────────────────────────────────────────────────────────────────────────────
+// Stable loader-error code constants.
+// ─────────────────────────────────────────────────────────────────────────────────────────
+
+/** Stable code for a missing-key loader error (value of `errors[0].code`). */
+export const LOAD_NOT_FOUND = "load_not_found" as const;
+
+/** Stable code for a loader I/O or cap error (value of `errors[0].code`). */
+export const LOAD_IO = "load_io" as const;
+
+// ─────────────────────────────────────────────────────────────────────────────────────────
+// PromptLoader interface + built-ins (spec 019, FR-001/FR-002/FR-003).
+// ─────────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Pluggable source of raw prompt text (spec 019, FR-001).
+ *
+ * The single operation `load(key)` maps a logical key to the raw text of a prompt definition.
+ * The returned text is **never parsed or validated** — that belongs to the construct-from-text
+ * path (`Prompt.fromYaml` etc.). Loading and construction are always separate, composable steps.
+ *
+ * The interface is **async** (`Promise<string>`) to match the Node.js ecosystem's native I/O
+ * idiom (FR-009), enabling remote/cloud backends.
+ *
+ * Any function `(key: string) => Promise<string>` satisfies this interface as-is (function
+ * coercion — FR-001).
+ *
+ * Failures must reject with `PromptLoadError` — never resolve to empty string or `null` for a
+ * missing key (FR-006).
+ *
+ * @example
+ * ```ts
+ * const loader: PromptLoader = new FileSystemLoader("/prompts");
+ * const raw = await loader.load("greet");
+ * const prompt = Prompt.fromYaml(raw);
+ * ```
+ */
+export interface PromptLoader {
+	/**
+	 * Load the prompt source for `key`, returning raw text.
+	 * Rejects with {@link PromptLoadError} (`load_not_found`) when the key is absent,
+	 * or (`load_io`) on I/O error or exceeded cap.
+	 */
+	load(key: string): Promise<string>;
+}
+
+/** Helper: reject with a `PromptLoadError` with a single row (FR-008a). */
+function rejectLoad(code: string, message: string): never {
+	const errors: FieldError[] = [{ field: "", code, message }];
+	const summary = message;
+	throw new PromptLoadError(summary, errors);
+}
+
+// ─── FileSystemLoader ─────────────────────────────────────────────────────────
+
+import * as fs from "node:fs/promises";
+import * as nodepath from "node:path";
+
+// Sane default: 1 MiB.
+const DEFAULT_MAX_BYTES = 1 << 20;
+
+/**
+ * A loader that reads prompt files from a configured base directory (spec 019, FR-002).
+ *
+ * Maps a logical key to `{base}/{key}{suffix}` and returns the file's raw text (async).
+ *
+ * ## Traversal guard (FR-002a/FR-002b/SC-008)
+ *
+ * The resolved final path is validated against the canonicalized base. Rejected keys:
+ * - contain `..` components
+ * - are absolute
+ * - contain NUL bytes or backslashes
+ * - are empty or equal to `"."`
+ * - contain an intermediate `"."` component (e.g. `"foo/./bar"`)
+ * - resolve via symlinks to outside the base
+ *
+ * A missing target canonicalize failure returns `load_not_found` (not `load_io`).
+ *
+ * ## Read cap (FR-016/SC-009)
+ *
+ * Files exceeding `maxBytes` reject with `PromptLoadError` (`load_io`).
+ */
+export class FileSystemLoader implements PromptLoader {
+	/** Default maximum file size (1 MiB). */
+	static readonly DEFAULT_MAX_BYTES = DEFAULT_MAX_BYTES;
+
+	readonly #base: string;
+	readonly #suffix: string;
+	readonly #maxBytes: number;
+
+	/**
+	 * Construct a `FileSystemLoader`.
+	 *
+	 * `base` is stored as-is; it is resolved (canonicalized) at each `load()` call so the
+	 * constructor is synchronous. Use `nodepath.resolve` to make the path absolute before
+	 * construction if needed.
+	 *
+	 * @param base     The base directory under which prompt files live.
+	 * @param suffix   File name suffix appended to every key (default `".yaml"`).
+	 * @param maxBytes Maximum file size in bytes (default 1 MiB).
+	 */
+	constructor(base: string, suffix = ".yaml", maxBytes: number = DEFAULT_MAX_BYTES) {
+		this.#base = nodepath.resolve(base);
+		this.#suffix = suffix;
+		this.#maxBytes = maxBytes;
+	}
+
+	/** The resolved base directory path. */
+	get base(): string {
+		return this.#base;
+	}
+
+	/** The file name suffix (e.g. `".yaml"`). */
+	get suffix(): string {
+		return this.#suffix;
+	}
+
+	/** The maximum file size in bytes. */
+	get maxBytes(): number {
+		return this.#maxBytes;
+	}
+
+	/**
+	 * Load the prompt source for `key`.
+	 *
+	 * @throws {PromptLoadError} `load_not_found` — key not found or traversal rejected.
+	 * @throws {PromptLoadError} `load_io` — OS error or `maxBytes` exceeded.
+	 */
+	async load(key: string): Promise<string> {
+		// --- traversal guard (FR-002a/FR-002b/SC-008) ---
+		validateKey(key);
+
+		// Build candidate path: {base}/{key}{suffix}.
+		const candidate = nodepath.join(this.#base, key + this.#suffix);
+
+		// Resolve symlinks / canonicalize.
+		let resolved: string;
+		try {
+			resolved = await fs.realpath(candidate);
+		} catch (err: unknown) {
+			if (isNodeNotFound(err)) {
+				rejectLoad(LOAD_NOT_FOUND, `key not found: \`${key}\``);
+			}
+			rejectLoad(LOAD_IO, `path resolution failed for key \`${key}\``);
+		}
+
+		// Symlink-escape check: resolved must be a descendant of base. Canonicalize the base
+		// too (realpath) so a symlinked base component — e.g. macOS `/var` → `/private/var`,
+		// or any symlinked deploy path — does not defeat the prefix comparison against the
+		// already-realpath'd candidate. Fall back to the plain resolved base if it does not
+		// (yet) exist on disk.
+		let canonicalBase: string;
+		try {
+			canonicalBase = await fs.realpath(this.#base);
+		} catch {
+			canonicalBase = this.#base;
+		}
+		const resolvedNorm = addTrailingSep(resolved);
+		const baseNorm = addTrailingSep(canonicalBase);
+		if (!resolvedNorm.startsWith(baseNorm)) {
+			rejectLoad(LOAD_NOT_FOUND, `key not found: \`${key}\``);
+		}
+
+		// --- read cap (FR-016/SC-009) ---
+		let stat: Awaited<ReturnType<typeof fs.stat>>;
+		try {
+			stat = await fs.stat(resolved);
+		} catch {
+			rejectLoad(LOAD_IO, `cannot read file metadata for key \`${key}\``);
+		}
+		if (stat.size > this.#maxBytes) {
+			rejectLoad(
+				LOAD_IO,
+				`file size (${stat.size} bytes) exceeds maxBytes (${this.#maxBytes}) for key \`${key}\``,
+			);
+		}
+
+		// --- read ---
+		try {
+			return await fs.readFile(resolved, "utf-8");
+		} catch {
+			rejectLoad(LOAD_IO, `failed to read file for key \`${key}\``);
+		}
+	}
+}
+
+/** Normalize a path so it ends with the platform separator, for prefix comparison. */
+function addTrailingSep(p: string): string {
+	return p.endsWith(nodepath.sep) ? p : p + nodepath.sep;
+}
+
+/** Return true if an unknown error is an ENOENT / ENOTDIR (file-not-found) error. */
+function isNodeNotFound(err: unknown): boolean {
+	if (err !== null && typeof err === "object") {
+		const code = (err as { code?: unknown }).code;
+		return code === "ENOENT" || code === "ENOTDIR";
+	}
+	return false;
+}
+
+/** Validate a loader key against traversal rules (FR-002a/FR-002b). */
+function validateKey(key: string): void {
+	// NUL byte.
+	if (key.includes("\0")) {
+		rejectLoad(LOAD_NOT_FOUND, `key not found: \`${key}\``);
+	}
+	// Backslash (Windows separator / UNC).
+	if (key.includes("\\")) {
+		rejectLoad(LOAD_NOT_FOUND, `key not found: \`${key}\``);
+	}
+	// Empty or bare ".".
+	if (!key || key === ".") {
+		rejectLoad(LOAD_NOT_FOUND, `key not found: \`${key}\``);
+	}
+	// Use POSIX path parsing to inspect components (works on all platforms for key validation).
+	const parts = key.split("/").filter((p) => p !== "");
+	for (const part of parts) {
+		if (part === ".." || part === ".") {
+			rejectLoad(LOAD_NOT_FOUND, `key not found: \`${key}\``);
+		}
+	}
+	// Absolute keys (start with "/" or match "C:\" patterns).
+	if (nodepath.isAbsolute(key) || /^[A-Za-z]:/.test(key)) {
+		rejectLoad(LOAD_NOT_FOUND, `key not found: \`${key}\``);
+	}
+}
+
+// ─── MemoryLoader ─────────────────────────────────────────────────────────────
+
+/**
+ * A loader backed by an in-memory key→text mapping (spec 019, FR-003).
+ *
+ * The primary use case is **dependency injection in tests**: production code uses a
+ * `FileSystemLoader` or a custom loader; tests substitute a `MemoryLoader` with hard-coded
+ * prompt text. No filesystem access is performed.
+ *
+ * A missing key rejects with `PromptLoadError` (`load_not_found`).
+ */
+export class MemoryLoader implements PromptLoader {
+	readonly #map: ReadonlyMap<string, string>;
+
+	/**
+	 * Construct a `MemoryLoader` from a `Record<string, string>` or a `Map<string, string>`.
+	 */
+	constructor(prompts: Record<string, string> | Map<string, string> = {}) {
+		this.#map = prompts instanceof Map ? new Map(prompts) : new Map(Object.entries(prompts));
+	}
+
+	/**
+	 * Return the mapped text for `key`, or reject with `PromptLoadError` (`load_not_found`).
+	 */
+	async load(key: string): Promise<string> {
+		const text = this.#map.get(key);
+		if (text === undefined) {
+			rejectLoad(LOAD_NOT_FOUND, `key not found: \`${key}\``);
+		}
+		return text;
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────
 // Re-exports: the inert addon classes/functions surfaced 1:1, plus the generated shape.
 // (`Prompt`, `Composition`, and the error hierarchy are the primary surface above;
 // `RenderResult`/`CheckReport` are read-only result types surfaced unchanged, and
@@ -853,3 +1176,4 @@ export {
 	// Read-only result classes + the trivial version probe, surfaced unchanged (Principle I).
 	RenderResult,
 };
+// MergeStrategy is declared and exported inline at its definition above.

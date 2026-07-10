@@ -60,11 +60,26 @@ jobs:
       version: ${{ steps.release.outputs.version }}
       tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
+      # Mint a short-lived GitHub App installation token. Used instead of the
+      # default GITHUB_TOKEN so the release PR is authored by the App (a
+      # first-party identity), NOT github-actions[bot] — a bot-authored PR trips
+      # the org's "require approval for outside collaborators" Actions policy, so
+      # its ci.yml + codeql.yml runs land in `action_required` and the required
+      # checks never report, leaving the release PR unmergeable until a maintainer
+      # approves each run. An App token also sidesteps the fine-grained-PAT
+      # lifetime/approval org policies. (Publish jobs use OIDC, not this token.)
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b  # v2.0.6
+        with:
+          app-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
       - name: Run release-please
         id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7  # v5.0.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
@@ -90,12 +105,15 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # App token so the lock-sync commit pushed below is authored by the App
+          # (matching the release PR) and re-triggers CI without the action_required
+          # gate. See the Generate GitHub App token step above.
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Sync Cargo.lock on the release PR
         if: ${{ steps.release.outputs.pr }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           RP_PR: ${{ steps.release.outputs.pr }}
         run: |
           set -euo pipefail
@@ -164,22 +182,54 @@ jobs:
     permissions:
       contents: write # push the snapshot branch
       pull-requests: write # open + auto-merge the snapshot PR
+    # sccache for the napi addon Rust build (build:addon shells out to cargo).
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
     steps:
+      # App token so the docs-snapshot branch push + PR below are first-party
+      # (the App), not github-actions[bot] — a bot-authored PR hits the org's
+      # "require approval for outside collaborators" gate → its required checks
+      # sit in action_required and auto-merge never completes (the stuck
+      # docs-snapshot deploy). Same reasoning as the release-please job.
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b  # v2.0.6
+        with:
+          app-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
       - name: Checkout main
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: main
           # Full history so version.mjs / git see the prior tags, matching ci.yml.
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Install mise toolchain
-        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
           experimental: true
 
       - name: 'Ensure rust components (rustfmt/clippy)'
         run: mise exec -- rustup component add rustfmt clippy
+
+      - name: 'Cache pnpm + uv stores'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: |
+            ~/.local/share/pnpm/store
+            ~/.cache/uv
+          key: pnpm-uv-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml', '**/uv.lock') }}
+          restore-keys: |
+            pnpm-uv-${{ runner.os }}-
+      - name: 'Expose Rust on PATH (for sccache)'
+        shell: bash
+        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
+      - name: 'sccache (GHA backend)'
+        uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
 
       - name: 'Install docs/site deps (pnpm)'
         run: mise exec -- pnpm -C docs/site install --frozen-lockfile
@@ -227,15 +277,25 @@ jobs:
       - name: Run docs:snapshot
         run: mise exec -- moon run docs:snapshot -- --version "${{ steps.ver.outputs.version }}"
 
+      # Regenerate the aggregated root CHANGELOG.md from the six per-package
+      # changelogs (release-please has just bumped them on the tagged commit). This
+      # is the ONE file that unions every package's notes per version — the
+      # component-less GitHub Release at vX.Y.Z shows only the first package's
+      # notes. It rides the same auto-merged snapshot PR below (added to `git add`).
+      - name: Regenerate root CHANGELOG.md
+        run: mise exec -- node scripts/gen-root-changelog.mjs
+
       - name: Open + auto-merge a PR with the frozen docs tree
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # App token so `gh pr create`/`merge` run as the App — the snapshot PR
+          # is first-party and its required checks run without the approval gate.
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           VER: ${{ steps.ver.outputs.version }}
         run: |
           set -euo pipefail
           git config user.name "prompting-press-release[bot]"
           git config user.email "release-bot@prompting-press.github.io"
-          git add docs/site/src/versions docs/site/src/data/versions.json
+          git add docs/site/src/versions docs/site/src/data/versions.json CHANGELOG.md
           if git diff --cached --quiet; then
             echo "Snapshot produced no changes (idempotent re-run); nothing to commit."
             exit 0
@@ -321,6 +381,10 @@ jobs:
           # bad/invalid manifest before the release tries to `cargo publish`.
           - name: crate-package
             task: ci:check-package
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
@@ -328,15 +392,29 @@ jobs:
       # PATH); harmless for the other suites. Kept unconditional so the matrix
       # stays uniform.
       - name: Set up Python 3.12
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
           python-version: '3.12'
       - name: Install mise toolchain
-        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac  # v2
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
         with:
           experimental: true
       - name: Ensure rust components (rustfmt/clippy)
         run: mise exec -- rustup component add rustfmt clippy
+      - name: 'Cache pnpm + uv stores'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: |
+            ~/.local/share/pnpm/store
+            ~/.cache/uv
+          key: pnpm-uv-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml', '**/uv.lock') }}
+          restore-keys: |
+            pnpm-uv-${{ runner.os }}-
+      - name: 'Expose Rust on PATH (for sccache)'
+        shell: bash
+        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
+      - name: 'sccache (GHA backend)'
+        uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
       - name: Install TS deps (pnpm)
         run: mise exec -- pnpm -C packages/typescript install --frozen-lockfile
       # The consumer-samples leg runs the greeter-cli apps, and the TypeScript one
@@ -408,9 +486,13 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="$(node -e "const m=require('./.release-please-manifest.json');console.log(Object.values(m)[0])")"
-          echo "Gate failed before any publish — rolling back draft releases + tags for v${VERSION}."
+          echo "Gate failed before any publish — rolling back the draft release + tag for v${VERSION}."
+          # Single component-less tag per release (include-component-in-tag: false) →
+          # the tag is exactly "v${VERSION}". (Pre-0.3.2 releases used per-component
+          # tags like "prompting-press-*-v${VERSION}"; those are historical and never
+          # re-rolled by this job.)
           mapfile -t DRAFT_TAGS < <(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName,isDraft \
-            --jq ".[] | select(.isDraft and (.tagName | endswith(\"-v${VERSION}\"))) | .tagName")
+            --jq ".[] | select(.isDraft and (.tagName == \"v${VERSION}\")) | .tagName")
           for tag in "${DRAFT_TAGS[@]:-}"; do
             [ -z "$tag" ] && continue
             echo "Deleting draft release + tag: $tag"
@@ -451,7 +533,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
 
       - name: Install mise toolchain
-        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac  # v2
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
         with:
           experimental: true
 
@@ -536,9 +618,32 @@ jobs:
 
       # abi3-py312 ⇒ one wheel per platform serves CPython 3.12+; 3.12 is the floor.
       - name: Set up Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
           python-version: '3.12'
+
+      # mise + cargo are needed on the runner host to generate the attribution file
+      # below (maturin-action runs in its own container and cannot see them).
+      - name: Install mise toolchain
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
+        with:
+          experimental: true
+
+      # Populate the cargo registry cache on the RUNNER host: gen-third-party-licenses.sh
+      # runs cargo-about --offline, which harvests license text from the local crate
+      # sources. maturin-action fetches inside its own container, not on the host, so
+      # without this the offline generate would find an empty cache and fail.
+      - name: Fetch crate sources (for offline cargo-about)
+        run: mise exec -- cargo fetch --locked
+
+      # Generate THIRD-PARTY-LICENSES.md BEFORE maturin-action runs. The file must
+      # exist on the runner filesystem at packages/python/THIRD-PARTY-LICENSES.md so
+      # maturin can include it in the wheel (via [tool.maturin].include). maturin-action
+      # executes INSIDE its own container where mise/cargo-about are absent, so
+      # generation must happen on the runner host here, not inside the container. The
+      # file is no longer committed — it is generated at build time (issue #16).
+      - name: Generate third-party license attribution (cargo-about)
+        run: mise exec -- bash scripts/ci/gen-third-party-licenses.sh
 
       - name: Build abi3 wheel (maturin-action)
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b  # v1.51.0
@@ -570,6 +675,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
+
+      - name: Install mise toolchain
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
+        with:
+          experimental: true
+
+      # Populate the cargo registry cache on the runner host for cargo-about --offline
+      # (same reasoning as build-wheels — maturin-action fetches only in its container).
+      - name: Fetch crate sources (for offline cargo-about)
+        run: mise exec -- cargo fetch --locked
+
+      # Generate THIRD-PARTY-LICENSES.md before maturin-action packages the sdist.
+      # Same reasoning as build-wheels: the file must exist on the runner host before
+      # the maturin-action container step runs (issue #16).
+      - name: Generate third-party license attribution (cargo-about)
+        run: mise exec -- bash scripts/ci/gen-third-party-licenses.sh
+
       - name: Build sdist (maturin-action)
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b  # v1.51.0
         with:
@@ -604,13 +726,13 @@ jobs:
       # index.d.ts as an "Unknown distribution format". The wheels are named
       # `wheel-<target>` and the sdist `sdist`; both patterns land in one dist/.
       - name: Download wheels
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
           path: dist
           pattern: wheel-*
           merge-multiple: true
       - name: Download sdist
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
           path: dist
           pattern: sdist
@@ -666,14 +788,31 @@ jobs:
             target: aarch64-apple-darwin
           - runner: windows-latest
             target: x86_64-pc-windows-msvc
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
 
       - name: Install mise toolchain
-        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac  # v2
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
         with:
           experimental: true
+
+      - name: 'Cache pnpm store'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+      - name: 'Expose Rust on PATH (for sccache)'
+        shell: bash
+        run: dirname "$(mise which cargo)" >> "$GITHUB_PATH"
+      - name: 'sccache (GHA backend)'
+        uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
 
       # The build target's Rust std must be present (native for glibc/macOS/
       # Windows; the cross std for musl). Add it explicitly so napi resolves it.
@@ -689,7 +828,7 @@ jobs:
           version: 0.14.1
       - name: Install cargo-zigbuild (musl only)
         if: ${{ contains(matrix.settings.target, 'musl') }}
-        uses: taiki-e/install-action@16b05812d776ae1dfaabc8277e421fb6d2506419  # v2
+        uses: taiki-e/install-action@50414676f9f5d50a65992c6dd2ed02641263226c  # v2
         with:
           tool: cargo-zigbuild
 
@@ -746,18 +885,34 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
 
       - name: Install mise toolchain
-        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac  # v2
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
         with:
           experimental: true
 
       - name: Set up Node for npm OIDC
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
         with:
-          node-version: '22.14.0'
+          # Node 24 LTS: the `npm install -g npm@latest` below (needed for OIDC
+          # trusted publishing) pulls npm 12.x, whose engines require node
+          # ^22.22.2 || ^24.15.0 || >=26. The previous 22.14.0 pin failed that
+          # check (EBADENGINE) and blocked the npm publish. 24 LTS satisfies it and
+          # is the stable line for a publish job.
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install TS deps
         run: mise exec -- pnpm -C packages/typescript install --frozen-lockfile
+
+      # Populate the cargo registry cache for cargo-about --offline (the generate
+      # step harvests license text from local crate sources).
+      - name: Fetch crate sources (for offline cargo-about)
+        run: mise exec -- cargo fetch --locked
+
+      # Generate THIRD-PARTY-LICENSES.md for the npm package. The file is listed in
+      # package.json `files` and must exist before `npm publish` assembles the tarball.
+      # Not committed; generated at publish time (issue #16).
+      - name: Generate third-party license attribution (cargo-about)
+        run: mise exec -- bash scripts/ci/gen-third-party-licenses.sh
 
       # Pull every prebuilt binary into the package dir. The napi loader tries
       # ./prompting-press.<platform>.node FIRST, so bundling all of them into the
@@ -766,7 +921,7 @@ jobs:
       # generated napi loader (index.js/index.d.ts), and src/index.ts imports
       # from ../index.js — so tsc can't compile the facade until they're present.
       - name: Download all prebuilt addons
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
           path: packages/typescript
           pattern: node-*
@@ -783,7 +938,11 @@ jobs:
         working-directory: packages/typescript
         run: |
           set -euo pipefail
-          npm install -g npm@latest        # OIDC trusted publishing needs npm >= 11.5.1
+          # OIDC trusted publishing needs npm >= 11.5.1. Node 24 LTS already bundles
+          # npm 11.x, so no global upgrade is needed. (A previous `npm install -g
+          # npm@latest` here floated to npm 12.x, whose node engine requirement broke
+          # the pinned runtime with EBADENGINE — don't reintroduce a floating upgrade.)
+          npm --version
           VER="$(node -p "require('./package.json').version")"
           # IDEMPOTENT + FORWARD-ONLY: npm is append-only, so a recovery re-run must
           # not attempt to re-publish an existing version (npm would hard-fail with
@@ -842,9 +1001,31 @@ jobs:
           VERSION="$(node -e "const m=require('./.release-please-manifest.json');console.log(Object.values(m)[0])")"
           echo "Release version: $VERSION"
 
-          # Collect this version's DRAFT releases (tag ends in -v<version>).
+          # Collect this version's DRAFT release. Single component-less tag per
+          # release (include-component-in-tag: false) → the tag is exactly
+          # "v<version>". (Pre-0.3.2 releases used per-component "*-v<version>" tags.)
           mapfile -t DRAFT_TAGS < <(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName,isDraft \
-            --jq ".[] | select(.isDraft and (.tagName | endswith(\"-v${VERSION}\"))) | .tagName")
+            --jq ".[] | select(.isDraft and (.tagName == \"v${VERSION}\")) | .tagName")
+
+          # Overwrite the release body with the UNION of all packages' notes.
+          # release-please gives the single component-less release at v<version>
+          # only the FIRST-listed package's notes (the other 5 collide on the tag
+          # and are skipped) — so a change scoped to another package is missing from
+          # the release page. gen-root-changelog.mjs --section rebuilds this
+          # version's deduplicated union from the six per-package CHANGELOG.md files
+          # (the same merge the root CHANGELOG.md uses). Best-effort: a failure here
+          # must NOT fail the release (the notes are cosmetic; the tag + registry
+          # artifacts are what matter), so it logs and continues.
+          if NOTES="$(node scripts/gen-root-changelog.mjs --section "$VERSION" 2>/dev/null)" && [ -n "$NOTES" ]; then
+            for tag in "${DRAFT_TAGS[@]:-}"; do
+              [ -z "$tag" ] && continue
+              echo "Rewriting release body for $tag with the aggregated union notes."
+              printf '%s\n' "$NOTES" | gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --notes-file - \
+                || echo "::warning::Could not rewrite release body for $tag; leaving release-please's default."
+            done
+          else
+            echo "::warning::Could not build aggregated release notes for v${VERSION}; leaving release-please's default body."
+          fi
 
           # A registry publish is irreversible and the git tags are already public,
           # so the moment ANY registry has this version it demonstrably exists and

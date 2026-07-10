@@ -99,7 +99,7 @@ Someone clicks a shared link like `https://prompting-press.github.io/getting-sta
 - **FR-005a**: Samples MUST be compiled/type-checked against the **real** framework SDK types (not local stubs). The framework SDKs MUST be installed as **sample-only dev dependencies**, scoped to the samples/CI toolchain and isolated from every shipped `prompting-press-*` package's dependency set, so that a real SDK shape drift would surface as a sample type-check failure.
 - **FR-006**: The Prompting Press portion of each sample MUST use only the existing public library surface; no sample requires a new method, field, or option on any `prompting-press-*` package.
 - **FR-007**: No `prompting-press-*` package MUST gain a dependency on any agent framework as a result of this feature; framework SDK usage appears only in sample/demo code and its sample-only dev-dependency set (FR-005a), never in shipped library packages.
-- **FR-008**: Each framework page MUST document that framework's known footgun(s): LangChain — do not route rendered text through `ChatPromptTemplate.from_messages` tuple/dict shorthand (brace re-templating); Strands — system position is flattened into the separate system prompt; CrewAI — do not double-fill via `crew.kickoff(inputs=...)` for already-rendered variables.
+- **FR-008**: Each framework page MUST document that framework's known pitfall(s): LangChain — do not route rendered text through `ChatPromptTemplate.from_messages` tuple/dict shorthand (brace re-templating); Strands — system position is flattened into the separate system prompt; CrewAI — do not double-fill via `crew.kickoff(inputs=...)` for already-rendered variables.
 - **FR-009**: The Integrations pages MUST NOT describe or imply any framework-specific request-body content types (e.g. Strands `guardContent`/`toolResult`) as supported outputs; recipes map plain rendered text only.
 
 #### Positioning: why-vs-Jinja, framework fit, use cases
@@ -125,7 +125,7 @@ Someone clicks a shared link like `https://prompting-press.github.io/getting-sta
 
 ### Key Entities
 
-- **Integration page**: A docs page for one framework, containing prose (positioning, footguns, out-of-scope notes) and one or more embedded, CI-tested sample files, per supported language.
+- **Integration page**: A docs page for one framework, containing prose (positioning, pitfalls, out-of-scope notes) and one or more embedded, CI-tested sample files, per supported language.
 - **Recipe / helper sample**: A real source file under `docs/site/samples/{python,typescript}/examples/` that maps a Prompting Press render result into a target framework's expected shape; the unit of "tested glue" this feature ships.
 - **Composition result**: The existing Prompting Press output — an ordered list of role-tagged rendered messages (`[{role, text}]`, role ∈ {system, user, assistant}) that recipes consume. Unchanged by this feature.
 - **Use-cases section**: Homepage content summarizing framework-agnostic value; links out to existing guides (Variants, Lint-in-CI, etc.) rather than duplicating them.

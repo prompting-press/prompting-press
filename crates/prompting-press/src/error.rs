@@ -68,7 +68,72 @@ pub mod code {
 
     /// Malformed YAML/JSON input, or a deserialize failure, in the dual-input loader.
     pub const LOAD: &str = "load";
+
+    /// A `PromptLoader::load` call failed due to an I/O error or an exceeded read cap
+    /// (e.g. `max_bytes` exceeded).
+    pub const LOAD_IO: &str = "load_io";
+
+    /// A `PromptLoader::load` call could not find the requested key.
+    pub const LOAD_NOT_FOUND: &str = "load_not_found";
 }
+
+/// The error type returned by [`crate::loader::PromptLoader::load`].
+///
+/// Distinct from [`ConsumerError`] at the type level (FR-007/FR-008). Normalizes into the
+/// common `[{field, code, message}]` contract under codes [`code::LOAD_IO`] and
+/// [`code::LOAD_NOT_FOUND`]. Messages are scrubbed: the logical key + code only; never
+/// file contents, full absolute paths, or secrets (SEC-003).
+///
+/// ## Compatibility surface note
+///
+/// `PromptLoadError` and its codes [`code::LOAD_IO`] / [`code::LOAD_NOT_FOUND`] are NEW
+/// additions to the closed error vocabulary (spec 019 compatibility-surface expansion). See
+/// the amendment in `.specify/memory/DECISIONS.md`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PromptLoadError {
+    /// A key was not found in the loader's backing store (missing file, missing map entry).
+    /// Code: [`code::LOAD_NOT_FOUND`].
+    NotFound {
+        /// The logical key that was requested (never the on-disk path).
+        key: String,
+    },
+    /// An I/O or resource failure occurred (read error, `max_bytes` exceeded, etc.).
+    /// Code: [`code::LOAD_IO`].
+    Io {
+        /// The logical key that was being loaded (never raw OS error strings or paths).
+        key: String,
+        /// A short, scrubbed description of the I/O failure (no file contents or full paths).
+        detail: String,
+    },
+}
+
+impl PromptLoadError {
+    /// Convert this error into the normalized `[{field, code, message}]` shape used across bindings.
+    #[must_use]
+    pub fn to_field_error(&self) -> FieldError {
+        match self {
+            Self::NotFound { key } => FieldError {
+                field: String::new(),
+                code: code::LOAD_NOT_FOUND.to_string(),
+                message: format!("key not found: `{key}`"),
+            },
+            Self::Io { key, detail } => FieldError {
+                field: String::new(),
+                code: code::LOAD_IO.to_string(),
+                message: format!("I/O error loading `{key}`: {detail}"),
+            },
+        }
+    }
+}
+
+impl std::fmt::Display for PromptLoadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let row = self.to_field_error();
+        write!(f, "{} [{}]", row.message, row.code)
+    }
+}
+
+impl std::error::Error for PromptLoadError {}
 
 /// One normalized failure row — the common structured shape shared across every binding
 /// (`[{field, code, message}]`).

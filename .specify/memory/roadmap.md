@@ -1,5 +1,20 @@
 <!--
-SYNC IMPACT REPORT
+SYNC IMPACT REPORT (latest)
+==================
+Version change: 1.4.0 → 1.5.0
+Bump rationale: MINOR — spec 019 (pluggable loader) added [implemented]; Never section refined
+  (I/O / storage adapters → kernel/construction I/O stays Never; caller-side loader seam is now an
+  earned opt-in seam); C-08 updated (Loader seam re-scoped from eliminated → earned).
+Changes this revision (1.5.0, 2026-07-08):
+  - Added spec 019 [implemented] — pluggable prompt loader (PromptLoadError, FileSystemLoader,
+    MemoryLoader, traversal guard + read cap, v3.2.0 constitutional amendment).
+  - C-08 updated: Loader seam re-scoped from "eliminated" to "earned opt-in seam" (earned by
+    Bellwether; heavier backends still deferred).
+  - Never section refined: "I/O / storage adapters" expanded to clarify kernel/construction I/O
+    stays Never; caller-side loader seam is now permitted; heavy cloud backends remain deferred.
+  - spec 017 note updated with "earned seam" anchor reference.
+
+PRIOR SYNC IMPACT REPORT
 ==================
 Version change: 1.3.1 → 1.4.0
 Bump rationale: MINOR — reconcile the roadmap with shipped reality (it had stalled at spec 010).
@@ -223,10 +238,12 @@ Status legend (lifecycle): **undecided** · **needs-info** · **planned** ·
   codegen'd per language from one schema; YAML+JSON push input via a dual-input
   loader; conformance corpus guards the FFI boundary + schema round-trip, not
   render parity. _Principle VII._
-- **C-08 — Scope discipline (R1):** all five of the original design brief's
-  pluggable interfaces (Store, Loader, VariantSelector, ProvenanceSink, type
-  system) are eliminated as v1 public seams. No new pluggable interface until a
-  second concrete implementation exists. _Constitution §Scope Discipline._
+- **C-08 — Scope discipline (R1):** four of the original design brief's pluggable
+  interfaces (Store, VariantSelector, ProvenanceSink, type system) are eliminated
+  as v1 public seams. The **Loader** seam is **reintroduced as an earned, opt-in
+  seam** (spec 019, v3.2.0) — earned by Bellwether, the real second consumer.
+  No new pluggable interface until a second concrete implementation exists.
+  _Constitution §Scope Discipline; amended spec 019._
 - **C-09 — Var provenance is metadata + lint + opt-in guard, never silent
   mutation:** 3-way tag (`trusted | untrusted | external`); configurable,
   opt-in, additive guard expansion; sanitization/stripping rejected. _Principle
@@ -631,6 +648,83 @@ Status legend (lifecycle): **undecided** · **needs-info** · **planned** ·
   bindings + 2 facades + docs, all gates green. PR #214 open (in CI). The lost original spec was recovered
   from the `015-guard-delimiting` branch and re-clarified 2026-06-30.
 
+### 017 — `derive()` merge strategy  [status: implemented — 2026-07-08]
+
+**Outcome**: A consumer can derive a child prompt that inherits a base's map-typed fields
+(`variables`, `variants`, `metadata`) and adds its own in a single `derive` call — removing the
+"forget to spread base variables" footgun — while the `Replace`-default behavior remains fully
+non-breaking.
+
+**Scope**: Adds `MergeStrategy { Replace (default), Merge }` + `DeriveOptions` to the Rust
+consumer; adds a `strategy=` keyword-only arg to the Python binding; moves `derive`'s optional
+tail into an options object `{ validators?, strategy? }` in TypeScript (breaking at 0.x). The
+shared `merge_definitions(base, overlay, strategy)` helper in `serde_json::Value` space is the
+single union algorithm for both the typed Rust path and the Node binding (FR-018 / Principle I).
+Carries the **v3.0.0 constitutional repositioning** (preamble + Principle VI clarification +
+explicit redefinition of spec-008 FR-017(b) — see DECISIONS.md).
+
+**Governing decisions**: FR-018 (single-source helper); FR-019 (name-only soundness boundary);
+D1 (canonical serialized-form comparison); C-08 (deep/none excluded; axis reserved).
+
+**Note for specs 018 and 019**: This spec's v3.0.0 repositioning statement ("minimal core PLUS
+earned, opt-in seams") is the constitutional anchor both later specs cite when introducing their
+own earned seams.
+
+### 018 — Provenance attributes helper  [status: implemented (pending merge after 017)]
+
+- **Description:** Add a projection helper on the render result that formats the four provenance
+  fields (`name`, `variant`, `template_hash`, `render_hash`) into a flat, telemetry-ready
+  `string→string` attribute map in all three bindings (Rust extension trait + free function;
+  Python `dict[str,str]` method; TypeScript `Record<string,string>` method).
+- **Outcome:** A consumer can attach all four provenance fields to an observability span in a
+  single helper call + one bulk set-attributes call, with no hand-written key strings. Keys are
+  library-owned (`prompting_press.prompt.*`), documented as NOT OTel gen_ai.* keys; consumer
+  may remap. Exactly 4 entries — explicit allowlist, never reflection (text/guard/metadata/
+  output_model are never included). No telemetry dependency added anywhere.
+- **Scope (in):** `ProvenanceExt` trait + `provenance_attributes_of` free function + 4 key
+  constants in the consumer crate; `provenance_attributes()` on the Python pyclass; `provenance
+  Attributes()` on the napi `RenderResult`; TypeScript re-export via the existing `RenderResult`
+  class; conformance fixture `provenance-attributes.json`; Principle V constitution softening.
+- **Scope (out):** telemetry SDK coupling, configurable keys, pluggable sink interfaces (explicitly
+  rejected; issue #270 resolved as a pure projection helper, not a callback or emission sink).
+- **Depends on:** 002 (kernel RenderResult fields), 003 (consumer crate), 004 (Python binding),
+  005 (TS binding), **017** (v3.0.0 repositioning statement cited by the constitution amendment).
+  **Governed by:** Principles I (helper calls shared fn), III (no I/O — pure projection), V
+  (provenance formatting added as additive permission). **Requires a MINOR constitution amendment**
+  (v3.1.0 additive) on top of 017's v3.0.0 baseline; recorded in DECISIONS.md.
+- **Notes:** Issue #270 proposed a `ProvenanceSink`/`OtelSink` pluggable interface; resolved via
+  design grilling to this boundary-safe projection helper. Constitution amendment writes v3.1.0 on
+  a v2.0.0 base in this worktree; the version line reconciles at merge after 017. `apm compile`
+  not runnable in-worktree; `CLAUDE.md`/`AGENTS.md` regeneration deferred to post-merge.
+
+### 019 — Pluggable prompt loader  [status: implemented — 2026-07-08]
+
+**Outcome**: A consumer can load prompt source text by a logical key through a pluggable
+`PromptLoader` interface, swapping implementations (filesystem ↔ memory ↔ custom) without
+changing call sites. The two built-in loaders ship in the standard package:
+`FileSystemLoader` (key → `{base}/{key}{suffix}`, traversal-guarded, read-capped) and
+`MemoryLoader` (key → in-memory text map, the primary DI/test fixture).
+
+**Scope**: Defines `PromptLoader` (Rust object-safe trait + blanket closure impl; Python
+`runtime_checkable Protocol`; TS async `interface`) in the **standard package**. Ships
+`FileSystemLoader` + `MemoryLoader`. Does NOT add a name-keyed container/registry
+(deferred). Does NOT fuse loading into construction. Carries the **v3.2.0 constitutional
+amendment** (Principle III softened for caller-invoked loader seam; C-08 Loader re-scoped;
+error-taxonomy expansion — see DECISIONS.md).
+
+**Security**: Traversal guard (FR-002a/FR-002b) validates the final resolved path (including
+suffix) against a canonicalized base; rejects `..`, absolute keys, NUL bytes, backslash,
+escaping symlinks, empty key, bare `.`. Read cap (`max_bytes`, default 1 MiB, FR-016).
+Guard + cap implemented per language (FR-017, SC-008/SC-009). Error messages are scrubbed
+(logical key + code only; no absolute paths or file contents).
+
+**Error taxonomy**: `PromptLoadError` (NEW, spec 019) is distinct from `LoadError` (the
+parse/shape error). Codes `load_not_found` / `load_io` are added to the closed vocabulary.
+Each binding exposes `make_prompt_load_error(code, message)` for native-language loaders to
+raise with a structured payload (FR-008a).
+
+**Governing decisions**: Principle III (softened); C-08 (Loader earned); spec 019 FR-001–FR-017.
+
 ## Deferred
 
 <!-- Gated on real demand (C-08 / R1). Not planned specs until a trigger fires. -->
@@ -730,9 +824,19 @@ Status legend (lifecycle): **undecided** · **needs-info** · **planned** ·
 <!-- Out of scope by constitution; each requires a constitution amendment to revisit. -->
 
 - LLM calls · provider request-body assembly · output parsing/coercion · built-in
-  token counting · a managed version axis (git owns versioning) · I/O / storage
-  adapters · sanitization/stripping of untrusted vars · a SaaS authoring backend
-  as source of truth.
+  token counting · a managed version axis (git owns versioning) ·
+  **kernel or construction I/O** (the kernel and construction path MUST stay
+  I/O-free even though the caller-side loader seam now exists — spec 019) ·
+  **heavier storage backends in the standard package** (cloud/object-store adapters,
+  fsspec, remote caches: remain deferred to opt-in extras) ·
+  sanitization/stripping of untrusted vars · a SaaS authoring backend as source
+  of truth.
+
+*(Note: "I/O / storage adapters" was previously listed as a flat Never. Spec 019
+(v3.2.0) earned a caller-invoked language-side loader seam — this is no longer
+Never at the language binding level. The Never entries above are the refined
+statement: kernel/construction I/O stays Never; heavier cloud backends remain
+deferred. See `.specify/memory/DECISIONS.md` for the full amendment record.)*
 
 ## Open Questions
 
@@ -764,4 +868,4 @@ Status legend (lifecycle): **undecided** · **needs-info** · **planned** ·
 
 ---
 
-**Version**: 1.4.0 | **Ratified**: 2026-06-25 | **Last Amended**: 2026-06-30
+**Version**: 1.5.0 | **Ratified**: 2026-06-25 | **Last Amended**: 2026-07-08

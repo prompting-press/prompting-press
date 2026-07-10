@@ -23,3 +23,4 @@ projects:
   conformance: "conformance"       # Spec 006 conformance corpus tooling (regen)
   docs: "docs/site"                # Spec 012 docs site (snapshot task + future docs tasks)
   samples: "samples"               # Spec 014 WU-C — consumer sample apps (samples:test gate)
+  integration: "integration"       # Full-surface pre-release integration gate (integration:test)
