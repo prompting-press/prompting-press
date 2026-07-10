@@ -16,6 +16,9 @@ import customTs from '../../../../samples/typescript/examples/guides_loader_cust
 import missRust from '../../../../samples/rust/examples/guides_loader_miss.rs?raw';
 import missPython from '../../../../samples/python/examples/guides_loader_miss.py?raw';
 import missTs from '../../../../samples/typescript/examples/guides_loader_miss.ts?raw';
+import formatsRust from '../../../../samples/rust/examples/guides_loader_formats.rs?raw';
+import formatsPython from '../../../../samples/python/examples/guides_loader_formats.py?raw';
+import formatsTs from '../../../../samples/typescript/examples/guides_loader_formats.ts?raw';
 
 A `PromptLoader` is a **pluggable source of raw prompt text** looked up by a logical key. Its single
 operation `load(key)` returns the raw text of a prompt definition — never a parsed `Prompt`. Loading
@@ -77,6 +80,35 @@ canonicalized at construction time (Rust/Python) or at each `load()` call (TypeS
 `FileSystemLoader` rejects keys with `..` components, absolute paths, NUL bytes, backslashes,
 empty strings, and symlinks that escape the base directory — all returning `load_not_found` (never
 leaking OS-level path detail). A file exceeding `max_bytes` (default 1 MiB) returns `load_io`.
+</Aside>
+
+### Loading JSON, TOML, or any format
+
+A loader is **format-agnostic**: it returns raw text and never parses. You choose the format at the
+*parse* step — `from_yaml` / `from_json` / `from_toml` (Rust & Python) or `fromYaml` / `fromJson` /
+`fromToml` (TypeScript) — independently of how the loader found the text. So JSON and TOML work
+exactly like YAML; only two things change: the `FileSystemLoader` suffix and which `from_*` you call.
+`MemoryLoader` needs no suffix at all (it is a direct key→text map); the format is decided solely by
+which `from_*` you parse with.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+<Code code={formatsRust} lang="rust" title="guides_loader_formats.rs" />
+</TabItem>
+<TabItem label="Python">
+<Code code={formatsPython} lang="python" title="guides_loader_formats.py" />
+</TabItem>
+<TabItem label="TypeScript">
+<Code code={formatsTs} lang="ts" title="guides_loader_formats.ts" />
+</TabItem>
+</Tabs>
+
+<Aside type="tip" title="Extension in the key">
+The suffix is a plain string appended to the key, so the two conventions are interchangeable:
+`FileSystemLoader::with_base(dir)` (default `.yaml` suffix) + `load("greet")` reads `greet.yaml`,
+while an **empty suffix** (`FileSystemLoader::new(dir, "", cap)`) + `load("greet.yaml")` reads the
+same file with the extension carried in the key. Pick whichever reads better; a directory that
+mixes formats simply uses one loader per suffix (or an empty suffix with extensions in the keys).
 </Aside>
 
 ## Custom loaders
