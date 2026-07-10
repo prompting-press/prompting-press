@@ -787,11 +787,18 @@ jobs:
           shared-key: samples-test-v3
 
       - name: 'Install + build the TS package (addon + facade)'
+        # Includes `docs`: the Doc-sample suites step below fires on docs-only
+        # PRs, and the TS doc-samples resolve `prompting-press` via a `file:`
+        # link to packages/typescript — which needs its dist/ (index.js +
+        # index.d.ts) built here first. Without `docs`, a docs-only PR skipped
+        # this build and the TS doc-samples failed with "Cannot find module
+        # 'prompting-press'". (Rust/Python samples self-build via cargo/uv sync.)
         if: >-
           needs.changes.outputs.rust == 'true' ||
           needs.changes.outputs.python == 'true' ||
           needs.changes.outputs.node == 'true' ||
           needs.changes.outputs.samples == 'true' ||
+          needs.changes.outputs.docs == 'true' ||
           needs.changes.outputs.ci == 'true' ||
           github.event_name == 'merge_group'
         run: |
