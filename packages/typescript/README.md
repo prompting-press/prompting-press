@@ -46,6 +46,11 @@ r.renderHash;    // 64-char SHA-256 of the rendered output
 Full docs — getting started, API reference, template features, guides, and the CI agreement
 lint — are at **<https://prompting-press.github.io/>**.
 
+## Changelog
+
+Per-version release notes are on the
+[GitHub Releases page](https://github.com/prompting-press/prompting-press/releases).
+
 ## License
 
 [Apache-2.0](https://github.com/prompting-press/prompting-press/blob/main/LICENSE).

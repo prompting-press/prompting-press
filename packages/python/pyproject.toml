@@ -53,6 +53,12 @@ Homepage = "https://prompting-press.github.io/"
 Documentation = "https://prompting-press.github.io/"
 Repository = "https://github.com/prompting-press/prompting-press"
 Issues = "https://github.com/prompting-press/prompting-press/issues"
+# PyPI surfaces a recognized "Changelog" label with a dedicated changelog icon in
+# the project sidebar (case-insensitive; also matches Changes/Release notes/History).
+# Point it at the GitHub Releases page — the always-current, per-version notes — so
+# there is no in-repo file to maintain. (crates.io/npm render only the README, so
+# they get a README link instead; see each package README's Changelog section.)
+Changelog = "https://github.com/prompting-press/prompting-press/releases"
 
 [dependency-groups]
 # Build-time-only codegen toolchain (NOT a wheel runtime dep — runtime
