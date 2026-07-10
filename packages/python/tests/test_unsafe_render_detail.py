@@ -15,9 +15,8 @@ Validates FR-001/FR-002/FR-003/FR-004/FR-010 from the Python binding surface:
 from __future__ import annotations
 
 import pytest
-from pydantic import BaseModel
-
 from prompting_press import Prompt, PromptRenderError
+from pydantic import BaseModel
 
 # ---------------------------------------------------------------------------
 # A simple valid prompt whose body references a single variable.
@@ -60,12 +59,8 @@ def test_reveal_flag_does_not_change_success_path() -> None:
     r_true = p.render(Vars, data=data, unsafe_reveal_render_detail=True)
 
     assert r_false.text == r_true.text, "text must be byte-identical"
-    assert r_false.template_hash == r_true.template_hash, (
-        "template_hash must be byte-identical"
-    )
-    assert r_false.render_hash == r_true.render_hash, (
-        "render_hash must be byte-identical"
-    )
+    assert r_false.template_hash == r_true.template_hash, "template_hash must be byte-identical"
+    assert r_false.render_hash == r_true.render_hash, "render_hash must be byte-identical"
 
 
 # ---------------------------------------------------------------------------
@@ -159,13 +154,11 @@ def test_reveal_true_surfaces_render_detail() -> None:
     assert rows_true[0].field == "template"
     assert rows_true[0].code == "render"
     revealed_msg = rows_true[0].message
-    assert revealed_msg != "render error", (
-        "reveal=True must NOT produce the fixed scrubbed message"
-    )
+    assert revealed_msg != "render error", "reveal=True must NOT produce the fixed scrubbed message"
     # The detail embeds the filter name from the template — verify it's present.
-    assert "nonexistent_filter_abc" in revealed_msg or len(revealed_msg) > len(
-        "render error"
-    ), f"reveal=True message should carry filter-name context, got: {revealed_msg!r}"
+    assert "nonexistent_filter_abc" in revealed_msg or len(revealed_msg) > len("render error"), (
+        f"reveal=True message should carry filter-name context, got: {revealed_msg!r}"
+    )
 
 
 def test_reveal_false_scrubs_render_detail() -> None:

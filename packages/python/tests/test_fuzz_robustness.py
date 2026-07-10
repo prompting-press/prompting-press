@@ -27,7 +27,6 @@ from typing import Any
 
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
-
 from prompting_press import (
     Prompt,
     PromptingPressError,
@@ -75,9 +74,7 @@ _VALID_VAR_ENTRY = st.fixed_dictionaries(
 _HOSTILE_VAR_ENTRY = st.one_of(
     _VALID_VAR_ENTRY,
     st.fixed_dictionaries({"type": st.text(max_size=20), "trusted": _TRUSTED_ANY}),
-    st.dictionaries(
-        st.text(max_size=10), st.integers() | st.text(max_size=20), max_size=5
-    ),
+    st.dictionaries(st.text(max_size=10), st.integers() | st.text(max_size=20), max_size=5),
     st.none(),
     st.integers(),
     st.text(max_size=20),
@@ -187,9 +184,7 @@ def valid_prompt_and_hostile_vars(
     # avoids the agreement-check raising on an out-of-vars reference.
     body = draw(_SAFE_BODY)
     prompt_def: dict[str, Any] = {
-        "name": draw(
-            st.text(alphabet=string.ascii_letters + "_-", min_size=1, max_size=20)
-        ),
+        "name": draw(st.text(alphabet=string.ascii_letters + "_-", min_size=1, max_size=20)),
         "role": "user",
         "body": body,
         "variables": variables,
@@ -344,9 +339,7 @@ def test_check_never_panics(doc: dict[str, Any]) -> None:
 def valid_prompt_with_literal_body(draw: st.DrawFn) -> dict[str, Any]:
     """A fully valid prompt dict (literal body, no Jinja vars) for determinism tests."""
     return {
-        "name": draw(
-            st.text(alphabet=string.ascii_letters + "_", min_size=1, max_size=20)
-        ),
+        "name": draw(st.text(alphabet=string.ascii_letters + "_", min_size=1, max_size=20)),
         "role": draw(st.sampled_from(["user", "system"])),
         "body": draw(_SAFE_BODY),
         "variables": {},

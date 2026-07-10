@@ -20,12 +20,11 @@ import json
 import re
 import textwrap
 
-import pytest
-from pydantic import BaseModel
-
 import prompting_press
+import pytest
 from prompting_press import LoadError, Prompt, PromptingPressError, RenderResult
 from prompting_press.generated import PromptDefinition
+from pydantic import BaseModel
 
 # A lowercase 64-char hex string — the SHA-256 provenance hash shape (FR-012/FR-013).
 HEX64 = re.compile(r"\A[0-9a-f]{64}\Z")

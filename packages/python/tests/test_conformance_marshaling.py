@@ -50,9 +50,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from pydantic import BaseModel, create_model
-
 from prompting_press import Prompt
+from pydantic import BaseModel, create_model
 
 # Records the value-construction choice for the canonical-serialized types — the form that
 # reproduces each golden byte-for-byte (see the module docstring's DECISION). Asserted by
@@ -130,7 +129,7 @@ def _vars_model(field_names: list[str]) -> type[BaseModel]:
     """
     return create_model(  # type: ignore[call-overload, no-any-return]
         "ConformanceVars",
-        **{name: (object, ...) for name in field_names},
+        **dict.fromkeys(field_names, (object, ...)),
     )
 
 
@@ -175,8 +174,7 @@ def test_marshaling_fixture_renders_to_golden(fixture: dict[str, Any]) -> None:
         f"{result.template_hash} != golden {expected['template_hash']}"
     )
     assert result.render_hash == expected["render_hash"], (
-        f"[{case}] render_hash diverged: "
-        f"{result.render_hash} != golden {expected['render_hash']}"
+        f"[{case}] render_hash diverged: {result.render_hash} != golden {expected['render_hash']}"
     )
 
 

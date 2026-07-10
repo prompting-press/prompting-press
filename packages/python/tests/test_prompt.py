@@ -16,10 +16,8 @@ from __future__ import annotations
 
 import re
 
-import pytest
-from pydantic import BaseModel, field_validator
-
 import prompting_press
+import pytest
 from prompting_press import (
     CheckReport,
     Composition,
@@ -30,6 +28,7 @@ from prompting_press import (
     RenderResult,
 )
 from prompting_press.generated import PromptDefinition
+from pydantic import BaseModel, field_validator
 
 # A lowercase 64-char hex string — the SHA-256 provenance hash shape (FR-012/FR-013).
 HEX64 = re.compile(r"\A[0-9a-f]{64}\Z")
@@ -267,9 +266,7 @@ def test_validation_required_without_validators_raises() -> None:
         "name": "strict",
         "role": "user",
         "body": "Hi {{ name }}",
-        "variables": {
-            "name": {"type": "string", "trusted": True, "validation_required": True}
-        },
+        "variables": {"name": {"type": "string", "trusted": True, "validation_required": True}},
     }
     with pytest.raises(PromptValidationError) as excinfo:
         Prompt(strict)
@@ -283,9 +280,7 @@ def test_validation_required_with_covering_validators_ok() -> None:
         "name": "strict",
         "role": "user",
         "body": "Hi {{ name }}",
-        "variables": {
-            "name": {"type": "string", "trusted": True, "validation_required": True}
-        },
+        "variables": {"name": {"type": "string", "trusted": True, "validation_required": True}},
     }
     # Named has `name` in model_fields → covers the required variable.
     p = Prompt(strict, validators=Named)
@@ -298,9 +293,7 @@ def test_validation_required_with_non_covering_validators_raises() -> None:
         "name": "strict",
         "role": "user",
         "body": "Hi {{ name }}",
-        "variables": {
-            "name": {"type": "string", "trusted": True, "validation_required": True}
-        },
+        "variables": {"name": {"type": "string", "trusted": True, "validation_required": True}},
     }
     with pytest.raises(PromptValidationError) as excinfo:
         Prompt(strict, validators=EmptyVars)  # EmptyVars has no `name` field
@@ -510,9 +503,7 @@ def test_derive_validators_carry_forward() -> None:
         "name": "strict",
         "role": "user",
         "body": "Hi {{ name }}",
-        "variables": {
-            "name": {"type": "string", "trusted": True, "validation_required": True}
-        },
+        "variables": {"name": {"type": "string", "trusted": True, "validation_required": True}},
     }
     original = Prompt(strict, validators=Named)
     # Derive without supplying validators — they carry forward from original.
@@ -526,9 +517,7 @@ def test_derive_validators_override() -> None:
         "name": "strict",
         "role": "user",
         "body": "Hi {{ name }}",
-        "variables": {
-            "name": {"type": "string", "trusted": True, "validation_required": True}
-        },
+        "variables": {"name": {"type": "string", "trusted": True, "validation_required": True}},
     }
     original = Prompt(strict, validators=Named)
 
