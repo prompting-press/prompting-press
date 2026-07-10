@@ -9,6 +9,25 @@
 # `mis` is the prefix in "mis-derives" (a comment in scripts/ci/test-python.sh describing how
 # maturin mis-derives the module name from a hyphenated crate name run from the repo root). It
 # is correct English, not a typo; allowlist the prefix so the hook does not flag the comment.
+#
+# The remaining entries are legitimate technical terms in the APM-generated agentic assets
+# (.claude/.agents/.codex/) and docs — not typos. Hand-editing generated files would be undone
+# by the next `apm compile`, so they are allowlisted here instead:
+#   arange      → NumPy's `np.arange` API (python-performance-optimization skill).
+#   Hashi       → "HashiCorp" (Vault) in the security-auditor agent.
+#   VAS         → "OpenVAS" scanner in the security-auditor agent.
+#   nd          → the `git clean -nd` flag combo in the git-safety hook.
+#   SEH         → "Structured Exception Handling" (Windows) in reverse-engineering skills.
+#   prompty     → the `prompty` prompt library, named alongside LangChain/mirascope in research.
+#   unparseable → accepted English variant of "unparsable" (speckit-roadmap-write skill).
 [default.extend-words]
 nam = "nam"
 mis = "mis"
+arange = "arange"
+Hashi = "Hashi"
+VAS = "VAS"
+nd = "nd"
+SEH = "SEH"
+prompty = "prompty"
+Prompty = "Prompty"
+unparseable = "unparseable"
