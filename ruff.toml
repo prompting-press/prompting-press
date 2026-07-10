@@ -1,0 +1,14 @@
+# Repo-root Ruff config. Its only job is a repo-wide exclude that applies
+# regardless of the directory Ruff is invoked from (editor/commit hooks run
+# `ruff format --check <changed-file>` from the repo root, which otherwise finds
+# no config for paths outside packages/python/ and falls back to Ruff defaults).
+#
+# The real Python project config lives in packages/python/pyproject.toml
+# (line length, lint rule set, generated-shape excludes); Ruff still discovers
+# and applies that for files under packages/python/.
+#
+# .specify/ is the vendored SpecKit community-extension catalog — third-party
+# helper scripts and deliberately-messy test fixtures that are install-output,
+# not our code. Never format- or lint-gate them.
+extend-exclude = [".specify"]
+force-exclude = true
