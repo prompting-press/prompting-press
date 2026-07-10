@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Derive guide — add a variant at runtime: spread the current ``variants`` map (read via
 the accessor) into the overlay, then add one — so existing arms survive. ``derive`` is the
 sole mutator; the original is untouched.

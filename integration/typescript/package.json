@@ -4,7 +4,7 @@
 	"description": "Full-surface integration test gate for the prompting-press TypeScript package.",
 	"private": true,
 	"type": "module",
-	"license": "Apache-2.0",
+	"license": "MPL-2.0",
 	"engines": {
 		"node": ">=20"
 	},

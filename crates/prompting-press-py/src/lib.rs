@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! # prompting-press-py
 //!
 //! The Python binding for Prompting Press, built with [PyO3]. This crate exposes the Rust

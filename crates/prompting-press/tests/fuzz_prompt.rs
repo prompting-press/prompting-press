@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Adversarial property-based tests for the consumer `Prompt` surface (spec 009, T005).
 //!
 //! Exercises `Prompt::new` / `from_yaml` / `from_json` / `from_toml` / `render::<V>` /

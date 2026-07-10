@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Adversarial secret-scrub verification (spec 009, T006; FR-002, FR-007; US4; SC-003).
 //!
 //! Proves that SEC-004 holds under adversarial input: secret-shaped values embedded in

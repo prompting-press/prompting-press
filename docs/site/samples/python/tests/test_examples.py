@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Run every docs sample under ``examples/`` as a standalone program.
 
 Each file in ``examples/`` is a COMPLETE, standalone Python program that a docs
@@ -22,9 +26,7 @@ import pytest
 
 EXAMPLES_DIR = Path(__file__).resolve().parent.parent / "examples"
 
-EXAMPLES = sorted(
-    p for p in EXAMPLES_DIR.glob("*.py") if not p.name.startswith("_")
-)
+EXAMPLES = sorted(p for p in EXAMPLES_DIR.glob("*.py") if not p.name.startswith("_"))
 
 assert EXAMPLES, f"no example programs found under {EXAMPLES_DIR}"
 

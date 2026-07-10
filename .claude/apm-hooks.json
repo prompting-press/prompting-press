@@ -5,6 +5,39 @@
       "hooks": [
         {
           "type": "command",
+          "command": ".claude/hooks/mcp-package-version/scripts/package-file-warn.sh",
+          "if": "Edit(Cargo.toml)|Edit(package.json)|Edit(pyproject.toml)|Edit(go.mod)|Edit(Gemfile)|Edit(composer.json)|Write(Cargo.toml)|Write(package.json)|Write(pyproject.toml)|Write(go.mod)|Write(Gemfile)|Write(composer.json)"
+        }
+      ],
+      "_apm_source": "mcp-package-version"
+    },
+    {
+      "matcher": "Bash",
+      "hooks": [
+        {
+          "type": "command",
+          "command": ".claude/hooks/mcp-package-version/scripts/pkg-version-warn.sh",
+          "if": "Bash(pnpm add*)|Bash(cargo add*)|Bash(uv add*)|Bash(pip install*)"
+        }
+      ],
+      "_apm_source": "mcp-package-version"
+    },
+    {
+      "matcher": "Grep|Glob|Read",
+      "hooks": [
+        {
+          "type": "command",
+          "command": ".claude/hooks/code-intelligence/scripts/code-discovery-steer.sh",
+          "timeout": 3
+        }
+      ],
+      "_apm_source": "code-intelligence"
+    },
+    {
+      "matcher": "apply_patch|Edit|Write|MultiEdit",
+      "hooks": [
+        {
+          "type": "command",
           "command": ".claude/hooks/agent-coder/scripts/coder-delegation-reminder.sh",
           "timeout": 3
         }
@@ -36,28 +69,6 @@
       "_apm_source": "hooks-git-safety"
     },
     {
-      "matcher": "Edit|Write|MultiEdit",
-      "hooks": [
-        {
-          "type": "command",
-          "command": ".claude/hooks/mcp-package-version/scripts/package-file-warn.sh",
-          "if": "Edit(Cargo.toml)|Edit(package.json)|Edit(pyproject.toml)|Edit(go.mod)|Edit(Gemfile)|Edit(composer.json)|Write(Cargo.toml)|Write(package.json)|Write(pyproject.toml)|Write(go.mod)|Write(Gemfile)|Write(composer.json)"
-        }
-      ],
-      "_apm_source": "mcp-package-version"
-    },
-    {
-      "matcher": "Bash",
-      "hooks": [
-        {
-          "type": "command",
-          "command": ".claude/hooks/mcp-package-version/scripts/pkg-version-warn.sh",
-          "if": "Bash(pnpm add*)|Bash(cargo add*)|Bash(uv add*)|Bash(pip install*)"
-        }
-      ],
-      "_apm_source": "mcp-package-version"
-    },
-    {
       "matcher": "Skill",
       "hooks": [
         {
@@ -72,18 +83,15 @@
       "hooks": [
         {
           "type": "command",
-          "command": ".claude/hooks/speckit/scripts/speckit-issue-close-guard.sh",
-          "if": "Bash(gh issue close*)|Bash(*gh issue close*)|Bash(glab issue close*)"
+          "command": ".claude/hooks/speckit/scripts/speckit-issue-close-guard.sh"
         },
         {
           "type": "command",
-          "command": ".claude/hooks/speckit/scripts/speckit-issue-label-guard.sh",
-          "if": "Bash(gh issue create*)|Bash(*gh issue create*)|Bash(glab issue create*)|Bash(*glab issue create*)"
+          "command": ".claude/hooks/speckit/scripts/speckit-issue-label-guard.sh"
         },
         {
           "type": "command",
-          "command": ".claude/hooks/speckit/scripts/speckit-pr-issue-refs.sh",
-          "if": "Bash(gh pr create*)|Bash(*gh pr create*)|Bash(*gh-api.py*pr create*)|Bash(glab mr create*)|Bash(*glab mr create*)"
+          "command": ".claude/hooks/speckit/scripts/speckit-pr-issue-refs.sh"
         }
       ],
       "_apm_source": "speckit"
@@ -99,17 +107,6 @@
         }
       ],
       "_apm_source": "speckit-dag-hooks"
-    },
-    {
-      "matcher": "Grep|Glob|Read",
-      "hooks": [
-        {
-          "type": "command",
-          "command": ".claude/hooks/code-intelligence/scripts/code-discovery-steer.sh",
-          "timeout": 3
-        }
-      ],
-      "_apm_source": "code-intelligence"
     }
   ],
   "PostToolUse": [
@@ -118,10 +115,114 @@
       "hooks": [
         {
           "type": "command",
-          "command": ".claude/hooks/mcp-repomix/scripts/repomix-refresh-snapshot.sh",
-          "if": "Bash(git switch -c*)|Bash(git switch --create*)|Bash(git checkout -b*)|Bash(git checkout -B*)|Bash(git worktree add*)|Bash(git merge*)|Bash(git pull*)|Bash(git rebase*)",
+          "command": ".claude/hooks/code-intelligence/scripts/reindex-after-commit.sh",
+          "if": "Bash(git commit*)",
           "async": true,
           "timeout": 30
+        }
+      ],
+      "_apm_source": "code-intelligence"
+    },
+    {
+      "matcher": "Bash",
+      "hooks": [
+        {
+          "type": "command",
+          "command": ".claude/hooks/mcp-repomix/scripts/repomix-refresh-snapshot.sh",
+          "async": true,
+          "timeout": 30,
+          "if": "Bash(git switch -c*)"
+        }
+      ],
+      "_apm_source": "mcp-repomix"
+    },
+    {
+      "matcher": "Bash",
+      "hooks": [
+        {
+          "type": "command",
+          "command": ".claude/hooks/mcp-repomix/scripts/repomix-refresh-snapshot.sh",
+          "async": true,
+          "timeout": 30,
+          "if": "Bash(git switch --create*)"
+        }
+      ],
+      "_apm_source": "mcp-repomix"
+    },
+    {
+      "matcher": "Bash",
+      "hooks": [
+        {
+          "type": "command",
+          "command": ".claude/hooks/mcp-repomix/scripts/repomix-refresh-snapshot.sh",
+          "async": true,
+          "timeout": 30,
+          "if": "Bash(git checkout -b*)"
+        }
+      ],
+      "_apm_source": "mcp-repomix"
+    },
+    {
+      "matcher": "Bash",
+      "hooks": [
+        {
+          "type": "command",
+          "command": ".claude/hooks/mcp-repomix/scripts/repomix-refresh-snapshot.sh",
+          "async": true,
+          "timeout": 30,
+          "if": "Bash(git checkout -B*)"
+        }
+      ],
+      "_apm_source": "mcp-repomix"
+    },
+    {
+      "matcher": "Bash",
+      "hooks": [
+        {
+          "type": "command",
+          "command": ".claude/hooks/mcp-repomix/scripts/repomix-refresh-snapshot.sh",
+          "async": true,
+          "timeout": 30,
+          "if": "Bash(git worktree add*)"
+        }
+      ],
+      "_apm_source": "mcp-repomix"
+    },
+    {
+      "matcher": "Bash",
+      "hooks": [
+        {
+          "type": "command",
+          "command": ".claude/hooks/mcp-repomix/scripts/repomix-refresh-snapshot.sh",
+          "async": true,
+          "timeout": 30,
+          "if": "Bash(git merge*)"
+        }
+      ],
+      "_apm_source": "mcp-repomix"
+    },
+    {
+      "matcher": "Bash",
+      "hooks": [
+        {
+          "type": "command",
+          "command": ".claude/hooks/mcp-repomix/scripts/repomix-refresh-snapshot.sh",
+          "async": true,
+          "timeout": 30,
+          "if": "Bash(git pull*)"
+        }
+      ],
+      "_apm_source": "mcp-repomix"
+    },
+    {
+      "matcher": "Bash",
+      "hooks": [
+        {
+          "type": "command",
+          "command": ".claude/hooks/mcp-repomix/scripts/repomix-refresh-snapshot.sh",
+          "async": true,
+          "timeout": 30,
+          "if": "Bash(git rebase*)"
         }
       ],
       "_apm_source": "mcp-repomix"
@@ -148,19 +249,6 @@
         }
       ],
       "_apm_source": "speckit-dag-hooks"
-    },
-    {
-      "matcher": "Bash",
-      "hooks": [
-        {
-          "type": "command",
-          "command": ".claude/hooks/code-intelligence/scripts/reindex-after-commit.sh",
-          "if": "Bash(git commit*)",
-          "async": true,
-          "timeout": 30
-        }
-      ],
-      "_apm_source": "code-intelligence"
     }
   ],
   "UserPromptSubmit": [

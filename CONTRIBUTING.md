@@ -1,69 +1,28 @@
-# Contributing to Prompting Press
+# Contributing
 
-## Build requirements
+Contributions are welcome! By submitting a pull request, you agree to the terms
+below.
 
-The repo uses [mise](https://mise.jdx.dev/) for toolchain management and [moon](https://moonrepo.dev/) as the task runner.
+## Contributor License Agreement (CLA)
 
-```sh
-mise install          # installs Rust, Python, Node, and other pinned tools
-```
+This project requires a CLA for all contributions. When you open your first pull
+request, the CLA Assistant bot will comment with a link to review and sign the
+agreement. You only need to sign once — it covers all future contributions to
+this repository.
 
-### Running tests
+**Why?** The CLA ensures the project maintainer retains the ability to offer the
+code under alternative licensing terms (e.g., a commercial license) without
+needing to track down every contributor individually. Your contribution remains
+publicly available under the project's open-source license (MPL-2.0) regardless.
 
-```sh
-# Rust (core + consumer crate)
-cargo test --workspace
+## How to contribute
 
-# Python binding
-cd packages/python
-uv run pytest
-
-# TypeScript binding
-cd packages/typescript
-pnpm test
-```
-
-All three suites plus schema-codegen gates run in CI (`cargo xtask` / moon pipelines). A PR that breaks any gate will not be merged.
-
-### Docs site (Astro / Starlight)
-
-```sh
-pnpm -C docs/site dev    # http://localhost:4321/prompting-press/
-```
-
-The published docs are at <https://prompting-press.github.io/>.
-
----
-
-## Commit style
-
-This repo uses [Conventional Commits](https://www.conventionalcommits.org/). The PR title is what ends up in the changelog (via release-please on squash-merge), so make it user-facing and accurate.
-
-| Prefix | When to use |
-|--------|-------------|
-| `feat:` | New public capability |
-| `fix:` | Bug fix visible to users |
-| `chore:` | Tooling, deps, CI — no user-visible change |
-| `docs:` | Documentation only |
-| `refactor:` | Internal restructure, no behaviour change |
-| `test:` | Tests only |
-
-A breaking change gets `!` after the prefix (e.g. `feat!:`) and a `BREAKING CHANGE:` footer.
-
----
-
-## Substantial changes: SpecKit workflow
-
-New public API, schema changes, new bindings, or anything that touches multiple crates/packages goes through the SpecKit spec workflow (spec → clarify → plan → tasks → implement → verify). Open a [feature request issue](https://github.com/prompting-press/prompting-press/issues/new?template=feature_request.yml) first; a maintainer will initiate the spec if the proposal is accepted.
-
----
-
-## Publishing
-
-Releases are fully automated via [release-please](https://github.com/googleapis/release-please). Maintainers trigger the release workflow; contributors do not need to bump versions or publish packages manually.
-
----
+1. Fork the repository
+2. Create a feature branch from `main`
+3. Make your changes
+4. Ensure tests pass (if applicable)
+5. Open a pull request with a clear description of the change
 
 ## Code of conduct
 
-Be constructive, be kind, be specific. That's it.
+Be respectful. Contributions are evaluated on technical merit.

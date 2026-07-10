@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """from_messages builds a Composition from a list of (prompt, vars) or
 (prompt, vars, variant) tuples. All validation runs before any state is created.
 Standalone."""

@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Advisory lint contract (spec 008 reshape of spec 003, T015; FR-016/017/018/020).
 //!
 //! Post-reshape, the lint runs per-prompt via `Prompt::check()`. Construction enforces the

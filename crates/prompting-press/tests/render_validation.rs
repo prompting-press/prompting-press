@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! US1 validation + boundary contract (spec 008 reshape of spec 003, T008).
 //!
 //! Post-reshape, `render` is a method on `Prompt`. Behavioral contract is unchanged:

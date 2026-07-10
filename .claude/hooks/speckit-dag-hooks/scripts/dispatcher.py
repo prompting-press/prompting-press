@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """SpecKit DAG dispatcher (stdlib-only).
 
 Ported from dispatcher.sh. Wired through .apm/hooks/speckit-{claude,codex}-hooks.json:
@@ -77,9 +82,13 @@ def _render_section(heading, bullets):
     return "\n".join(lines)
 
 
-def render_body(phase, node):
-    """Render a node phase dict to markdown (byte-faithful to the old .md)."""
-    parts = ["# " + node["title"]]
+def render_body(phase, node, node_id=""):
+    """Render a node phase dict to markdown (byte-faithful to the old .md).
+
+    A node phase missing its 'title' falls back to node_id so a malformed /
+    hand-edited nodes.json entry degrades gracefully instead of raising KeyError.
+    """
+    parts = ["# " + node.get("title", node_id)]
 
     if phase == "pre":
         if "came_from" in node:
@@ -116,9 +125,7 @@ def render_body(phase, node):
                 _render_section("Context absorbed from steering", node["context"])
             )
         if "conditional" in node:
-            parts.append(
-                _render_section("Conditional branching", node["conditional"])
-            )
+            parts.append(_render_section("Conditional branching", node["conditional"]))
 
     body = "\n\n".join(parts)
     return body + "\n"
@@ -127,19 +134,35 @@ def render_body(phase, node):
 # ---------------------------------------------------------------------------
 # Event / command extraction.
 # ---------------------------------------------------------------------------
+def _as_str(value):
+    """Return value if it is a str, else "".
+
+    Adversarial / malformed hook payloads can carry non-string values where a
+    command or prompt string is expected (e.g. command_name as a dict or list).
+    Downstream code calls .startswith / re.search / .replace, which raise on a
+    non-string. Coerce anything that is not a str to "" so the guard degrades to
+    a silent no-op instead of crashing.
+    """
+    return value if isinstance(value, str) else ""
+
+
 def _resolve_command(event, payload):
     """Extract the speckit command string from the event payload."""
     if event == "UserPromptExpansion":
-        return payload.get("command_name") or ""
+        return _as_str(payload.get("command_name"))
     if event in ("PreToolUse", "PostToolUse"):
-        tool_input = payload.get("tool_input") or {}
-        cmd = tool_input.get("skill") or tool_input.get("command_name") or ""
+        tool_input = payload.get("tool_input")
+        if not isinstance(tool_input, dict):
+            tool_input = {}
+        cmd = _as_str(tool_input.get("skill")) or _as_str(
+            tool_input.get("command_name")
+        )
         if cmd:
             return cmd
         # Codex PreToolUse/PostToolUse may not carry a skill; try the prompt.
-        return _parse_speckit_slash(tool_input.get("prompt") or "")
+        return _parse_speckit_slash(_as_str(tool_input.get("prompt")))
     if event == "UserPromptSubmit":
-        return _parse_speckit_slash(payload.get("prompt") or "")
+        return _parse_speckit_slash(_as_str(payload.get("prompt")))
     return ""
 
 
@@ -161,9 +184,9 @@ def _normalize(cmd):
     """
     raw = cmd
     if raw.startswith("speckit-"):
-        raw = raw[len("speckit-"):]
+        raw = raw[len("speckit-") :]
     if raw.startswith("speckit."):
-        raw = raw[len("speckit."):]
+        raw = raw[len("speckit.") :]
     if not raw:
         return ""
     return raw.replace(".", "-")
@@ -245,7 +268,7 @@ def _resolve_feat(proj_root):
     if env_dir:
         feat = env_dir
         if feat.startswith("specs/"):
-            feat = feat[len("specs/"):]
+            feat = feat[len("specs/") :]
         return feat.rstrip("/")
 
     feature_json = os.path.join(proj_root, ".specify", "feature.json")
@@ -253,22 +276,28 @@ def _resolve_feat(proj_root):
         try:
             with open(feature_json, "r", encoding="utf-8") as fh:
                 data = json.load(fh)
-            feat = data.get("feature_directory") or "" if isinstance(data, dict) else ""
+            feat = (
+                _as_str(data.get("feature_directory")) if isinstance(data, dict) else ""
+            )
         except (OSError, ValueError):
             feat = ""
         if feat:
             if feat.startswith("specs/"):
-                feat = feat[len("specs/"):]
+                feat = feat[len("specs/") :]
             return feat.rstrip("/")
 
     # Tier 3: branch-name prefix lookup. Branch "001-foo" -> specs/001-foo/.
     git_dir = os.path.join(proj_root, ".git")
     if os.path.isdir(git_dir) or os.path.isfile(git_dir):
         try:
-            branch = subprocess.check_output(
-                ["git", "-C", proj_root, "rev-parse", "--abbrev-ref", "HEAD"],
-                stderr=subprocess.DEVNULL,
-            ).decode("utf-8", "replace").strip()
+            branch = (
+                subprocess.check_output(
+                    ["git", "-C", proj_root, "rev-parse", "--abbrev-ref", "HEAD"],
+                    stderr=subprocess.DEVNULL,
+                )
+                .decode("utf-8", "replace")
+                .strip()
+            )
         except (OSError, subprocess.CalledProcessError):
             branch = ""
         if branch and os.path.isdir(os.path.join(proj_root, "specs", branch)):
@@ -331,8 +360,9 @@ def _evaluate_block(node, feat, proj_root):
         path = _resolve_path(tmpl, feat, proj_root)
         if _path_present(path):
             return (
-                "Conflicting artefact present: " + path
-                + " -- use /speckit.refine.update to amend instead of"
+                "Conflicting artefact present: "
+                + path
+                + " -- use /speckit.iterate.define to scope a change instead of"
                 + " re-running this step"
             )
     return ""
@@ -377,7 +407,7 @@ def main():
     if not isinstance(node, dict):
         return 0
 
-    node_body = render_body(phase, node)
+    node_body = render_body(phase, node, node_id)
 
     proj_root = _resolve_proj_root(payload)
     feat = _resolve_feat(proj_root)

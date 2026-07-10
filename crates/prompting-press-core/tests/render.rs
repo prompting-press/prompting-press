@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! US1 render suite (spec 002, T013): rendering a prompt to text with provenance.
 //!
 //! Covers quickstart scenarios V1.1, V1.3, V1.5, V1.6. Template bodies live in JSON

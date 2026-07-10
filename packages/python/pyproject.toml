@@ -31,7 +31,7 @@ readme = "README.md"
 # CI-tested interpreter, and 3.12 gives stdlib `tomllib` for Prompt.from_toml (no
 # tomli backport dependency).
 requires-python = ">=3.12"
-license = { text = "Apache-2.0" }
+license = { text = "MPL-2.0" }
 authors = [{ name = "Sjors Robroek" }]
 # Pydantic v2 is the typed-Vars facade and the generated shape (US3). The bounded
 # range `>=2,<3` is explicit and acceptable under the no-floating-versions rule.
@@ -72,11 +72,16 @@ Changelog = "https://github.com/prompting-press/prompting-press/blob/main/CHANGE
 # (then run packages/python/scripts/codegen.sh).
 codegen = ["datamodel-code-generator==0.68.1", "ruff==0.15.20"]
 
-# Property-based / adversarial fuzzing framework (spec 009 T008 — test-only;
+# Test runner + property-based/adversarial fuzzing framework (test-only; these
 # MUST NOT enter the published wheel's runtime `[project.dependencies]`).
-# Exact pin per FR-009 / SEC-003 (no floating ranges in dev deps).
+# pytest is the runner for packages/python/tests; hypothesis drives the spec-009
+# fuzz suite. Both exact-pinned per FR-009 / SEC-003 (no floating ranges in dev
+# deps) and locked with integrity hashes in uv.lock. This makes the suite
+# runnable locally the normal way: `uv run --project packages/python --group test
+# pytest packages/python/tests`. (scripts/ci/test-python.sh predates this group
+# and still installs pytest into its throwaway venv imperatively.)
 # To lock after editing: `uv lock --project packages/python`.
-test = ["hypothesis==6.156.3"]
+test = ["hypothesis==6.156.3", "pytest==9.1.1"]
 
 [tool.maturin]
 # The binding crate lives OUTSIDE this package dir, at the repo's

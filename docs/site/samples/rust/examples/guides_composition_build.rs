@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Build a Composition by appending (prompt, vars, variant?) entries, then
 //! resolve it to an ordered Vec<Message>. Standalone:
 //! `cargo run --example guides_composition_build`.

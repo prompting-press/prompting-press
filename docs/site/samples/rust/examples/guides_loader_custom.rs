@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Loader guide — custom loaders: a closure or a struct implementing PromptLoader.
 //! No struct is required — any `Fn(&str) -> Result<String, PromptLoadError>` closure works.
 //! Standalone — `cargo run --example guides_loader_custom`.

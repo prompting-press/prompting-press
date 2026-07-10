@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! US2 agreement-purity suite (spec 002, T022): V2.5 — analysis mutates nothing.
 //!
 //! The agreement analysis MUST be pure: it must not mutate the prompt definition, the

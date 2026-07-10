@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Discovering the selectable variants: `variants()` returns the declared
 //! variant map; read its keys (the default arm is not listed — it is the root
 //! body, name `"default"`). Standalone:

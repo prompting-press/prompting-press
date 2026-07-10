@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """
 T019 — Fixture validation gate (FR-013 / US2 acceptance gate).
 
@@ -22,7 +26,9 @@ from typing import NamedTuple
 try:
     import jsonschema
 except ImportError:
-    print("ERROR: jsonschema not available. Run via: uv run --with jsonschema python3 validate_fixtures.py")
+    print(
+        "ERROR: jsonschema not available. Run via: uv run --with jsonschema python3 validate_fixtures.py"
+    )
     sys.exit(1)
 
 ROOT = pathlib.Path(__file__).parent.parent
@@ -39,8 +45,8 @@ RESET = "\033[0m"
 
 class Result(NamedTuple):
     fixture: pathlib.Path
-    passed: bool      # True = expectation met
-    note: str         # human-readable outcome
+    passed: bool  # True = expectation met
+    note: str  # human-readable outcome
 
 
 def load_schema() -> dict:
@@ -71,13 +77,17 @@ def validate_document(schema: dict, path: pathlib.Path) -> tuple[bool, str]:
     return True, "accepted"
 
 
-def check_dir(schema: dict, directory: pathlib.Path, expect_valid: bool) -> list[Result]:
+def check_dir(
+    schema: dict, directory: pathlib.Path, expect_valid: bool
+) -> list[Result]:
     results: list[Result] = []
     files = sorted(directory.iterdir())
     non_dir_files = [f for f in files if not f.is_dir()]
     if not non_dir_files:
         label = "valid" if expect_valid else "invalid"
-        print(f"  ERROR: no fixtures found in {directory} — at least one {label}/ fixture is required.")
+        print(
+            f"  ERROR: no fixtures found in {directory} — at least one {label}/ fixture is required."
+        )
         sys.exit(1)
     for fixture in files:
         if fixture.is_dir():
@@ -112,7 +122,9 @@ def main() -> int:
     try:
         jsonschema.Draft202012Validator.check_schema(schema)
     except jsonschema.SchemaError as exc:
-        print(f"ERROR: Schema file is not a valid Draft 2020-12 document: {exc.message}")
+        print(
+            f"ERROR: Schema file is not a valid Draft 2020-12 document: {exc.message}"
+        )
         return 1
 
     valid_results = check_dir(schema, VALID_DIR, expect_valid=True)
@@ -139,9 +151,13 @@ def main() -> int:
     else:
         print(f"  {RED}{total_failures} FAILURE(S){RESET}")
         if fail_valid:
-            print(f"  {fail_valid} valid fixture(s) were incorrectly rejected (schema too strict).")
+            print(
+                f"  {fail_valid} valid fixture(s) were incorrectly rejected (schema too strict)."
+            )
         if fail_invalid:
-            print(f"  {fail_invalid} invalid fixture(s) were incorrectly accepted (schema too permissive).")
+            print(
+                f"  {fail_invalid} invalid fixture(s) were incorrectly accepted (schema too permissive)."
+            )
         return 1
 
 

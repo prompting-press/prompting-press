@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Render the `Prompt` with the typed `AssistantVars` and read the result fields.
 //! Standalone — `cargo run --example getting-started_rust_render_and_read`.
 

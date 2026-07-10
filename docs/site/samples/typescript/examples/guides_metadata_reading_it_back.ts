@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 /**
  * Reading prompt-level and per-variant metadata back out. The library stores the
  * opaque `metadata` maps and echoes them through accessors; it never interprets

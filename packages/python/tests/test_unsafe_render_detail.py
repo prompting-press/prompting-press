@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Tests for the opt-in unsafe render-error detail (spec 013).
 
 Validates FR-001/FR-002/FR-003/FR-004/FR-010 from the Python binding surface:

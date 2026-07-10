@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! US1 render-error suite (spec 002, T015).
 //!
 //! Covers quickstart scenarios V1.7 (strict undefined — SC-009/FR-001a) and V1.4

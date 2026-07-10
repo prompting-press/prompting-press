@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Conformance corpus — GOLDEN GENERATOR (spec 006, T005; research D3).
 //!
 //! This is the REGENERATION tool, not a gated test. It is `#[ignore]`d so the CI conformance gate never

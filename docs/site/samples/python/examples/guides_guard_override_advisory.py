@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Overriding the guard advisory text: a conforming custom advisory is returned
 verbatim in `RenderResult.guard`, while the body still wraps untrusted values.
 Standalone — run directly or under pytest."""

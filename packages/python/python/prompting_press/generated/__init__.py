@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 # GENERATED-CODE SUBPACKAGE — DO NOT HAND-EDIT THE MODULES HERE.
 #
 # Every module under `prompting_press.generated` is code-generated from

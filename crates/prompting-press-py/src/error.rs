@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! The Python exception hierarchy and the `ConsumerError`/`KernelError` → `PyErr`
 //! translation (FR-014/FR-015, research D4 / C-06 / SEC-004).
 //!
