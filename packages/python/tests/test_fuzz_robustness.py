@@ -22,6 +22,7 @@ stays bounded (FR-004).  Derandomised with a fixed database so failures replay.
 
 from __future__ import annotations
 
+import contextlib
 import string
 from typing import Any
 
@@ -212,10 +213,9 @@ def valid_prompt_and_hostile_vars(
 @FUZZ_SETTINGS
 def test_construct_never_panics(doc: dict[str, Any]) -> None:
     """Prompt(dict) never panics; always returns or raises PromptingPressError."""
-    try:
+    # expected structured error path
+    with contextlib.suppress(PromptingPressError):
         Prompt(doc)
-    except PromptingPressError:
-        pass  # expected structured error path
 
 
 # ---------------------------------------------------------------------------
@@ -233,10 +233,8 @@ def test_construct_never_panics(doc: dict[str, Any]) -> None:
 @FUZZ_SETTINGS
 def test_from_yaml_never_panics(text: str) -> None:
     """Prompt.from_yaml(text) never panics on hostile input."""
-    try:
+    with contextlib.suppress(PromptingPressError):
         Prompt.from_yaml(text)
-    except PromptingPressError:
-        pass
 
 
 # ---------------------------------------------------------------------------
@@ -253,10 +251,8 @@ def test_from_yaml_never_panics(text: str) -> None:
 @FUZZ_SETTINGS
 def test_from_json_never_panics(text: str) -> None:
     """Prompt.from_json(text) never panics on hostile input."""
-    try:
+    with contextlib.suppress(PromptingPressError):
         Prompt.from_json(text)
-    except PromptingPressError:
-        pass
 
 
 # ---------------------------------------------------------------------------
@@ -273,10 +269,8 @@ def test_from_json_never_panics(text: str) -> None:
 @FUZZ_SETTINGS
 def test_from_toml_never_panics(text: str) -> None:
     """Prompt.from_toml(text) never panics on hostile input."""
-    try:
+    with contextlib.suppress(PromptingPressError):
         Prompt.from_toml(text)
-    except PromptingPressError:
-        pass
 
 
 # ---------------------------------------------------------------------------
@@ -303,12 +297,11 @@ def test_render_hostile_vars_never_panics(
         p = Prompt(prompt_def)
     except PromptingPressError:
         return  # construction failed — that's fine; skip render
-    try:
-        # Use _AnyVars so Pydantic validation does not reject the hostile values
-        # before they reach the kernel; we want the kernel path exercised too.
+    # structured error — correct
+    # Use _AnyVars so Pydantic validation does not reject the hostile values
+    # before they reach the kernel; we want the kernel path exercised too.
+    with contextlib.suppress(PromptingPressError):
         p.render(_AnyVars, data=vars_dict)
-    except PromptingPressError:
-        pass  # structured error — correct
 
 
 # ---------------------------------------------------------------------------
@@ -324,10 +317,9 @@ def test_check_never_panics(doc: dict[str, Any]) -> None:
         p = Prompt(doc)
     except PromptingPressError:
         return
-    try:
+    # unexpected but structured — acceptable
+    with contextlib.suppress(PromptingPressError):
         p.check()
-    except PromptingPressError:
-        pass  # unexpected but structured — acceptable
 
 
 # ---------------------------------------------------------------------------

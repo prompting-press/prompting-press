@@ -177,7 +177,10 @@ def test_construct_rejects_parse_error() -> None:
 
 def test_from_json_valid() -> None:
     """Prompt.from_json(text) constructs from a JSON string."""
-    json_text = '{"name":"hi","role":"user","body":"Hello {{ name }}","variables":{"name":{"type":"string","trusted":true}}}'
+    json_text = (
+        '{"name":"hi","role":"user","body":"Hello {{ name }}",'
+        '"variables":{"name":{"type":"string","trusted":true}}}'
+    )
     p = Prompt.from_json(json_text)
     assert p.name == "hi"
     assert p.body == "Hello {{ name }}"
