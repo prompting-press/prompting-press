@@ -19,6 +19,9 @@ import revalidationErrorTs from '../../../../samples/typescript/examples/guides_
 import renderVariantRust from '../../../../samples/rust/examples/guides_derive_render_variant.rs?raw';
 import renderVariantPython from '../../../../samples/python/examples/guides_derive_render_variant.py?raw';
 import renderVariantTs from '../../../../samples/typescript/examples/guides_derive_render_variant.ts?raw';
+import mergeRust from '../../../../samples/rust/examples/guides_derive_merge.rs?raw';
+import mergePython from '../../../../samples/python/examples/guides_derive_merge.py?raw';
+import mergeTs from '../../../../samples/typescript/examples/guides_derive_merge.ts?raw';
 
 `Prompt` is immutable — there are no setters. **`derive`** is the single, general-purpose way to
 produce a *changed* prompt: it combines an overlay with the current definition using a
@@ -70,38 +73,21 @@ undeclared variable) is rejected.
 **Replace** is the pre-0.3 behavior, kept as the default — no existing call site changes.
 
 **Merge** is the new strategy. Use it when you want a child prompt that inherits the base's
-declared variables and adds its own — without hand-spreading the base's variables into every overlay:
+declared variables and adds its own — without hand-spreading the base's variables into every overlay.
+In TypeScript and Python the strategy is `derive`'s options argument (`{ strategy }` / `strategy=`);
+in Rust it rides in `DeriveOptions` on `derive_with`:
 
-```python
-# Python
-child = base.derive(
-    {"body": "{{ extraction }} | {{ sentiment }}",
-     "variables": {"sentiment": {"type": "string", "trusted": True}}},
-    strategy=MergeStrategy.MERGE,
-)
-# child.variables == {extraction: ..., sentiment: ...}
-```
-
-```ts
-// TypeScript
-const child = base.derive(
-  { body: "{{ extraction }} | {{ sentiment }}",
-    variables: { sentiment: { type: "string", trusted: true } } },
-  { strategy: MergeStrategy.Merge },
-);
-```
-
-```rust
-// Rust
-let child = base.derive_with(
-    PromptOverlay {
-        body: Some("{{ extraction }} | {{ sentiment }}".into()),
-        variables: Some(overlay_vars),
-        ..Default::default()
-    },
-    DeriveOptions { strategy: MergeStrategy::Merge },
-)?;
-```
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+<Code code={mergeRust} lang="rust" title="guides_derive_merge.rs" />
+</TabItem>
+<TabItem label="Python">
+<Code code={mergePython} lang="python" title="guides_derive_merge.py" />
+</TabItem>
+<TabItem label="TypeScript">
+<Code code={mergeTs} lang="ts" title="guides_derive_merge.ts" />
+</TabItem>
+</Tabs>
 
 ### Soundness boundary
 
@@ -122,19 +108,6 @@ These axes are reserved for a future consumer that earns them; they are not anti
 Metadata keys union at top-level under `Merge`. If the overlay supplies a `guard` key, the overlay's
 whole `guard` entry replaces the base's (child-wins-whole-entry). The library does not interpret
 metadata contents — the union is opaque.
-
-### TypeScript: breaking change — `validators` moves into the options object
-
-In `0.3.x`, the `derive(overlay, validators?)` positional signature becomes
-`derive(overlay, options?)` where `options` is `{ validators?, strategy? }`. Migrate:
-
-```ts
-// Before (0.2.x)
-p.derive(overlay, schema);
-
-// After (0.3.x)
-p.derive(overlay, { validators: schema });
-```
 
 ## `variants` is replaced wholesale under `Replace` — read, then spread (or use `Merge`)
 
@@ -177,8 +150,8 @@ accessor for the current map.
 <TabItem label="TypeScript">
 <Code code={addVariantTs} lang="ts" title="guides_derive_add_variant.ts" />
 
-`derive(overlay, validators?)` — `overlay` is a partial `PromptDefinition` object. `assistant.variants` is
-the read-only accessor for the current map.
+`derive(overlay, options?)` — `overlay` is a partial `PromptDefinition` object; `options` is
+`{ validators?, strategy? }`. `assistant.variants` is the read-only accessor for the current map.
 </TabItem>
 </Tabs>
 
