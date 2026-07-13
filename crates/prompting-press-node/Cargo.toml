@@ -71,8 +71,8 @@ serde = { workspace = true }
 #     `napi4`; `napi6` is a strict superset.) `dyn-symbols` (a default) is kept so the
 #     `cargo test` rlib harness links without a Node host.
 [dependencies.napi]
-version = "=3.10.3"
+version = "=3.10.5"
 features = ["serde-json", "napi6"]
 
 [dependencies.napi-derive]
-version = "=3.5.9"
+version = "=3.5.10"
