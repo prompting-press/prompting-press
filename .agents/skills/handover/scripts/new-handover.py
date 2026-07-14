@@ -95,6 +95,8 @@ def build_content(
         .isoformat()
         .replace("+00:00", "Z")
     )
+def build_content(*, project: str, repo_root: str, worktree: str, branch: str, task: str) -> str:
+    updated = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     return f"""---
 project: {_yaml_scalar(project)}
 repo_root: {_yaml_scalar(repo_root)}

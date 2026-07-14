@@ -42,6 +42,14 @@ lst = _load_module()
         "42",  # bare JSON number
         "true",  # bare JSON bool
         "null",  # JSON null
+@pytest.mark.parametrize(
+    "line",
+    [
+        "[1, 2, 3]",        # bare JSON array
+        '"just a string"',  # bare JSON string
+        "42",               # bare JSON number
+        "true",             # bare JSON bool
+        "null",             # JSON null
     ],
 )
 def test_non_dict_line_skipped(tmp_path, line):
@@ -57,6 +65,7 @@ def test_dicts_kept_non_dicts_dropped(tmp_path):
     p.write_text(
         '{"type": "user", "a": 1}\n'
         "[1, 2, 3]\n"  # poison line between two good ones
+        "[1, 2, 3]\n"           # poison line between two good ones
         '"a bare string"\n'
         '{"type": "assistant", "b": 2}\n',
         encoding="utf-8",
@@ -135,6 +144,13 @@ def test_negative_limit_keeps_entries(tmp_path, monkeypatch):
         "argv",
         ["list-sessions.py", "--project", str(tmp_path), "--limit", "-1", "--json"],
     )
+    entries = [{"last_ts": float(i), "title": f"t{i}", "branch": "", "agent": "claude",
+                "session_id": f"id{i}", "turns": 1, "last": "", "path": ""} for i in range(3)]
+    monkeypatch.setattr(lst, "collect_claude_worktrees", lambda wts: entries)
+    monkeypatch.setattr(lst, "collect_codex", lambda wts: [])
+    monkeypatch.setattr(lst, "list_worktrees", lambda project: [])
+    monkeypatch.setattr(sys, "argv",
+                        ["list-sessions.py", "--project", str(tmp_path), "--limit", "-1", "--json"])
     rc = lst.main()
     assert rc == 0
 
@@ -183,6 +199,8 @@ def test_list_worktrees_parses_porcelain(monkeypatch):
         "isdir",
         lambda p: p in ("/repo/main", "/repo/wt-feature", "/repo/wt-detached"),
     )
+    monkeypatch.setattr(lst.os.path, "isdir",
+                        lambda p: p in ("/repo/main", "/repo/wt-feature", "/repo/wt-detached"))
     wts = lst.list_worktrees("/repo/main")
     paths = [w["path"] for w in wts]
     assert paths == ["/repo/main", "/repo/wt-feature", "/repo/wt-detached"]
@@ -215,6 +233,10 @@ def test_commit_info_batches_heads(monkeypatch):
         1700000000.0,
         "first subject",
     )
+    wts = [{"head": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"},
+           {"head": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222"}]
+    info = lst.commit_info(wts, "/repo/main")
+    assert info["aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"] == (1700000000.0, "first subject")
     assert info["bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222"][1] == "second subject"
 
 
@@ -248,6 +270,16 @@ def test_sessions_tagged_with_worktree(tmp_path, monkeypatch, capsys):
             "h2": (1700000500.0, "topic commit"),
         },
     )
+    monkeypatch.setattr(lst, "list_worktrees", lambda project: [
+        {"path": "/repo/main", "head": "h1", "branch": "main",
+         "detached": False, "is_main": True},
+        {"path": "/repo/wt-x", "head": "h2", "branch": "topic",
+         "detached": False, "is_main": False},
+    ])
+    monkeypatch.setattr(lst, "commit_info", lambda wts, project: {
+        "h1": (1700000000.0, "main commit"),
+        "h2": (1700000500.0, "topic commit"),
+    })
     monkeypatch.setattr(lst, "is_dirty", lambda path: False)
 
     def fake_collect_claude(project):
@@ -265,6 +297,9 @@ def test_sessions_tagged_with_worktree(tmp_path, monkeypatch, capsys):
                     "path": "x.jsonl",
                 }
             ]
+            return [{"agent": "claude", "session_id": "sib123", "title": "sibling task",
+                     "goal": "", "last": "did sibling work", "branch": "topic",
+                     "last_ts": 1700000400.0, "turns": 5, "path": "x.jsonl"}]
         return []
 
     monkeypatch.setattr(lst, "collect_claude", fake_collect_claude)
@@ -292,6 +327,13 @@ def test_no_worktrees_flag_scans_only_project(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(
         sys, "argv", ["list-sessions.py", "--project", str(tmp_path), "--no-worktrees"]
     )
+    def boom(project):
+        raise AssertionError("list_worktrees called under --no-worktrees")
+    monkeypatch.setattr(lst, "list_worktrees", boom)
+    monkeypatch.setattr(lst, "collect_claude", lambda project: [])
+    monkeypatch.setattr(lst, "collect_codex", lambda wts: [])
+    monkeypatch.setattr(sys, "argv",
+                        ["list-sessions.py", "--project", str(tmp_path), "--no-worktrees"])
     rc = lst.main()
     assert rc == 0
     assert "No prior sessions" in capsys.readouterr().out

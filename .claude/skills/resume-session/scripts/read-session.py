@@ -81,6 +81,7 @@ def worktree_projects(project: str) -> list[str]:
             capture_output=True,
             text=True,
             timeout=10,
+            capture_output=True, text=True, timeout=10,
         )
     except (OSError, subprocess.SubprocessError):
         return paths
@@ -89,6 +90,7 @@ def worktree_projects(project: str) -> list[str]:
     for line in r.stdout.splitlines():
         if line.startswith("worktree "):
             p = line[len("worktree ") :]
+            p = line[len("worktree "):]
             if os.path.isdir(p) and p not in paths:
                 paths.append(p)
     return paths
@@ -186,6 +188,7 @@ def resolve_file(args) -> tuple[str, str]:
             sys.exit(
                 f"error: session prefix '{sid}' is ambiguous: {len(matches)} matches"
             )
+            sys.exit(f"error: session prefix '{sid}' is ambiguous: {len(matches)} matches")
 
     if args.agent in (None, "codex"):
         for root, _, files in os.walk(CODEX_ROOT):
@@ -488,11 +491,13 @@ def main() -> int:
 
     total = len(turns)
     end = total - offset  # exclusive upper bound (chronological)
+    end = total - offset                 # exclusive upper bound (chronological)
     if end <= 0:
         print(f"No turns at offset {offset} (session has {total} turns).")
         return 0
     start = max(0, end - turns_per_window)
     window = turns[start:end]  # chronological slice
+    window = turns[start:end]            # chronological slice
 
     # Render newest first, stopping early if the char budget is exhausted.
     rendered, used, shown = [], 0, 0

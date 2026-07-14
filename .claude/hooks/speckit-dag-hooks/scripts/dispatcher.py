@@ -279,6 +279,7 @@ def _resolve_feat(proj_root):
             feat = (
                 _as_str(data.get("feature_directory")) if isinstance(data, dict) else ""
             )
+            feat = _as_str(data.get("feature_directory")) if isinstance(data, dict) else ""
         except (OSError, ValueError):
             feat = ""
         if feat:
@@ -362,6 +363,7 @@ def _evaluate_block(node, feat, proj_root):
             return (
                 "Conflicting artefact present: "
                 + path
+                "Conflicting artefact present: " + path
                 + " -- use /speckit.iterate.define to scope a change instead of"
                 + " re-running this step"
             )

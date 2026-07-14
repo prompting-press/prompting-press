@@ -13,6 +13,13 @@ import importlib.util
 import os
 from pathlib import Path
 
+import importlib.util
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+import pytest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -48,6 +55,7 @@ class TestParseXlint:
 
     def test_inline_list(self):
         text = '---\nx-lint:\n  allow: [E1, E3]\n  reason: "test reason"\n---\nbody'
+        text = "---\nx-lint:\n  allow: [E1, E3]\n  reason: \"test reason\"\n---\nbody"
         codes, reason = lint_mod.parse_xlint(text)
         assert codes == {"E1", "E3"}
         assert reason == "test reason"
@@ -73,6 +81,7 @@ class TestParseXlint:
         text = (
             '---\nx-lint:\n  allow: [W9]\n  reason: "acceptable duplication"\n---\nbody'
         )
+        text = "---\nx-lint:\n  allow: [W9]\n  reason: \"acceptable duplication\"\n---\nbody"
         codes, reason = lint_mod.parse_xlint(text)
         assert "W9" in codes
         assert reason == "acceptable duplication"
@@ -135,6 +144,7 @@ class TestOverrideMechanism:
         overridden = [
             (sev, code, msg) for sev, code, msg in findings if sev == "OVERRIDDEN"
         ]
+        overridden = [(sev, code, msg) for sev, code, msg in findings if sev == "OVERRIDDEN"]
         assert overridden, "expected at least one OVERRIDDEN finding"
         assert "routing depends on full description" in overridden[0][2]
 

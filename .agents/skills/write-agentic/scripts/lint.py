@@ -106,6 +106,7 @@ def parse_xlint(text: str) -> tuple[set[str], str]:
 
     # Grab lines belonging to x-lint (indented, non-empty)
     after = fm_text[xlint_m.end() :]
+    after = fm_text[xlint_m.end():]
     block_lines: list[str] = []
     for line in after.splitlines():
         if line == "" or line[0] == " " or line[0] == "\t":
@@ -132,6 +133,7 @@ def parse_xlint(text: str) -> tuple[set[str], str]:
     # Parse `reason`
     reason_m = re.search(r"reason:\s*[\"']?(.+?)[\"']?\s*$", block, re.M)
     reason = reason_m.group(1).strip().strip("\"'") if reason_m else ""
+    reason = reason_m.group(1).strip().strip('"\'') if reason_m else ""
 
     return codes, reason
 
@@ -174,6 +176,7 @@ def lint(path: Path) -> list[tuple[str, str, str]]:
                     "E2",
                     f"line {i}: hedge '{m.group(0)}' — replace with an observable condition",
                 )
+                err("E2", f"line {i}: hedge '{m.group(0)}' — replace with an observable condition")
 
     # E3 model names outside routing steering
     if "subagent-routing" not in str(path) and kind != "agent":
@@ -186,6 +189,7 @@ def lint(path: Path) -> list[tuple[str, str, str]]:
                     "E3",
                     f"line {i}: model name '{m.group(0)}' in prose — route via steering-subagent-routing",
                 )
+                err("E3", f"line {i}: model name '{m.group(0)}' in prose — route via steering-subagent-routing")
 
     # E5 agent output contract
     if kind == "agent":
@@ -197,6 +201,7 @@ def lint(path: Path) -> list[tuple[str, str, str]]:
                     "W5",
                     "no CAPS verdict enum (PASS|FAIL style) found in output contract",
                 )
+                warn("W5", "no CAPS verdict enum (PASS|FAIL style) found in output contract")
             if not re.search(r"\bCAP\b|\b\d+\s*w(ords)?\b|≤\s*\d+", body):
                 err("E5", "output contract has no word cap")
         if not re.search(r"never reprint|paths? only|path:line", body, re.I):
@@ -228,6 +233,7 @@ def lint(path: Path) -> list[tuple[str, str, str]]:
         if len(key) > 30 and (
             KEYWORD_LINE.match(ln) or SIGIL_LINE.match(ln) or ln.strip().startswith("-")
         ):
+        if len(key) > 30 and (KEYWORD_LINE.match(ln) or SIGIL_LINE.match(ln) or ln.strip().startswith("-")):
             if key in seen:
                 warn("W9", f"line {i} duplicates line {seen[key]}")
             else:

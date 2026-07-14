@@ -61,6 +61,8 @@ def test_newline_in_repo_root_does_not_inject_keys():
             "task",
             "updated",
         }, f"unexpected frontmatter key from injection: {line!r}"
+        assert key in {"project", "repo_root", "worktree", "branch", "task", "updated"}, \
+            f"unexpected frontmatter key from injection: {line!r}"
     # The newline survives inside the quoted repo_root value (as \n escape).
     assert "repo_root: " in fm
     assert "\\ninjected" in fm  # json-escaped newline kept the data on one line
@@ -71,6 +73,7 @@ def test_newline_in_branch_single_key():
         project="p",
         repo_root="/r",
         worktree="/w",
+        project="p", repo_root="/r", worktree="/w",
         branch="feature\nupdated: 1999-01-01T00:00:00Z",
         task="t",
     )
@@ -101,6 +104,11 @@ def test_frontmatter_parses_with_pyyaml_if_available():
         "task",
         "updated",
     }
+        worktree="/w", branch="b", task="t",
+    )
+    fm = _frontmatter(content)
+    data = yaml.safe_load(fm)
+    assert set(data.keys()) == {"project", "repo_root", "worktree", "branch", "task", "updated"}
     assert data["repo_root"] == '/r"quote\ninjected: x'
 
 
@@ -133,6 +141,16 @@ def test_out_dir_is_a_file_exits_cleanly(tmp_path, monkeypatch, capsys):
             str(tmp_path),
         ],
     )
+    monkeypatch.setattr(sys, "argv", [
+        "new-handover.py",
+        "--out-dir", str(blocker),
+        "--project", "proj",
+        "--branch", "main",
+        "--task", "task",
+        "--repo-root", str(tmp_path),
+        "--worktree", str(tmp_path),
+        "--cwd", str(tmp_path),
+    ])
     rc = nh.main(sys.argv[1:])
     assert rc == 1
     err = capsys.readouterr().err
@@ -170,6 +188,16 @@ def test_happy_path_writes_file(tmp_path, monkeypatch, capsys):
             str(tmp_path),
         ],
     )
+    monkeypatch.setattr(sys, "argv", [
+        "new-handover.py",
+        "--out-dir", str(out),
+        "--project", "proj",
+        "--branch", "main",
+        "--task", "task",
+        "--repo-root", str(tmp_path),
+        "--worktree", str(tmp_path),
+        "--cwd", str(tmp_path),
+    ])
     rc = nh.main(sys.argv[1:])
     assert rc == 0
     written = list(out.glob("*.md"))

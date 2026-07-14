@@ -109,6 +109,7 @@ def test_nonpositive_turns_clamped(tmp_path, monkeypatch, capsys, turns):
     rc = _run_main(
         ["--file", str(p), "--agent", "claude", "--turns", turns], monkeypatch
     )
+    rc = _run_main(["--file", str(p), "--agent", "claude", "--turns", turns], monkeypatch)
     assert rc == 0
     out = capsys.readouterr().out
     assert "Recent turns" in out
@@ -123,6 +124,7 @@ def test_negative_offset_clamped(tmp_path, monkeypatch, capsys, offset):
     rc = _run_main(
         ["--file", str(p), "--agent", "claude", "--offset", offset], monkeypatch
     )
+    rc = _run_main(["--file", str(p), "--agent", "claude", "--offset", offset], monkeypatch)
     assert rc == 0
     out = capsys.readouterr().out
     # window header must report a sane upper bound (== total), never > total.
@@ -134,6 +136,7 @@ def test_offset_zero_shows_newest(tmp_path, monkeypatch, capsys):
     rc = _run_main(
         ["--file", str(p), "--agent", "claude", "--offset", "0"], monkeypatch
     )
+    rc = _run_main(["--file", str(p), "--agent", "claude", "--offset", "0"], monkeypatch)
     assert rc == 0
     assert "Recent turns" in capsys.readouterr().out
 
@@ -151,6 +154,9 @@ def test_worktree_projects_lists_all(monkeypatch):
         returncode = 0
         stdout = porcelain
 
+    class _R:
+        returncode = 0
+        stdout = porcelain
     monkeypatch.setattr(rs.subprocess, "run", lambda *a, **k: _R())
     monkeypatch.setattr(rs.os.path, "isdir", lambda p: True)
     assert rs.worktree_projects("/repo/main") == ["/repo/main", "/repo/wt-x"]
@@ -181,6 +187,7 @@ def test_resolve_finds_session_in_sibling_worktree(tmp_path, monkeypatch):
     monkeypatch.setattr(
         rs, "worktree_projects", lambda project: ["/repo/main", "/repo/wt-x"]
     )
+    monkeypatch.setattr(rs, "worktree_projects", lambda project: ["/repo/main", "/repo/wt-x"])
 
     class Args:
         file = None
