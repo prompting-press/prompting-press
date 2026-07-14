@@ -1,6 +1,3 @@
-// Copyright (C) 2024-2026 Sjors Robroek
-// SPDX-License-Identifier: AGPL-3.0-only
-
 // GENERATED FILE — DO NOT EDIT.
 //
 // This module is code-generated from the single source of truth:
