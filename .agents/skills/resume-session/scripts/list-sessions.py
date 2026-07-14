@@ -218,6 +218,7 @@ def is_dirty(path: str) -> bool:
 # -- returns the whole family, so we enumerate it once and scan every member.
 # ---------------------------------------------------------------------------
 
+
 def list_worktrees(project: str) -> list[dict]:
     """Live worktrees of the repo containing `project`, main checkout first.
 
@@ -228,7 +229,9 @@ def list_worktrees(project: str) -> list[dict]:
     try:
         r = subprocess.run(
             ["git", "-C", project, "worktree", "list", "--porcelain"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
     except (OSError, subprocess.SubprocessError):
         return []
@@ -244,14 +247,21 @@ def list_worktrees(project: str) -> list[dict]:
             cur = {}
             continue
         if line.startswith("worktree "):
-            cur = {"path": line[len("worktree "):], "head": "", "branch": "",
-                   "detached": False, "prunable": False}
+            cur = {
+                "path": line[len("worktree ") :],
+                "head": "",
+                "branch": "",
+                "detached": False,
+                "prunable": False,
+            }
         elif line.startswith("HEAD "):
-            cur["head"] = line[len("HEAD "):]
+            cur["head"] = line[len("HEAD ") :]
         elif line.startswith("branch "):
-            ref = line[len("branch "):]
+            ref = line[len("branch ") :]
             # Keep multi-segment branch names intact (refs/heads/foo/bar -> foo/bar).
-            cur["branch"] = ref[len("refs/heads/"):] if ref.startswith("refs/heads/") else ref
+            cur["branch"] = (
+                ref[len("refs/heads/") :] if ref.startswith("refs/heads/") else ref
+            )
         elif line == "detached":
             cur["detached"] = True
         elif line.startswith("prunable"):
@@ -281,7 +291,9 @@ def commit_info(worktrees: list[dict], project: str) -> dict:
     try:
         r = subprocess.run(
             ["git", "-C", project, "show", "-s", "--format=%H%x00%ct%x00%s", *heads],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
     except (OSError, subprocess.SubprocessError):
         return out
@@ -304,7 +316,9 @@ def is_dirty(path: str) -> bool:
     try:
         r = subprocess.run(
             ["git", "-C", path, "status", "--porcelain"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
     except (OSError, subprocess.SubprocessError):
         return False
@@ -550,10 +564,16 @@ def main() -> int:
         action="store_true",
         help="skip the per-worktree git-activity overview",
     )
-    ap.add_argument("--no-worktrees", action="store_true",
-                    help="scan only this project's transcript dir, not sibling worktrees")
-    ap.add_argument("--no-git", action="store_true",
-                    help="skip the per-worktree git-activity overview")
+    ap.add_argument(
+        "--no-worktrees",
+        action="store_true",
+        help="scan only this project's transcript dir, not sibling worktrees",
+    )
+    ap.add_argument(
+        "--no-git",
+        action="store_true",
+        help="skip the per-worktree git-activity overview",
+    )
     ap.add_argument("--json", action="store_true", help="emit machine-readable JSON")
     args = ap.parse_args()
 
@@ -577,8 +597,15 @@ def main() -> int:
                 "is_main": True,
             }
         ]
-        worktrees = [{"path": project, "head": "", "branch": "",
-                      "detached": False, "is_main": True}]
+        worktrees = [
+            {
+                "path": project,
+                "head": "",
+                "branch": "",
+                "detached": False,
+                "is_main": True,
+            }
+        ]
 
     entries: list[dict] = []
     if args.agent in ("claude", "all"):
@@ -606,14 +633,20 @@ def main() -> int:
                 default=str,
             )
         )
-        print(json.dumps({
-            "project": project,
-            "worktrees": [
-                {**w, "head_commit": commits.get(w.get("head", ""), (None, ""))}
-                for w in worktrees
-            ],
-            "sessions": entries,
-        }, indent=2, default=str))
+        print(
+            json.dumps(
+                {
+                    "project": project,
+                    "worktrees": [
+                        {**w, "head_commit": commits.get(w.get("head", ""), (None, ""))}
+                        for w in worktrees
+                    ],
+                    "sessions": entries,
+                },
+                indent=2,
+                default=str,
+            )
+        )
         return 0
 
     lines: list[str] = []
@@ -622,8 +655,7 @@ def main() -> int:
         lines.append("")
 
     scope = f"across {len(worktrees)} worktrees" if len(worktrees) > 1 else ""
-    scope = (f"across {len(worktrees)} worktrees"
-             if len(worktrees) > 1 else "")
+    scope = f"across {len(worktrees)} worktrees" if len(worktrees) > 1 else ""
     if not entries:
         if scope:
             lines.append(f"No prior sessions found for {project} {scope}.")
