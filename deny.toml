@@ -88,6 +88,7 @@ private = { ignore = true }
 # graph. Keep this list sorted and pruned to what is actually used — an unmatched
 # entry is a warning that signals the list has drifted from the tree.
 allow = [
+  "AGPL-3.0-only",                  # this project (workspace root + published crates)
   "Apache-2.0",                     # minijinja, memo-map (sole); + OR-arm of most crates
   "Apache-2.0 WITH LLVM-exception", # target-lexicon (pyo3 build dep, sole); rustix/wasip2 OR-arm
   "MIT",                            # napi*, pythonize, serde_yaml_ng, winnow, zmij, … (sole)
