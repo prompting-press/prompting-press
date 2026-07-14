@@ -1,7 +1,12 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Tests for list-sessions.py adversarial-input handling.
 
 Run with:  uv run --with pytest pytest test_list_sessions.py
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -28,6 +33,15 @@ lst = _load_module()
 
 # --- iter_json_lines: non-dict JSONL lines must be skipped, not crash --------
 
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "[1, 2, 3]",  # bare JSON array
+        '"just a string"',  # bare JSON string
+        "42",  # bare JSON number
+        "true",  # bare JSON bool
+        "null",  # JSON null
 @pytest.mark.parametrize(
     "line",
     [
@@ -50,6 +64,7 @@ def test_dicts_kept_non_dicts_dropped(tmp_path):
     p = tmp_path / "mixed.jsonl"
     p.write_text(
         '{"type": "user", "a": 1}\n'
+        "[1, 2, 3]\n"  # poison line between two good ones
         "[1, 2, 3]\n"           # poison line between two good ones
         '"a bare string"\n'
         '{"type": "assistant", "b": 2}\n',
@@ -87,6 +102,7 @@ def test_malformed_json_line_skipped(tmp_path):
 
 # --- --limit clamping --------------------------------------------------------
 
+
 def _run_main(argv, monkeypatch):
     monkeypatch.setattr(sys, "argv", ["list-sessions.py", *argv])
     return lst.main()
@@ -107,6 +123,27 @@ def test_negative_limit_keeps_entries(tmp_path, monkeypatch):
 
     The old code did entries[:-1]; the clamp falls back to the default of 20.
     """
+    entries = [
+        {
+            "last_ts": float(i),
+            "title": f"t{i}",
+            "branch": "",
+            "agent": "claude",
+            "session_id": f"id{i}",
+            "turns": 1,
+            "last": "",
+            "path": "",
+        }
+        for i in range(3)
+    ]
+    monkeypatch.setattr(lst, "collect_claude_worktrees", lambda wts: entries)
+    monkeypatch.setattr(lst, "collect_codex", lambda wts: [])
+    monkeypatch.setattr(lst, "list_worktrees", lambda project: [])
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["list-sessions.py", "--project", str(tmp_path), "--limit", "-1", "--json"],
+    )
     entries = [{"last_ts": float(i), "title": f"t{i}", "branch": "", "agent": "claude",
                 "session_id": f"id{i}", "turns": 1, "last": "", "path": ""} for i in range(3)]
     monkeypatch.setattr(lst, "collect_claude_worktrees", lambda wts: entries)
@@ -143,11 +180,13 @@ _PORCELAIN = (
 def _fake_git(stdout, returncode=0):
     class _R:
         pass
+
     def run(cmd, capture_output=True, text=True, timeout=None):
         r = _R()
         r.returncode = returncode
         r.stdout = stdout
         return r
+
     return run
 
 
@@ -155,6 +194,11 @@ def test_list_worktrees_parses_porcelain(monkeypatch):
     monkeypatch.setattr(lst.subprocess, "run", _fake_git(_PORCELAIN))
     # All listed paths "exist" except the pruned one; the gone one is skipped
     # both by prunable AND by the isdir check, so cover both.
+    monkeypatch.setattr(
+        lst.os.path,
+        "isdir",
+        lambda p: p in ("/repo/main", "/repo/wt-feature", "/repo/wt-detached"),
+    )
     monkeypatch.setattr(lst.os.path, "isdir",
                         lambda p: p in ("/repo/main", "/repo/wt-feature", "/repo/wt-detached"))
     wts = lst.list_worktrees("/repo/main")
@@ -180,6 +224,15 @@ def test_commit_info_batches_heads(monkeypatch):
         "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222\x001700000500\x00second subject\n"
     )
     monkeypatch.setattr(lst.subprocess, "run", _fake_git(out))
+    wts = [
+        {"head": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"},
+        {"head": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222"},
+    ]
+    info = lst.commit_info(wts, "/repo/main")
+    assert info["aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"] == (
+        1700000000.0,
+        "first subject",
+    )
     wts = [{"head": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"},
            {"head": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222"}]
     info = lst.commit_info(wts, "/repo/main")
@@ -189,6 +242,34 @@ def test_commit_info_batches_heads(monkeypatch):
 
 def test_sessions_tagged_with_worktree(tmp_path, monkeypatch, capsys):
     """A session from a sibling worktree is listed and labeled with it."""
+    monkeypatch.setattr(
+        lst,
+        "list_worktrees",
+        lambda project: [
+            {
+                "path": "/repo/main",
+                "head": "h1",
+                "branch": "main",
+                "detached": False,
+                "is_main": True,
+            },
+            {
+                "path": "/repo/wt-x",
+                "head": "h2",
+                "branch": "topic",
+                "detached": False,
+                "is_main": False,
+            },
+        ],
+    )
+    monkeypatch.setattr(
+        lst,
+        "commit_info",
+        lambda wts, project: {
+            "h1": (1700000000.0, "main commit"),
+            "h2": (1700000500.0, "topic commit"),
+        },
+    )
     monkeypatch.setattr(lst, "list_worktrees", lambda project: [
         {"path": "/repo/main", "head": "h1", "branch": "main",
          "detached": False, "is_main": True},
@@ -203,6 +284,19 @@ def test_sessions_tagged_with_worktree(tmp_path, monkeypatch, capsys):
 
     def fake_collect_claude(project):
         if project == "/repo/wt-x":
+            return [
+                {
+                    "agent": "claude",
+                    "session_id": "sib123",
+                    "title": "sibling task",
+                    "goal": "",
+                    "last": "did sibling work",
+                    "branch": "topic",
+                    "last_ts": 1700000400.0,
+                    "turns": 5,
+                    "path": "x.jsonl",
+                }
+            ]
             return [{"agent": "claude", "session_id": "sib123", "title": "sibling task",
                      "goal": "", "last": "did sibling work", "branch": "topic",
                      "last_ts": 1700000400.0, "turns": 5, "path": "x.jsonl"}]
@@ -223,6 +317,16 @@ def test_sessions_tagged_with_worktree(tmp_path, monkeypatch, capsys):
 
 def test_no_worktrees_flag_scans_only_project(tmp_path, monkeypatch, capsys):
     """--no-worktrees must not call list_worktrees; scans the project alone."""
+
+    def boom(project):
+        raise AssertionError("list_worktrees called under --no-worktrees")
+
+    monkeypatch.setattr(lst, "list_worktrees", boom)
+    monkeypatch.setattr(lst, "collect_claude", lambda project: [])
+    monkeypatch.setattr(lst, "collect_codex", lambda wts: [])
+    monkeypatch.setattr(
+        sys, "argv", ["list-sessions.py", "--project", str(tmp_path), "--no-worktrees"]
+    )
     def boom(project):
         raise AssertionError("list_worktrees called under --no-worktrees")
     monkeypatch.setattr(lst, "list_worktrees", boom)

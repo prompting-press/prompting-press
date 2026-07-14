@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Fully-rendered example: rendering the `ask` prompt with the guard enabled
 carries the untrusted value wrapped in delimiters in `result.text`, and returns
 the advisory separately in `result.guard`. Standalone — run directly or under

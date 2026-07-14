@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Adversarial robustness fuzzing for the Python binding — spec 009 Phase 2 (T009).
 
 Invariant under test (FR-001, FR-003, SC-001, SC-002, SC-005):

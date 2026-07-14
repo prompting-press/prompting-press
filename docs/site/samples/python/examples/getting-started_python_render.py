@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Render, and read the result — hand the Prompt the Vars class plus a data dict;
 it validates + renders in one call, returning a RenderResult. The same Vars class
 also rejects bad data at render, before the kernel ever sees it."""

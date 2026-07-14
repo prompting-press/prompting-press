@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Derive guide — render a named variant: after adding a variant with `derive`, select
 //! it by name at render time. Variant selection is caller-owned.
 //! Standalone — `cargo run --example guides_derive_render_variant`.

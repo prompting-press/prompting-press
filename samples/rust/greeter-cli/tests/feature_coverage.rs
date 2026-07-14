@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Feature-coverage suite (spec 014, FR-014a / SC-009): one assertion per feature in
 //! the full public surface, so end-to-end coverage is provable by inventory, not
 //! inspection. Also the behavioral test for the sample app (FR-013).

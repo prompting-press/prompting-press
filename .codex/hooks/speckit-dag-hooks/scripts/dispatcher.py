@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """SpecKit DAG dispatcher (stdlib-only).
 
 Ported from dispatcher.sh. Wired through .apm/hooks/speckit-{claude,codex}-hooks.json:
@@ -120,9 +125,7 @@ def render_body(phase, node, node_id=""):
                 _render_section("Context absorbed from steering", node["context"])
             )
         if "conditional" in node:
-            parts.append(
-                _render_section("Conditional branching", node["conditional"])
-            )
+            parts.append(_render_section("Conditional branching", node["conditional"]))
 
     body = "\n\n".join(parts)
     return body + "\n"
@@ -181,9 +184,9 @@ def _normalize(cmd):
     """
     raw = cmd
     if raw.startswith("speckit-"):
-        raw = raw[len("speckit-"):]
+        raw = raw[len("speckit-") :]
     if raw.startswith("speckit."):
-        raw = raw[len("speckit."):]
+        raw = raw[len("speckit.") :]
     if not raw:
         return ""
     return raw.replace(".", "-")
@@ -265,7 +268,7 @@ def _resolve_feat(proj_root):
     if env_dir:
         feat = env_dir
         if feat.startswith("specs/"):
-            feat = feat[len("specs/"):]
+            feat = feat[len("specs/") :]
         return feat.rstrip("/")
 
     feature_json = os.path.join(proj_root, ".specify", "feature.json")
@@ -273,22 +276,31 @@ def _resolve_feat(proj_root):
         try:
             with open(feature_json, "r", encoding="utf-8") as fh:
                 data = json.load(fh)
-            feat = _as_str(data.get("feature_directory")) if isinstance(data, dict) else ""
+            feat = (
+                _as_str(data.get("feature_directory")) if isinstance(data, dict) else ""
+            )
+            feat = (
+                _as_str(data.get("feature_directory")) if isinstance(data, dict) else ""
+            )
         except (OSError, ValueError):
             feat = ""
         if feat:
             if feat.startswith("specs/"):
-                feat = feat[len("specs/"):]
+                feat = feat[len("specs/") :]
             return feat.rstrip("/")
 
     # Tier 3: branch-name prefix lookup. Branch "001-foo" -> specs/001-foo/.
     git_dir = os.path.join(proj_root, ".git")
     if os.path.isdir(git_dir) or os.path.isfile(git_dir):
         try:
-            branch = subprocess.check_output(
-                ["git", "-C", proj_root, "rev-parse", "--abbrev-ref", "HEAD"],
-                stderr=subprocess.DEVNULL,
-            ).decode("utf-8", "replace").strip()
+            branch = (
+                subprocess.check_output(
+                    ["git", "-C", proj_root, "rev-parse", "--abbrev-ref", "HEAD"],
+                    stderr=subprocess.DEVNULL,
+                )
+                .decode("utf-8", "replace")
+                .strip()
+            )
         except (OSError, subprocess.CalledProcessError):
             branch = ""
         if branch and os.path.isdir(os.path.join(proj_root, "specs", branch)):
@@ -351,7 +363,8 @@ def _evaluate_block(node, feat, proj_root):
         path = _resolve_path(tmpl, feat, proj_root)
         if _path_present(path):
             return (
-                "Conflicting artefact present: " + path
+                "Conflicting artefact present: "
+                + path
                 + " -- use /speckit.iterate.define to scope a change instead of"
                 + " re-running this step"
             )

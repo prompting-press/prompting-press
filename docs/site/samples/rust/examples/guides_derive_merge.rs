@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Derive guide — `MergeStrategy::Merge` via `derive_with`: union the base's declared
 //! variables with the overlay's, so a child prompt inherits `company` + `max_words` and adds
 //! its own `tone` without hand-spreading the base's variables. The base is untouched.

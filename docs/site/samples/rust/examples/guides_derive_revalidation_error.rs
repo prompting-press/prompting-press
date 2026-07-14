@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Derive guide — re-validation on overlay: overlaying a body that references an
 //! undeclared variable is rejected over the merged whole (agreement failure).
 //! Standalone — `cargo run --example guides_derive_revalidation_error`.

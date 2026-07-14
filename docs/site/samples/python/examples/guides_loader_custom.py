@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Loader guide — custom loaders: a plain callable or a class implementing the PromptLoader protocol.
 
 Any callable ``(key: str) -> str`` satisfies the loader contract — no class needed.

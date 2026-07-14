@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Shared test-support for the spec-006 conformance corpus runners (Rust side).
 //!
 //! This module is **test-only** (`crates/prompting-press/tests/common/`) and is shared by the golden

@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Emit the most recent context of one agent session, newest turn first.
 
 Reads a Claude Code or Codex transcript and renders a small, filtered window of
@@ -16,6 +21,7 @@ Usage:
                     [--agent claude|codex] [--turns N] [--offset M]
                     [--max-chars N] [--include-thinking]
 """
+
 from __future__ import annotations
 
 import argparse
@@ -40,7 +46,9 @@ def default_project() -> str:
     try:
         r = subprocess.run(
             ["git", "rev-parse", "--show-toplevel"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         if r.returncode == 0 and r.stdout.strip():
             return r.stdout.strip()
@@ -48,8 +56,9 @@ def default_project() -> str:
         pass
     return os.getcwd()
 
-TURN_CHARS = 2000      # max chars rendered per user/assistant text body
-TOOL_ARG_CHARS = 220   # max chars of a tool call's brief args
+
+TURN_CHARS = 2000  # max chars rendered per user/assistant text body
+TOOL_ARG_CHARS = 220  # max chars of a tool call's brief args
 TOOL_RESULT_CHARS = 320  # max chars of a truncated tool result
 
 
@@ -69,6 +78,9 @@ def worktree_projects(project: str) -> list[str]:
     try:
         r = subprocess.run(
             ["git", "-C", project, "worktree", "list", "--porcelain"],
+            capture_output=True,
+            text=True,
+            timeout=10,
             capture_output=True, text=True, timeout=10,
         )
     except (OSError, subprocess.SubprocessError):
@@ -77,6 +89,7 @@ def worktree_projects(project: str) -> list[str]:
         return paths
     for line in r.stdout.splitlines():
         if line.startswith("worktree "):
+            p = line[len("worktree ") :]
             p = line[len("worktree "):]
             if os.path.isdir(p) and p not in paths:
                 paths.append(p)
@@ -97,7 +110,11 @@ def parse_ts(value):
 def fmt_ts(epoch):
     if not epoch:
         return "?"
-    return datetime.fromtimestamp(epoch, timezone.utc).astimezone().strftime("%Y-%m-%d %H:%M")
+    return (
+        datetime.fromtimestamp(epoch, timezone.utc)
+        .astimezone()
+        .strftime("%Y-%m-%d %H:%M")
+    )
 
 
 def est_tokens(text: str) -> int:
@@ -136,6 +153,7 @@ def iter_json_lines(path: str):
 # Session resolution
 # ---------------------------------------------------------------------------
 
+
 def resolve_file(args) -> tuple[str, str]:
     if args.file:
         path = os.path.expanduser(args.file)
@@ -167,12 +185,19 @@ def resolve_file(args) -> tuple[str, str]:
         if len(matches) == 1:
             return matches[0], "claude"
         if len(matches) > 1:
+            sys.exit(
+                f"error: session prefix '{sid}' is ambiguous: {len(matches)} matches"
+            )
             sys.exit(f"error: session prefix '{sid}' is ambiguous: {len(matches)} matches")
 
     if args.agent in (None, "codex"):
         for root, _, files in os.walk(CODEX_ROOT):
             for name in files:
-                if name.startswith("rollout-") and name.endswith(".jsonl") and sid in name:
+                if (
+                    name.startswith("rollout-")
+                    and name.endswith(".jsonl")
+                    and sid in name
+                ):
                     return os.path.join(root, name), "codex"
         # Fall back to matching session_meta id inside files.
         for root, _, files in os.walk(CODEX_ROOT):
@@ -193,9 +218,17 @@ def resolve_file(args) -> tuple[str, str]:
 # Turn model -- a normalized list of {role, ts, text, tools[]} chronological.
 # ---------------------------------------------------------------------------
 
+
 def load_claude(path: str, include_thinking: bool):
-    meta = {"agent": "claude", "session_id": os.path.splitext(os.path.basename(path))[0],
-            "cwd": "", "branch": "", "version": "", "title": "", "last_ts": None}
+    meta = {
+        "agent": "claude",
+        "session_id": os.path.splitext(os.path.basename(path))[0],
+        "cwd": "",
+        "branch": "",
+        "version": "",
+        "title": "",
+        "last_ts": None,
+    }
     turns: list[dict] = []
     latest_todos = None
 
@@ -203,7 +236,9 @@ def load_claude(path: str, include_thinking: bool):
         rtype = rec.get("type")
         ts = parse_ts(rec.get("timestamp"))
         if ts:
-            meta["last_ts"] = ts if meta["last_ts"] is None else max(meta["last_ts"], ts)
+            meta["last_ts"] = (
+                ts if meta["last_ts"] is None else max(meta["last_ts"], ts)
+            )
         if rec.get("cwd"):
             meta["cwd"] = rec["cwd"]
         if rec.get("gitBranch"):
@@ -226,10 +261,18 @@ def load_claude(path: str, include_thinking: bool):
                                 b.get("text", "") for b in res if isinstance(b, dict)
                             )
                         if turns and turns[-1]["tools"]:
-                            turns[-1]["tools"][-1]["result"] = clip(str(res), TOOL_RESULT_CHARS)
+                            turns[-1]["tools"][-1]["result"] = clip(
+                                str(res), TOOL_RESULT_CHARS
+                            )
                 continue
-            text = content if isinstance(content, str) else " ".join(
-                b.get("text", "") for b in content or [] if isinstance(b, dict) and b.get("type") == "text"
+            text = (
+                content
+                if isinstance(content, str)
+                else " ".join(
+                    b.get("text", "")
+                    for b in content or []
+                    if isinstance(b, dict) and b.get("type") == "text"
+                )
             )
             turns.append({"role": "user", "ts": ts, "text": text, "tools": []})
         elif rtype == "assistant":
@@ -248,12 +291,24 @@ def load_claude(path: str, include_thinking: bool):
                     tinp = block.get("input", {}) or {}
                     if name == "TodoWrite" and isinstance(tinp.get("todos"), list):
                         latest_todos = tinp["todos"]
-                        tools.append({"name": name, "brief": f"{len(tinp['todos'])} todos (see latest plan above)", "result": ""})
+                        tools.append(
+                            {
+                                "name": name,
+                                "brief": f"{len(tinp['todos'])} todos (see latest plan above)",
+                                "result": "",
+                            }
+                        )
                     else:
-                        tools.append({"name": name, "brief": brief_args(tinp), "result": ""})
+                        tools.append(
+                            {"name": name, "brief": brief_args(tinp), "result": ""}
+                        )
             body = " ".join(p for p in text_parts if p)
             if include_thinking and thinking:
-                body = "[thinking] " + clip(" ".join(thinking), 400) + ("\n" + body if body else "")
+                body = (
+                    "[thinking] "
+                    + clip(" ".join(thinking), 400)
+                    + ("\n" + body if body else "")
+                )
             turns.append({"role": "assistant", "ts": ts, "text": body, "tools": tools})
 
     return meta, drop_empty(turns), latest_todos
@@ -266,15 +321,31 @@ def drop_empty(turns: list[dict]) -> list[dict]:
 
 def brief_args(tinp: dict) -> str:
     """A short, human-readable summary of a tool call's salient arguments."""
-    for key in ("file_path", "path", "command", "pattern", "query", "url", "prompt", "description"):
+    for key in (
+        "file_path",
+        "path",
+        "command",
+        "pattern",
+        "query",
+        "url",
+        "prompt",
+        "description",
+    ):
         if key in tinp and tinp[key]:
             return f"{key}={clip(str(tinp[key]), TOOL_ARG_CHARS)}"
     return clip(json.dumps(tinp, default=str), TOOL_ARG_CHARS) if tinp else ""
 
 
 def load_codex(path: str, include_thinking: bool):
-    meta = {"agent": "codex", "session_id": "", "cwd": "", "branch": "",
-            "version": "", "title": "", "last_ts": None}
+    meta = {
+        "agent": "codex",
+        "session_id": "",
+        "cwd": "",
+        "branch": "",
+        "version": "",
+        "title": "",
+        "last_ts": None,
+    }
     turns: list[dict] = []
     latest_todos = None
 
@@ -283,7 +354,9 @@ def load_codex(path: str, include_thinking: bool):
         payload = rec.get("payload", {}) or {}
         ts = parse_ts(rec.get("timestamp"))
         if ts:
-            meta["last_ts"] = ts if meta["last_ts"] is None else max(meta["last_ts"], ts)
+            meta["last_ts"] = (
+                ts if meta["last_ts"] is None else max(meta["last_ts"], ts)
+            )
         if rtype == "session_meta":
             meta["session_id"] = payload.get("id", "")
             meta["cwd"] = payload.get("cwd", "")
@@ -294,25 +367,53 @@ def load_codex(path: str, include_thinking: bool):
             if not meta["title"] and text and not text.startswith("<"):
                 meta["title"] = clip(text, 80)
         elif rtype == "event_msg" and payload.get("type") == "agent_message":
-            turns.append({"role": "assistant", "ts": ts, "text": payload.get("message", ""), "tools": []})
-        elif rtype == "response_item" and payload.get("type") == "reasoning" and include_thinking:
+            turns.append(
+                {
+                    "role": "assistant",
+                    "ts": ts,
+                    "text": payload.get("message", ""),
+                    "tools": [],
+                }
+            )
+        elif (
+            rtype == "response_item"
+            and payload.get("type") == "reasoning"
+            and include_thinking
+        ):
             summary = payload.get("summary") or []
             text = " ".join(
                 s.get("text", "") for s in summary if isinstance(s, dict)
             ).strip()
             if text:
-                turns.append({"role": "assistant", "ts": ts, "text": "[reasoning] " + clip(text, 400), "tools": []})
+                turns.append(
+                    {
+                        "role": "assistant",
+                        "ts": ts,
+                        "text": "[reasoning] " + clip(text, 400),
+                        "tools": [],
+                    }
+                )
         elif rtype == "response_item" and payload.get("type") in (
-            "function_call", "local_shell_call", "custom_tool_call",
+            "function_call",
+            "local_shell_call",
+            "custom_tool_call",
         ):
             name = payload.get("name") or payload.get("type")
-            raw = payload.get("arguments") or payload.get("input") or payload.get("action") or ""
+            raw = (
+                payload.get("arguments")
+                or payload.get("input")
+                or payload.get("action")
+                or ""
+            )
             if name == "update_plan":
                 try:
                     plan = json.loads(raw) if isinstance(raw, str) else raw
                     if isinstance(plan, dict) and isinstance(plan.get("plan"), list):
                         latest_todos = [
-                            {"content": s.get("step", ""), "status": s.get("status", "")}
+                            {
+                                "content": s.get("step", ""),
+                                "status": s.get("status", ""),
+                            }
                             for s in plan["plan"]
                         ]
                 except (ValueError, TypeError):
@@ -321,7 +422,9 @@ def load_codex(path: str, include_thinking: bool):
             if turns and turns[-1]["role"] == "assistant":
                 turns[-1]["tools"].append(tool)
             else:
-                turns.append({"role": "assistant", "ts": ts, "text": "", "tools": [tool]})
+                turns.append(
+                    {"role": "assistant", "ts": ts, "text": "", "tools": [tool]}
+                )
 
     return meta, drop_empty(turns), latest_todos
 
@@ -329,6 +432,7 @@ def load_codex(path: str, include_thinking: bool):
 # ---------------------------------------------------------------------------
 # Rendering
 # ---------------------------------------------------------------------------
+
 
 def render_todos(todos) -> list[str]:
     glyph = {"completed": "[x]", "in_progress": "[~]", "pending": "[ ]"}
@@ -360,12 +464,19 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--session")
     ap.add_argument("--file")
-    ap.add_argument("--project", default=None,
-                    help="repo the session belongs to (default: the git repo root)")
+    ap.add_argument(
+        "--project",
+        default=None,
+        help="repo the session belongs to (default: the git repo root)",
+    )
     ap.add_argument("--agent", choices=["claude", "codex"])
     ap.add_argument("--turns", type=int, default=8, help="turns per window (default 8)")
-    ap.add_argument("--offset", type=int, default=0, help="skip this many newest turns (page older)")
-    ap.add_argument("--max-chars", type=int, default=14000, help="hard cap on rendered window size")
+    ap.add_argument(
+        "--offset", type=int, default=0, help="skip this many newest turns (page older)"
+    )
+    ap.add_argument(
+        "--max-chars", type=int, default=14000, help="hard cap on rendered window size"
+    )
     ap.add_argument("--include-thinking", action="store_true")
     args = ap.parse_args()
 
@@ -379,11 +490,13 @@ def main() -> int:
     meta, turns, latest_todos = loader(path, args.include_thinking)
 
     total = len(turns)
+    end = total - offset  # exclusive upper bound (chronological)
     end = total - offset                 # exclusive upper bound (chronological)
     if end <= 0:
         print(f"No turns at offset {offset} (session has {total} turns).")
         return 0
     start = max(0, end - turns_per_window)
+    window = turns[start:end]  # chronological slice
     window = turns[start:end]            # chronological slice
 
     # Render newest first, stopping early if the char budget is exhausted.

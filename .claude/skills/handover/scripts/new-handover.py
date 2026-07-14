@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Create a scaffolded handover markdown file.
 
 The script writes to the shared handover store by default:
@@ -81,8 +86,26 @@ def _yaml_scalar(value: str) -> str:
     return json.dumps(str(value))
 
 
-def build_content(*, project: str, repo_root: str, worktree: str, branch: str, task: str) -> str:
-    updated = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+def build_content(
+    *, project: str, repo_root: str, worktree: str, branch: str, task: str
+) -> str:
+    updated = (
+        datetime.now(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+
+
+def build_content(
+    *, project: str, repo_root: str, worktree: str, branch: str, task: str
+) -> str:
+    updated = (
+        datetime.now(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
     return f"""---
 project: {_yaml_scalar(project)}
 repo_root: {_yaml_scalar(repo_root)}
@@ -185,11 +208,22 @@ def write_private(path: Path, content: str) -> None:
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--cwd", type=Path, default=Path.cwd(), help="Project directory to inspect")
-    parser.add_argument("--out-dir", type=Path, default=DEFAULT_HANDOVER_DIR, help="Handover output directory")
-    parser.add_argument("--project", help="Project slug/name for frontmatter and filename")
+    parser.add_argument(
+        "--cwd", type=Path, default=Path.cwd(), help="Project directory to inspect"
+    )
+    parser.add_argument(
+        "--out-dir",
+        type=Path,
+        default=DEFAULT_HANDOVER_DIR,
+        help="Handover output directory",
+    )
+    parser.add_argument(
+        "--project", help="Project slug/name for frontmatter and filename"
+    )
     parser.add_argument("--branch", help="Branch name for frontmatter and filename")
-    parser.add_argument("--task", help="Task/spec/issue id for frontmatter and filename")
+    parser.add_argument(
+        "--task", help="Task/spec/issue id for frontmatter and filename"
+    )
     parser.add_argument("--repo-root", help="Repo root for frontmatter")
     parser.add_argument("--worktree", help="Worktree path for frontmatter")
     return parser.parse_args(argv)

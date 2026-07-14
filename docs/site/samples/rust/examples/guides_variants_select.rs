@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Selecting a variant at render: omit the name for the default (root body),
 //! pass a name for that arm. The resolved name comes back on
 //! `RenderResult.variant` and the text is that arm's rendered body. Standalone:

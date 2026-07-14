@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Excluded-feature regression suite (spec 002, T032; FR-002, FR-028, SC-008).
 //!
 //! Proves that **every** v1-excluded template construct is LOUDLY REJECTED: it never

@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 // A non-conforming advisory override (missing the required markers) is rejected
 // by the kernel and throws `PromptRenderError` with `code === "render"` and
 // `field === "guard"`. Standalone — run under `node --test`.

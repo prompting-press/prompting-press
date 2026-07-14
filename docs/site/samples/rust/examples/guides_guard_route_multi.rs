@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Routing the guard text for a multi-message composition: prepend the advisory
 //! as a system message, then the resolved body messages. Standalone —
 //! `cargo run --example guides_guard_route_multi`.

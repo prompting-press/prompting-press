@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Construct a Prompt from a plain dict (the Rust loader validates the shape on the way in)."""
 
 from prompting_press import Prompt

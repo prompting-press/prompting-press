@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """
 T016 — Schema meta-validation (FR-008).
 
@@ -13,7 +17,9 @@ import sys
 try:
     import jsonschema
 except ImportError:
-    print("ERROR: jsonschema not available. Run via: uv run --with jsonschema python3 meta_validate.py")
+    print(
+        "ERROR: jsonschema not available. Run via: uv run --with jsonschema python3 meta_validate.py"
+    )
     sys.exit(1)
 
 SCHEMA_PATH = pathlib.Path(__file__).parent.parent / "prompt-definition.schema.json"
@@ -33,7 +39,7 @@ def main() -> int:
     try:
         jsonschema.Draft202012Validator.check_schema(schema)
     except jsonschema.SchemaError as exc:
-        print(f"ERROR: Schema is NOT a valid Draft 2020-12 document:")
+        print("ERROR: Schema is NOT a valid Draft 2020-12 document:")
         print(f"  {exc.message}")
         return 1
 

@@ -60,7 +60,7 @@ ignore = []
 # ---------------------------------------------------------------------------
 # This is now an ENFORCING gate (wired as ci:check-licenses / the PR gate), not
 # the day-one permissive placeholder. The whole workspace is published under
-# Apache-2.0 (see the root LICENSE + `license = "Apache-2.0"` in Cargo.toml), so
+# MPL-2.0 (see the root LICENSE + license field in Cargo.toml), so
 # every dependency's license MUST be Apache-2.0-compatible: permissive, or a
 # multi-license (`OR`) expression with at least one permissive arm cargo-deny can
 # elect. No strong copyleft (GPL/AGPL/LGPL-as-sole-license) is permitted.
@@ -88,6 +88,7 @@ private = { ignore = true }
 # graph. Keep this list sorted and pruned to what is actually used — an unmatched
 # entry is a warning that signals the list has drifted from the tree.
 allow = [
+  "MPL-2.0",                        # this project (workspace root + published crates)
   "Apache-2.0",                     # minijinja, memo-map (sole); + OR-arm of most crates
   "Apache-2.0 WITH LLVM-exception", # target-lexicon (pyo3 build dep, sole); rustix/wasip2 OR-arm
   "MIT",                            # napi*, pythonize, serde_yaml_ng, winnow, zmij, … (sole)

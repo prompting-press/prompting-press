@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Integration: Prompt construction — from_yaml / from_json / from_toml / Prompt(shape).
 
 Exercises FR-001 to FR-008: all four construction entry points, valid and invalid inputs,

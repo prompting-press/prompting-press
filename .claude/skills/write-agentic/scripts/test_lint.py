@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Tests for lint.py — x-lint override mechanism and core rules.
 
 Run: pytest packages/write-agentic/.apm/skills/write-agentic/scripts/test_lint.py
 """
+
 import importlib.util
 import os
-import sys
-import tempfile
 from pathlib import Path
 
-import pytest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -35,6 +38,7 @@ def _write(tmp_path: Path, name: str, content: str) -> Path:
 # parse_xlint
 # ---------------------------------------------------------------------------
 
+
 class TestParseXlint:
     def test_no_xlint(self):
         text = "---\nname: foo\ndescription: bar\n---\nbody"
@@ -43,7 +47,8 @@ class TestParseXlint:
         assert reason == ""
 
     def test_inline_list(self):
-        text = "---\nx-lint:\n  allow: [E1, E3]\n  reason: \"test reason\"\n---\nbody"
+        text = '---\nx-lint:\n  allow: [E1, E3]\n  reason: "test reason"\n---\nbody'
+        text = '---\nx-lint:\n  allow: [E1, E3]\n  reason: "test reason"\n---\nbody'
         codes, reason = lint_mod.parse_xlint(text)
         assert codes == {"E1", "E3"}
         assert reason == "test reason"
@@ -66,7 +71,12 @@ class TestParseXlint:
         assert reason == ""
 
     def test_w_code_allowed(self):
-        text = "---\nx-lint:\n  allow: [W9]\n  reason: \"acceptable duplication\"\n---\nbody"
+        text = (
+            '---\nx-lint:\n  allow: [W9]\n  reason: "acceptable duplication"\n---\nbody'
+        )
+        text = (
+            '---\nx-lint:\n  allow: [W9]\n  reason: "acceptable duplication"\n---\nbody'
+        )
         codes, reason = lint_mod.parse_xlint(text)
         assert "W9" in codes
         assert reason == "acceptable duplication"
@@ -126,7 +136,12 @@ class TestOverrideMechanism:
         )
         p = _write(tmp_path, "SKILL.md", content)
         findings = lint_mod.lint(p)
-        overridden = [(sev, code, msg) for sev, code, msg in findings if sev == "OVERRIDDEN"]
+        overridden = [
+            (sev, code, msg) for sev, code, msg in findings if sev == "OVERRIDDEN"
+        ]
+        overridden = [
+            (sev, code, msg) for sev, code, msg in findings if sev == "OVERRIDDEN"
+        ]
         assert overridden, "expected at least one OVERRIDDEN finding"
         assert "routing depends on full description" in overridden[0][2]
 
@@ -222,6 +237,7 @@ MUST do something specific and verifiable.
 # ---------------------------------------------------------------------------
 # main() exit code with overrides
 # ---------------------------------------------------------------------------
+
 
 class TestMainExitCode:
     def test_overridden_only_exits_0(self, tmp_path, capsys):

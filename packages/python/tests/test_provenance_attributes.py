@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Provenance attributes tests for the Python binding — spec 018 (T008, T012, T013).
 
 T008 (US1): `result.provenance_attributes()` is a 4-entry dict[str, str] with the

@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Integration: core_version() returns a non-empty string.
 
 Principle I: the Rust engine version is exposed via core_version() so downstream

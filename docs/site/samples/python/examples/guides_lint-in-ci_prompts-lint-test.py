@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Wiring ``Prompt.check()`` as a CI gate under pytest.
 
 A CI gate is a test that fails the build: load every ``*.yaml`` under a ``prompts/``

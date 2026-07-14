@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Declare the typed Vars struct, validated by `garde`. Its field names must match the
 //! prompt's `variables` (`company`, `max_words`); the `#[garde(..)]` rules run at render
 //! time, before the kernel is touched. Standalone:

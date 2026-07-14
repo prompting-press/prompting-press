@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """List prior agent sessions for a repository, newest first.
 
 Discovers Claude Code transcripts (~/.claude/projects/<encoded>/*.jsonl) and
@@ -11,6 +16,7 @@ Usage:
     list-sessions.py [--project PATH] [--agent claude|codex|all]
                      [--limit N] [--json]
 """
+
 from __future__ import annotations
 
 import argparse
@@ -37,7 +43,9 @@ def default_project() -> str:
     try:
         r = subprocess.run(
             ["git", "rev-parse", "--show-toplevel"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         if r.returncode == 0 and r.stdout.strip():
             return r.stdout.strip()
@@ -76,7 +84,11 @@ def rel_time(epoch: float | None) -> str:
 def abs_time(epoch: float | None) -> str:
     if not epoch:
         return "unknown"
-    return datetime.fromtimestamp(epoch, timezone.utc).astimezone().strftime("%Y-%m-%d %H:%M")
+    return (
+        datetime.fromtimestamp(epoch, timezone.utc)
+        .astimezone()
+        .strftime("%Y-%m-%d %H:%M")
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -89,6 +101,7 @@ def abs_time(epoch: float | None) -> str:
 # -- returns the whole family, so we enumerate it once and scan every member.
 # ---------------------------------------------------------------------------
 
+
 def list_worktrees(project: str) -> list[dict]:
     """Live worktrees of the repo containing `project`, main checkout first.
 
@@ -99,7 +112,9 @@ def list_worktrees(project: str) -> list[dict]:
     try:
         r = subprocess.run(
             ["git", "-C", project, "worktree", "list", "--porcelain"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
     except (OSError, subprocess.SubprocessError):
         return []
@@ -115,14 +130,21 @@ def list_worktrees(project: str) -> list[dict]:
             cur = {}
             continue
         if line.startswith("worktree "):
-            cur = {"path": line[len("worktree "):], "head": "", "branch": "",
-                   "detached": False, "prunable": False}
+            cur = {
+                "path": line[len("worktree ") :],
+                "head": "",
+                "branch": "",
+                "detached": False,
+                "prunable": False,
+            }
         elif line.startswith("HEAD "):
-            cur["head"] = line[len("HEAD "):]
+            cur["head"] = line[len("HEAD ") :]
         elif line.startswith("branch "):
-            ref = line[len("branch "):]
+            ref = line[len("branch ") :]
             # Keep multi-segment branch names intact (refs/heads/foo/bar -> foo/bar).
-            cur["branch"] = ref[len("refs/heads/"):] if ref.startswith("refs/heads/") else ref
+            cur["branch"] = (
+                ref[len("refs/heads/") :] if ref.startswith("refs/heads/") else ref
+            )
         elif line == "detached":
             cur["detached"] = True
         elif line.startswith("prunable"):
@@ -152,7 +174,9 @@ def commit_info(worktrees: list[dict], project: str) -> dict:
     try:
         r = subprocess.run(
             ["git", "-C", project, "show", "-s", "--format=%H%x00%ct%x00%s", *heads],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
     except (OSError, subprocess.SubprocessError):
         return out
@@ -175,7 +199,126 @@ def is_dirty(path: str) -> bool:
     try:
         r = subprocess.run(
             ["git", "-C", path, "status", "--porcelain"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return r.returncode == 0 and bool(r.stdout.strip())
+
+
+# ---------------------------------------------------------------------------
+# Worktree discovery
+#
+# A session for this project may live in ANY worktree of the same repo: the
+# main checkout and every linked worktree each have their own cwd, so each gets
+# its own ~/.claude/projects/<encoded> dir (and Codex rollouts tagged with that
+# cwd). `git worktree list` from anywhere -- the main repo OR a linked worktree
+# -- returns the whole family, so we enumerate it once and scan every member.
+# ---------------------------------------------------------------------------
+
+
+def list_worktrees(project: str) -> list[dict]:
+    """Live worktrees of the repo containing `project`, main checkout first.
+
+    Returns [{path, head, branch, detached, is_main}] for every worktree that
+    still exists on disk and is not prunable. Returns [] when `project` is not
+    inside a git repo (the caller then falls back to scanning `project` alone).
+    """
+    try:
+        r = subprocess.run(
+            ["git", "-C", project, "worktree", "list", "--porcelain"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+    if r.returncode != 0:
+        return []
+
+    worktrees: list[dict] = []
+    cur: dict = {}
+    for line in r.stdout.splitlines():
+        if not line.strip():
+            if cur.get("path"):
+                worktrees.append(cur)
+            cur = {}
+            continue
+        if line.startswith("worktree "):
+            cur = {
+                "path": line[len("worktree ") :],
+                "head": "",
+                "branch": "",
+                "detached": False,
+                "prunable": False,
+            }
+        elif line.startswith("HEAD "):
+            cur["head"] = line[len("HEAD ") :]
+        elif line.startswith("branch "):
+            ref = line[len("branch ") :]
+            # Keep multi-segment branch names intact (refs/heads/foo/bar -> foo/bar).
+            cur["branch"] = (
+                ref[len("refs/heads/") :] if ref.startswith("refs/heads/") else ref
+            )
+        elif line == "detached":
+            cur["detached"] = True
+        elif line.startswith("prunable"):
+            cur["prunable"] = True
+    if cur.get("path"):
+        worktrees.append(cur)
+
+    out = []
+    for idx, w in enumerate(worktrees):
+        w["is_main"] = idx == 0  # porcelain always lists the main checkout first
+        if w.get("prunable") or not os.path.isdir(w["path"]):
+            continue
+        out.append(w)
+    return out
+
+
+def commit_info(worktrees: list[dict], project: str) -> dict:
+    """Map each worktree HEAD sha -> (commit_epoch, subject) in one git call.
+
+    The recency of the last commit -- and its subject -- is the second signal
+    (alongside transcript activity) for which worktree was last worked in.
+    """
+    heads = sorted({w["head"] for w in worktrees if w.get("head")})
+    out: dict = {}
+    if not heads:
+        return out
+    try:
+        r = subprocess.run(
+            ["git", "-C", project, "show", "-s", "--format=%H%x00%ct%x00%s", *heads],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return out
+    if r.returncode != 0:
+        return out
+    for line in r.stdout.splitlines():
+        parts = line.split("\x00")
+        if len(parts) != 3:
+            continue
+        try:
+            epoch = float(parts[1])  # %ct is integer epoch seconds
+        except ValueError:
+            epoch = None
+        out[parts[0]] = (epoch, parts[2])
+    return out
+
+
+def is_dirty(path: str) -> bool:
+    """True if the worktree has uncommitted changes -- a strong 'active' hint."""
+    try:
+        r = subprocess.run(
+            ["git", "-C", path, "status", "--porcelain"],
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
     except (OSError, subprocess.SubprocessError):
         return False
@@ -404,14 +547,33 @@ def render_git_activity(worktrees: list[dict], commits: dict, limit: int) -> lis
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--project", default=None,
-                    help="repo to list sessions for (default: the git repo root)")
+    ap.add_argument(
+        "--project",
+        default=None,
+        help="repo to list sessions for (default: the git repo root)",
+    )
     ap.add_argument("--agent", choices=["claude", "codex", "all"], default="all")
     ap.add_argument("--limit", type=int, default=20)
-    ap.add_argument("--no-worktrees", action="store_true",
-                    help="scan only this project's transcript dir, not sibling worktrees")
-    ap.add_argument("--no-git", action="store_true",
-                    help="skip the per-worktree git-activity overview")
+    ap.add_argument(
+        "--no-worktrees",
+        action="store_true",
+        help="scan only this project's transcript dir, not sibling worktrees",
+    )
+    ap.add_argument(
+        "--no-git",
+        action="store_true",
+        help="skip the per-worktree git-activity overview",
+    )
+    ap.add_argument(
+        "--no-worktrees",
+        action="store_true",
+        help="scan only this project's transcript dir, not sibling worktrees",
+    )
+    ap.add_argument(
+        "--no-git",
+        action="store_true",
+        help="skip the per-worktree git-activity overview",
+    )
     ap.add_argument("--json", action="store_true", help="emit machine-readable JSON")
     args = ap.parse_args()
 
@@ -426,8 +588,24 @@ def main() -> int:
     worktrees = [] if args.no_worktrees else list_worktrees(project)
     if not worktrees:
         # Not a git repo, --no-worktrees, or git unavailable: scan project alone.
-        worktrees = [{"path": project, "head": "", "branch": "",
-                      "detached": False, "is_main": True}]
+        worktrees = [
+            {
+                "path": project,
+                "head": "",
+                "branch": "",
+                "detached": False,
+                "is_main": True,
+            }
+        ]
+        worktrees = [
+            {
+                "path": project,
+                "head": "",
+                "branch": "",
+                "detached": False,
+                "is_main": True,
+            }
+        ]
 
     entries: list[dict] = []
     if args.agent in ("claude", "all"):
@@ -441,14 +619,34 @@ def main() -> int:
     commits = {} if args.no_git else commit_info(worktrees, project)
 
     if args.json:
-        print(json.dumps({
-            "project": project,
-            "worktrees": [
-                {**w, "head_commit": commits.get(w.get("head", ""), (None, ""))}
-                for w in worktrees
-            ],
-            "sessions": entries,
-        }, indent=2, default=str))
+        print(
+            json.dumps(
+                {
+                    "project": project,
+                    "worktrees": [
+                        {**w, "head_commit": commits.get(w.get("head", ""), (None, ""))}
+                        for w in worktrees
+                    ],
+                    "sessions": entries,
+                },
+                indent=2,
+                default=str,
+            )
+        )
+        print(
+            json.dumps(
+                {
+                    "project": project,
+                    "worktrees": [
+                        {**w, "head_commit": commits.get(w.get("head", ""), (None, ""))}
+                        for w in worktrees
+                    ],
+                    "sessions": entries,
+                },
+                indent=2,
+                default=str,
+            )
+        )
         return 0
 
     lines: list[str] = []
@@ -456,8 +654,8 @@ def main() -> int:
         lines += render_git_activity(worktrees, commits, limit)
         lines.append("")
 
-    scope = (f"across {len(worktrees)} worktrees"
-             if len(worktrees) > 1 else "")
+    scope = f"across {len(worktrees)} worktrees" if len(worktrees) > 1 else ""
+    scope = f"across {len(worktrees)} worktrees" if len(worktrees) > 1 else ""
     if not entries:
         if scope:
             lines.append(f"No prior sessions found for {project} {scope}.")
@@ -490,7 +688,7 @@ def main() -> int:
         last = (e.get("last") or "").replace("\n", " ").strip()
         if last and last != title:
             if len(last) > LAST_SNIPPET_CHARS:
-                last = last[:LAST_SNIPPET_CHARS - 1] + "…"
+                last = last[: LAST_SNIPPET_CHARS - 1] + "…"
             lines.append(f"      ↳ left off: {last}")
         lines.append(f"      id: {e['session_id']}")
     lines.append(

@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Lint purity contract (spec 008 reshape of spec 003, T016; FR-019 / V3.4).
 //!
 //! `Prompt::check()` is **pure analysis**: it produces only a [`CheckReport`] and MUST NOT

@@ -31,7 +31,7 @@ readme = "README.md"
 # CI-tested interpreter, and 3.12 gives stdlib `tomllib` for Prompt.from_toml (no
 # tomli backport dependency).
 requires-python = ">=3.12"
-license = { text = "Apache-2.0" }
+license = { text = "MPL-2.0" }
 authors = [{ name = "Sjors Robroek" }]
 # Pydantic v2 is the typed-Vars facade and the generated shape (US3). The bounded
 # range `>=2,<3` is explicit and acceptable under the no-floating-versions rule.

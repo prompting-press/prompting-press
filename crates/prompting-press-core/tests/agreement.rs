@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! US2 agreement-analysis suite (spec 002, T021): the sound required-roots report.
 //!
 //! Covers quickstart scenarios V2.1, V2.2, V2.3, V2.4, V2.6 and V4.3. Template bodies

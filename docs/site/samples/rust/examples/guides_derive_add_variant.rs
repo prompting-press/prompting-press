@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Derive guide — add a variant at runtime: READ the current variants with the
 //! `.variants()` accessor, add to a clone, then WRITE the merged map back via the sole
 //! mutator `derive`. The original is untouched.

@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Enabling the advisory guard: the untrusted `topic` value is delimited in the
 rendered body and a guard advisory is returned. Standalone — run directly or
 under pytest."""

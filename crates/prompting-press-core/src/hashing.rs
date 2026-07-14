@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Content-addressed hashing helpers (spec 002, T018; FR-012/FR-013; research D8).
 //!
 //! The kernel emits two provenance hashes per render, each a lowercase-hex SHA-256 over

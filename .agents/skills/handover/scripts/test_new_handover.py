@@ -1,7 +1,12 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Tests for new-handover.py frontmatter quoting and write-failure handling.
 
 Run with:  uv run --with pytest pytest test_new_handover.py
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -34,6 +39,7 @@ def _frontmatter(content):
 
 # --- YAML-safe scalar quoting ------------------------------------------------
 
+
 def test_newline_in_repo_root_does_not_inject_keys():
     """A newline in repo_root must stay inside the value, not start a new key."""
     content = nh.build_content(
@@ -47,6 +53,14 @@ def test_newline_in_repo_root_does_not_inject_keys():
     # The injected pseudo-keys must NOT appear as top-level frontmatter keys.
     for line in fm.splitlines():
         key = line.split(":", 1)[0].strip()
+        assert key in {
+            "project",
+            "repo_root",
+            "worktree",
+            "branch",
+            "task",
+            "updated",
+        }, f"unexpected frontmatter key from injection: {line!r}"
         assert key in {"project", "repo_root", "worktree", "branch", "task", "updated"}, \
             f"unexpected frontmatter key from injection: {line!r}"
     # The newline survives inside the quoted repo_root value (as \n escape).
@@ -56,6 +70,9 @@ def test_newline_in_repo_root_does_not_inject_keys():
 
 def test_newline_in_branch_single_key():
     content = nh.build_content(
+        project="p",
+        repo_root="/r",
+        worktree="/w",
         project="p", repo_root="/r", worktree="/w",
         branch="feature\nupdated: 1999-01-01T00:00:00Z",
         task="t",
@@ -73,6 +90,20 @@ def test_frontmatter_parses_with_pyyaml_if_available():
     content = nh.build_content(
         project="p",
         repo_root='/r"quote\ninjected: x',
+        worktree="/w",
+        branch="b",
+        task="t",
+    )
+    fm = _frontmatter(content)
+    data = yaml.safe_load(fm)
+    assert set(data.keys()) == {
+        "project",
+        "repo_root",
+        "worktree",
+        "branch",
+        "task",
+        "updated",
+    }
         worktree="/w", branch="b", task="t",
     )
     fm = _frontmatter(content)
@@ -83,11 +114,33 @@ def test_frontmatter_parses_with_pyyaml_if_available():
 
 # --- out-dir-is-a-file handling ----------------------------------------------
 
+
 def test_out_dir_is_a_file_exits_cleanly(tmp_path, monkeypatch, capsys):
     """If --out-dir is an existing regular file, exit non-zero, no traceback."""
     blocker = tmp_path / "store"
     blocker.write_text("i am a file, not a directory\n", encoding="utf-8")
 
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "new-handover.py",
+            "--out-dir",
+            str(blocker),
+            "--project",
+            "proj",
+            "--branch",
+            "main",
+            "--task",
+            "task",
+            "--repo-root",
+            str(tmp_path),
+            "--worktree",
+            str(tmp_path),
+            "--cwd",
+            str(tmp_path),
+        ],
+    )
     monkeypatch.setattr(sys, "argv", [
         "new-handover.py",
         "--out-dir", str(blocker),
@@ -114,6 +167,27 @@ def test_write_private_raises_handover_error_for_file_parent(tmp_path):
 
 def test_happy_path_writes_file(tmp_path, monkeypatch, capsys):
     out = tmp_path / "handovers"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "new-handover.py",
+            "--out-dir",
+            str(out),
+            "--project",
+            "proj",
+            "--branch",
+            "main",
+            "--task",
+            "task",
+            "--repo-root",
+            str(tmp_path),
+            "--worktree",
+            str(tmp_path),
+            "--cwd",
+            str(tmp_path),
+        ],
+    )
     monkeypatch.setattr(sys, "argv", [
         "new-handover.py",
         "--out-dir", str(out),

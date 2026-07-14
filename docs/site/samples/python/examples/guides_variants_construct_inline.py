@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Constructing a three-arm prompt inline from a shape object.
 
 The ``variants`` map mirrors the document form one-to-one and construction runs
