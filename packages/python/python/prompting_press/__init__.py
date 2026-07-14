@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Prompting Press — a typed, variant-aware prompt-template library.
 
 This package is the **Python binding** over the shared Rust core: prompts are parsed,

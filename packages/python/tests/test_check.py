@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Agreement + provenance lint tests for the PyO3 binding — spec 008 Phase 4.
 
 The spec 008 reshape moves the lint from `check(reg)` (registry-keyed free function)

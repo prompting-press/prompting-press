@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Loader guide — custom loaders: a plain callable or a class implementing the PromptLoader protocol.
 
 Any callable ``(key: str) -> str`` satisfies the loader contract — no class needed.

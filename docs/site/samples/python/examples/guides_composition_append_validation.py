@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """append validates eagerly: a passing model instance is stored, but an invalid
 one raises PromptValidationError and NOTHING is stored (no partial state).
 Standalone."""

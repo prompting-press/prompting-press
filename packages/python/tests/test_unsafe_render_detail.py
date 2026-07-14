@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Tests for the opt-in unsafe render-error detail (spec 013).
 
 Validates FR-001/FR-002/FR-003/FR-004/FR-010 from the Python binding surface:

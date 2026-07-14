@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Construct a `Prompt` from an already-built `PromptDefinition` value with `Prompt::new`
 //! — same validation as the `from_*` text factories. Standalone:
 //! `cargo run --example getting-started_rust_construct_from_definition`.

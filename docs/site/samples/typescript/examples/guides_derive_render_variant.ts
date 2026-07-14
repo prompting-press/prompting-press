@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Derive guide — render a named variant: after adding a variant with `derive`, select it by
  * name at render time. Variant selection is caller-owned.

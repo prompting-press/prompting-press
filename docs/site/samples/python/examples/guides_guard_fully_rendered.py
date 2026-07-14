@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Fully-rendered example: rendering the `ask` prompt with the guard enabled
 carries the untrusted value wrapped in delimiters in `result.text`, and returns
 the advisory separately in `result.guard`. Standalone — run directly or under

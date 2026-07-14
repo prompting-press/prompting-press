@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Pluggable prompt loader — spec 019.
 
 :class:`PromptLoader` is the loader interface (a :pep:`544` ``Protocol``). The two built-in

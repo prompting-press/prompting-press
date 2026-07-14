@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Derive / merge integration tests:
 //! - derive() Replace default (non-breaking, immutability of base)
 //! - derive_with Merge (unions variables/variants/metadata)

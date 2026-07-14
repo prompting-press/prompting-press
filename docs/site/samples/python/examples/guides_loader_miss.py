@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Loader guide — a missing key raises PromptLoadError (load_not_found),
 distinct from LoadError (the parse/shape error raised on malformed YAML).
 

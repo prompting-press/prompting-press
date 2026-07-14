@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Adversarial robustness corpus for the kernel (spec 009, T002).
 //!
 //! Feeds malformed / oversized / deeply-nested / Unicode / control-character bodies and

@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Constructing a three-arm prompt inline from a typed shape object — the
 //! `variants` map mirrors the document form one-to-one and runs the same
 //! validation as `Prompt::from_yaml`. Standalone:

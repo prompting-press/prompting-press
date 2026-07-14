@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Greeter CLI — a realistic Prompting Press consumer sample app (spec 014, WU-C).
 //!
 //! Walks the FULL public feature surface end-to-end (FR-014): construct → validate →

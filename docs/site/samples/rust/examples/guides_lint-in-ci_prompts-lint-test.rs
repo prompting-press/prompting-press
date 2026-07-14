@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Wiring `Prompt::check()` as a CI gate: a test that loads every `*.yaml` under a
 //! `prompts/` directory, constructs each prompt, and asserts `check()` returns no
 //! findings — failing the build (and naming the offender) otherwise.

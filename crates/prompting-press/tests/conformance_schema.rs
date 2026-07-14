@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Conformance corpus — Rust schema round-trip runner (spec 006, T011; US2).
 //!
 //! Feeds every `conformance/schema/manifest.json` document through the consumer's own loader

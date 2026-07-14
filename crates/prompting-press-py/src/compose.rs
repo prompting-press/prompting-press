@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Multi-message composition for the Python binding (spec 008 Phase 4, T039; FR-012/FR-013).
 //!
 //! A [`Composition`] is an **explicit, ordered** sequence of `(Prompt, vars, variant?)`

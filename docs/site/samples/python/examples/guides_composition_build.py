@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Build a Composition by appending (Prompt, vars) entries, then resolve it to
 an ordered list of role-tagged messages. Standalone."""
 

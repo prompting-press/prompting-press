@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 // Routing the guard text for a single render: the advisory goes to a system
 // message, the body to a user message. The library never concatenates them.
 // Standalone — run under `node --test`.

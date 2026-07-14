@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Composition integration tests: Composition + Message, multiple (Prompt, vars) → Messages.
 
 use garde::Validate;

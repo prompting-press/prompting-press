@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Property-based tests for the kernel (spec 009, T003 + T004).
 //!
 //! T003: hash-determinism — render the same def+values twice → identical

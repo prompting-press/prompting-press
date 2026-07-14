@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! The Rust side of error normalization for the Node binding (FR-014/FR-015, research D4 /
 //! C-06 / SEC-004).
 //!

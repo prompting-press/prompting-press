@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Version integration tests: core_version() returns a non-empty string.
 
 use prompting_press::core_version;

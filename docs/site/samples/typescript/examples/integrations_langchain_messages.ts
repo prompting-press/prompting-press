@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 // Use Prompting Press prompts with LangChain / LangGraph (TypeScript).
 //
 // Prompting Press renders a composition to an ordered list of role-tagged

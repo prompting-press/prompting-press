@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Render, and read the result — hand the Prompt the Vars class plus a data dict;
 it validates + renders in one call, returning a RenderResult. The same Vars class
 also rejects bad data at render, before the kernel ever sees it."""

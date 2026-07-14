@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Conformance corpus — Rust derive-merge runner (spec 017 T017).
 //!
 //! Drives every `conformance/derive-merge/*.json` fixture through the consumer's

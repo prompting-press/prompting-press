@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Feature-coverage suite (spec 014, FR-014a / SC-009): one assertion per feature in
 //! the full public surface, so end-to-end coverage is provable by inventory, not
 //! inspection. Also the behavioral test for the sample app (FR-013).

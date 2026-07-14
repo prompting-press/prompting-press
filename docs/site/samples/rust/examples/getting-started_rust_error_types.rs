@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! `ConsumerError` is a closed three-variant enum — the render match is exhaustive.
 //! Standalone — `cargo run --example getting-started_rust_error_types`.
 

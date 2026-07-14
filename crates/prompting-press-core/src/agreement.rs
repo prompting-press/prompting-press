@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Sound agreement analysis (spec 002, US2; T023–T025) — the library's headline
 //! differentiator (constitution Principle IV / C-04).
 //!

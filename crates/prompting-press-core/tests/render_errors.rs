@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! US1 render-error suite (spec 002, T015).
 //!
 //! Covers quickstart scenarios V1.7 (strict undefined — SC-009/FR-001a) and V1.4

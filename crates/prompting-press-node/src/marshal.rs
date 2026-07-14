@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! The FFI **value bridge** — the single auditable locus where a JavaScript value crosses
 //! into the kernel's value type (FR-003a, research D2 / C-02).
 //!

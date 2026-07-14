@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Integration: Prompt construction — from_yaml / from_json / from_toml / Prompt(shape).
 
 Exercises FR-001 to FR-008: all four construction entry points, valid and invalid inputs,

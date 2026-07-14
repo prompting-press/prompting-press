@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Strip first-party crates from a cargo-about THIRD-PARTY-LICENSES.md.
 
 cargo-about lists EVERY crate in the bundled dependency graph, including this

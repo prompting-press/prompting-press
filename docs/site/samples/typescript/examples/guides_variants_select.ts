@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Selecting a variant at render: omit the name for the default (root body),
  * pass `{ variant }` for that arm. The resolved name comes back on

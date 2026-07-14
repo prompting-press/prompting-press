@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Provenance attributes helper — spec 018.
 //!
 //! Provides the four library-owned key constants and `provenance_attributes_of`, a pure

@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! US1 render suite (spec 002, T013): rendering a prompt to text with provenance.
 //!
 //! Covers quickstart scenarios V1.1, V1.3, V1.5, V1.6. Template bodies live in JSON

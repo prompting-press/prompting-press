@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! The Python render helpers — the [`RenderResult`] and [`GuardConfig`] pyclasses, plus the
 //! [`validate_in_python`] helper shared by `prompt.rs` and `compose.rs`.
 //!

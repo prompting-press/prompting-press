@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Integration: Composition of multiple prompts → messages with roles.
 
 Covers: append / from_messages paths, order + roles, variant arg, empty composition,

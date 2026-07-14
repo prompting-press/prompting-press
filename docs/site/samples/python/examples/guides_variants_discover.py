@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Discovering the selectable variants.
 
 The ``variants`` accessor returns the declared variant map; read its keys to see

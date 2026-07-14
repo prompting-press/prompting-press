@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Construction integration tests: from_yaml / from_json / from_toml (valid + invalid).
 //!
 //! Exercises Prompt::from_yaml, from_json, from_toml on well-formed input and verifies

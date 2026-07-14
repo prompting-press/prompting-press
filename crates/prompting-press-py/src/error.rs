@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! The Python exception hierarchy and the `ConsumerError`/`KernelError` → `PyErr`
 //! translation (FR-014/FR-015, research D4 / C-06 / SEC-004).
 //!

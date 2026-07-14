@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Spec 006 — FFI marshaling conformance corpus, Python binding (`prompting_press`).
 
 This is a TEST HARNESS, not engine logic. It drives the shared

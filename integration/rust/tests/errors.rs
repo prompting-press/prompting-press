@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Error normalization integration tests:
 //! - ConsumerError / FieldError normalized [{field, code, message}] shape
 //! - Error codes from the closed vocabulary

@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! The Node render path — marshal → kernel-direct render, plus the
 //! [`RenderResult`] / [`GuardConfig`] napi types.
 //!

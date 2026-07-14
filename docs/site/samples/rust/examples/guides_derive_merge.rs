@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Derive guide — `MergeStrategy::Merge` via `derive_with`: union the base's declared
 //! variables with the overlay's, so a child prompt inherits `company` + `max_words` and adds
 //! its own `tone` without hand-spreading the base's variables. The base is untouched.

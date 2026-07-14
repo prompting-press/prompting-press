@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Normalized error surface for the consumer crate (spec 003, FR-014/FR-015).
 //!
 //! [`ConsumerError`] + [`FieldError`] are the **only** error type on this crate's public

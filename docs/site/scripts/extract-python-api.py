@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """
 extract-python-api.py — Python API-doc extractor for prompting-press (spec 011).
 

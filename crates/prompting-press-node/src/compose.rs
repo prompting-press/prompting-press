@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Composition types and the `Message` napi object.
 //!
 //! The TS facade owns its own `Composition` class that stores `NapiPrompt` handles and

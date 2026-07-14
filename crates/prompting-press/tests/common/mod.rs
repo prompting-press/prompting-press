@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Shared test-support for the spec-006 conformance corpus runners (Rust side).
 //!
 //! This module is **test-only** (`crates/prompting-press/tests/common/`) and is shared by the golden

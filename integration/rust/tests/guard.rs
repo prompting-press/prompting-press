@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Guard integration tests: GuardConfig on/off, untrusted delimiting,
 //! render_hash differs when guard is on vs off.
 

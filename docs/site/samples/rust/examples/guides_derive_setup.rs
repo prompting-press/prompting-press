@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Derive guide — the starting pair: an `assistant` system prompt (a `company` +
 //! `max_words` body) and a matching `AssistantVars`. Every later example on the page
 //! derives from this. Standalone — `cargo run --example guides_derive_setup`.

@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! A non-conforming advisory override (missing the required markers) is rejected
 //! by the kernel and returns `Err(ConsumerError::Kernel(..))` with
 //! `code == "render"`, `field == "guard"`. Standalone —

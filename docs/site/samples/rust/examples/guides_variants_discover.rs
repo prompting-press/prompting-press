@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Discovering the selectable variants: `variants()` returns the declared
 //! variant map; read its keys (the default arm is not listed — it is the root
 //! body, name `"default"`). Standalone:

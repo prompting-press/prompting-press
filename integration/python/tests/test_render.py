@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Integration: render happy path, variants, and error cases.
 
 Covers: render via (Schema, data={}), render via instance, named variant, missing

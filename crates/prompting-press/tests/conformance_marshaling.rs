@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Conformance corpus — Rust marshaling runner (spec 006, T007; US1).
 //!
 //! Drives every `conformance/marshaling/*.json` fixture through the REAL consumer render path

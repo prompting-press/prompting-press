@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Adversarial secret-scrub verification (spec 009, T006; FR-002, FR-007; US4; SC-003).
 //!
 //! Proves that SEC-004 holds under adversarial input: secret-shaped values embedded in

@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! US4 composition contract (spec 008 reshape of spec 003, T021; FR-012/FR-013).
 //!
 //! Post-reshape, `Composition` aggregates **`Prompt` objects** (not names). `resolve()` takes

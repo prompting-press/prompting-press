@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Build a Composition by appending (prompt, vars, variant?) entries, then
 //! resolve it to an ordered Vec<Message>. Standalone:
 //! `cargo run --example guides_composition_build`.

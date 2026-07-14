@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Integration: result.provenance_attributes() → dict with exactly 4 keys.
 
 Principle V: provenance carries template_hash + render_hash per variant, plus name

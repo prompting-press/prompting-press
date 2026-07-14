@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Advisory lint contract (spec 008 reshape of spec 003, T015; FR-016/017/018/020).
 //!
 //! Post-reshape, the lint runs per-prompt via `Prompt::check()`. Construction enforces the

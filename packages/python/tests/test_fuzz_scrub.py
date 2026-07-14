@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Secret-scrub adversarial verification — spec 009 Phase 2 (T010).
 
 Invariant under test (FR-002, FR-007, SC-003):

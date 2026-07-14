@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Var-trust query, opt-in guard instruction, and injection-resistant delimiting (spec 015).
 //!
 //! Three pure, additive concerns:

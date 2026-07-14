@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Dual-input factory tests for the PyO3 binding — spec 008 Phase 4.
 
 Spec 008 Phase 4 replaces the Registry-based loaders with Prompt factory methods:

@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 // Routing the guard text for a multi-message composition: prepend the advisory
 // as a system message, then the resolved body messages. Standalone — run under
 // `node --test`.

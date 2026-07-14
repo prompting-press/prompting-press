@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Construct a Prompt from a plain dict (the Rust loader validates the shape on the way in)."""
 
 from prompting_press import Prompt

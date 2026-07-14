@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """A non-conforming advisory override (missing the required markers) is rejected
 by the kernel and raises `PromptRenderError` with `code == "render"` and
 `field == "guard"`. Standalone — run directly or under pytest."""

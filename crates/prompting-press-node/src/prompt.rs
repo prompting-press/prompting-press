@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! The Node [`NapiPrompt`] `#[napi]` class — a thin wrapper over the Rust consumer's
 //! [`prompting_press::Prompt`] (spec 008, T042–T046).
 //!

@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Content-addressed hashing helpers (spec 002, T018; FR-012/FR-013; research D8).
 //!
 //! The kernel emits two provenance hashes per render, each a lowercase-hex SHA-256 over

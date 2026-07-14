@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Derive guide — re-validation on overlay: overlaying a body that references an
 //! undeclared variable is rejected over the merged whole (agreement failure).
 //! Standalone — `cargo run --example guides_derive_revalidation_error`.

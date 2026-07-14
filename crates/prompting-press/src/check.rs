@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Advisory lint types and shared helpers for the agreement + trusted/guard check.
 //!
 //! The lint runs **per-`Prompt`** via [`Prompt::check`](crate::Prompt::check). Construction

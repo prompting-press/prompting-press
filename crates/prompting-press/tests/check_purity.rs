@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Lint purity contract (spec 008 reshape of spec 003, T016; FR-019 / V3.4).
 //!
 //! `Prompt::check()` is **pure analysis**: it produces only a [`CheckReport`] and MUST NOT

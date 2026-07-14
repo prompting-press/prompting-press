@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Multi-message composition tests (spec 008 Phase 4 reshape) — T040.
 
 Tests the `Composition` surface after the object-model reshape: entries are

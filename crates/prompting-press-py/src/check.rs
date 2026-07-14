@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! The Python lint report types — [`CheckReport`] and [`Finding`] pyclasses
 //! (spec 003 US3 / FR-016..020; constitution Principle IV / C-04/C-09).
 //!

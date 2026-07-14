@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Declare the typed Vars struct, validated by `garde`. Its field names must match the
 //! prompt's `variables` (`company`, `max_words`); the `#[garde(..)]` rules run at render
 //! time, before the kernel is touched. Standalone:

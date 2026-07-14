@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Derive guide — re-validation on overlay: overlaying a body that references an undeclared
  * variable throws `PromptRenderError` (agreement failure over the merged whole).

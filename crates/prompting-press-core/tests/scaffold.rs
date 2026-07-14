@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Scaffold smoke test for the spec-002 fixture harness (T012).
 //!
 //! Proves both loader paths work end to end:

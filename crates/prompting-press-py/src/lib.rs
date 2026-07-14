@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! # prompting-press-py
 //!
 //! The Python binding for Prompting Press, built with [PyO3]. This crate exposes the Rust

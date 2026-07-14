@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! The immutable [`Prompt`] value object and its [`PromptOverlay`].
 //!
 //! [`Prompt`] is the library's primary public type: a validated, immutable facade over a

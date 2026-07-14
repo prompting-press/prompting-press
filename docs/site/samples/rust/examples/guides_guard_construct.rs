@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! The one-variable `ask` prompt used throughout the guard guide: `topic` is
 //! declared untrusted (`trusted: false`). Standalone — `cargo run --example
 //! guides_guard_construct`.

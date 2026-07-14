@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Injection / guard demonstration — spec 015 delimiting (updated from spec 009 Phase 2 T011).
 
 IMPORTANT — what this test demonstrates (FR-005, FR-006, SC-006, spec-015):

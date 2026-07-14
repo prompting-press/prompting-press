@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Engine-regression render-fixture suite (spec 002, FR-029).
 //!
 //! FR-029 calls for "a small engine-regression render-fixture set that pins

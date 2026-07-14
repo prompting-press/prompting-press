@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Adversarial robustness fuzzing for the Python binding — spec 009 Phase 2 (T009).
 
 Invariant under test (FR-001, FR-003, SC-001, SC-002, SC-005):

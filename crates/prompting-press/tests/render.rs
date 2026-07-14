@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! US1 happy-path render contract (spec 008 reshape of spec 003, T007).
 //!
 //! Post-reshape, render is a method on `Prompt` instead of a free fn over a `Registry`.

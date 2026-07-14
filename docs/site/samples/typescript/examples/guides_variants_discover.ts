@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Discovering the selectable variants: `variants` is the declared variant map;
  * read its keys to see what is selectable (the default arm is not listed — it is

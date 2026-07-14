@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Integration: derive() — Replace default and MergeStrategy.MERGE.
 
 Spec 017: derive(overlay) shallow-replaces (SC-002 default); derive(...,

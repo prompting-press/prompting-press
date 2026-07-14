@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Integration: core_version() returns a non-empty string.
 
 Principle I: the Rust engine version is exposed via core_version() so downstream

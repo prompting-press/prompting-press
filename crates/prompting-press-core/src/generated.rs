@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Segregated home for code-generated shape modules (FR-016).
 //!
 //! Everything under this module is emitted from the single source of truth

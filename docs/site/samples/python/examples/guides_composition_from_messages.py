@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """from_messages builds a Composition from a list of (prompt, vars) or
 (prompt, vars, variant) tuples. All validation runs before any state is created.
 Standalone."""

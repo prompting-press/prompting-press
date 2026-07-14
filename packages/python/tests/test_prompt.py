@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Prompt object tests for spec 008 Phase 4 (T040).
 
 Tests the new `Prompt` pyclass surface introduced in the api-schema reshape:

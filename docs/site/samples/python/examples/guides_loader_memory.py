@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Loader guide — MemoryLoader: load raw text by key, then construct a Prompt.
 
 The kernel stays I/O-free; the loader is a separate, caller-invoked I/O leaf.

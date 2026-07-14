@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 // Overriding the guard advisory text: a conforming custom advisory is returned
 // verbatim in `RenderResult.guard`, while the body still wraps untrusted values.
 // Standalone — run under `node --test`.

@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Render the `Prompt` with the typed `AssistantVars` and read the result fields.
 //! Standalone — `cargo run --example getting-started_rust_render_and_read`.
 

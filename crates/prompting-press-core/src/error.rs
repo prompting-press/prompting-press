@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Structured kernel error type (spec 002, data-model §KernelError; FR-028).
 //!
 //! The kernel returns its **native** [`KernelError`]. It deliberately does NOT

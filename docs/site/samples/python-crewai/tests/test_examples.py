@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Run every CrewAI docs sample under ``examples/`` as a standalone program.
 
 Mirrors docs/site/samples/python/tests/test_examples.py. Kept as a separate

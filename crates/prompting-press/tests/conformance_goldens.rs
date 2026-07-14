@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Conformance corpus — GOLDEN GENERATOR (spec 006, T005; research D3).
 //!
 //! This is the REGENERATION tool, not a gated test. It is `#[ignore]`d so the CI conformance gate never

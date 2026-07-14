@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Integration: prompt.check() → CheckReport findings.
 
 Covers: clean prompt passes, untrusted_without_guard finding, guard presence satisfies

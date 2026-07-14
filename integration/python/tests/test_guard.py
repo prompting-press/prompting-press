@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Integration: GuardConfig — untrusted delimiting, render_hash differs guard on/off.
 
 Spec 015: when guard is enabled, untrusted values are wrapped in

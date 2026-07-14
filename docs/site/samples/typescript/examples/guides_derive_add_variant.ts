@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Derive guide — add a variant at runtime: spread the current `variants` map (read via the
  * accessor) into the overlay, then add one — so existing arms survive. `derive` is the sole

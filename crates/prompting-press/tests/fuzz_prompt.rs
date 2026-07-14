@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Adversarial property-based tests for the consumer `Prompt` surface (spec 009, T005).
 //!
 //! Exercises `Prompt::new` / `from_yaml` / `from_json` / `from_toml` / `render::<V>` /

@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Reading prompt-level and per-variant metadata back out. The library stores the
  * opaque `metadata` maps and echoes them through accessors; it never interprets

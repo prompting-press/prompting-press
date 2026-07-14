@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Provenance attributes tests for the Python binding — spec 018 (T008, T012, T013).
 
 T008 (US1): `result.provenance_attributes()` is a 4-entry dict[str, str] with the

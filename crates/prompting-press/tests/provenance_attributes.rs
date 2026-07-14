@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Provenance attributes tests — spec 018 (T007, T011, T012, T013).
 //!
 //! T007 (US1): `result.provenance_attributes()` returns the 4 expected keys/values; a

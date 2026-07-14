@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 // Use Prompting Press prompts with the Strands Agents SDK (TypeScript).
 //
 // Strands has no `system` role in its message list: `role` is exactly

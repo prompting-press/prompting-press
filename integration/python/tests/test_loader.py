@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Integration: loader surface — MemoryLoader, FileSystemLoader, callable, make_prompt_load_error.
 
 Spec 019: MemoryLoader hit/miss; FileSystemLoader hit + traversal rejection + read-cap;

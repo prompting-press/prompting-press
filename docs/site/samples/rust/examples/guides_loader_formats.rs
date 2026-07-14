@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Loader guide — loading JSON and TOML: the loader is format-agnostic (returns raw
 //! text), so only the FileSystemLoader suffix and the `from_*` parser change.
 //! Uses the `assistant.json` / `assistant.toml` fixtures next to this program.

@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Enabling the advisory guard: the untrusted `topic` value is delimited in the
 //! rendered body and a guard advisory is returned. Standalone —
 //! `cargo run --example guides_guard_enable`.

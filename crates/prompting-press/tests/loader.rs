@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Dual-input loader contract (spec 008 reshape of spec 003, T012).
 //!
 //! Post-reshape the "loader" is the set of `Prompt` text-factory methods:

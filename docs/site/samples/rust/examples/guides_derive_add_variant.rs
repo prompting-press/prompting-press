@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Derive guide — add a variant at runtime: READ the current variants with the
 //! `.variants()` accessor, add to a clone, then WRITE the merged map back via the sole
 //! mutator `derive`. The original is untouched.

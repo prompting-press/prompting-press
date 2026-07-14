@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Loader guide — custom loaders: a closure or a struct implementing PromptLoader.
 //! No struct is required — any `Fn(&str) -> Result<String, PromptLoadError>` closure works.
 //! Standalone — `cargo run --example guides_loader_custom`.

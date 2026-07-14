@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Wiring ``Prompt.check()`` as a CI gate under pytest.
 
 A CI gate is a test that fails the build: load every ``*.yaml`` under a ``prompts/``

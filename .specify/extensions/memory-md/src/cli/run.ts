@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import chalk from "chalk";
 import { Command } from "commander";
 import fs from "fs";

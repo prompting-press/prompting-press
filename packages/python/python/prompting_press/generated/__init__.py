@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 # GENERATED-CODE SUBPACKAGE — DO NOT HAND-EDIT THE MODULES HERE.
 #
 # Every module under `prompting_press.generated` is code-generated from

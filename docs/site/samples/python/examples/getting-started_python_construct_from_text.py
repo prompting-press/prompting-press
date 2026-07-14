@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Construct a Prompt from a definition file with a from_* factory (validates immediately)."""
 
 from pathlib import Path

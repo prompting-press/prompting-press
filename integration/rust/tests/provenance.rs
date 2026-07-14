@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Provenance integration tests:
 //! - ProvenanceExt::provenance_attributes() → exactly 4 prompting_press.prompt.* keys
 //! - provenance_attributes_of free function

@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Engine construction (spec 002, T011).
 //!
 //! This module owns the single, canonical [`minijinja::Environment`] the kernel

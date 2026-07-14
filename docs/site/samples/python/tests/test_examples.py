@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Run every docs sample under ``examples/`` as a standalone program.
 
 Each file in ``examples/`` is a COMPLETE, standalone Python program that a docs

@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Loader integration tests:
 //! - MemoryLoader hit/miss
 //! - FileSystemLoader::with_base hit + traversal-guard rejection + read-cap

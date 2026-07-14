@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! The complete construct → declare → render walk in one program.
 //! Standalone — `cargo run --example getting-started_rust_complete_example`.
 

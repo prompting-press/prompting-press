@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Sjors Robroek
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Error types — a rejected render value raises PromptValidationError, whose
 `.errors` are normalized FieldError rows (.field, .code, .message)."""
 

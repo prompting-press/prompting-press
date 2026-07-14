@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! US2 agreement-purity suite (spec 002, T022): V2.5 — analysis mutates nothing.
 //!
 //! The agreement analysis MUST be pure: it must not mutate the prompt definition, the
