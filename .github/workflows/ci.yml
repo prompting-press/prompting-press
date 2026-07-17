@@ -238,7 +238,7 @@ jobs:
       - name: 'Dead code: Node/TS (knip)'
         run: mise exec -- moon run prompting-press-typescript:knip
 
-      # --- license policy: Apache-2.0 compatibility (one gate per ecosystem) ---
+      # --- license policy: MPL-2.0 compatibility (one gate per ecosystem) ---
       - name: 'License gate: Rust (cargo-deny)'
         run: mise exec -- moon run ci:check-licenses
       - name: 'License gate: Python (pip-licenses)'

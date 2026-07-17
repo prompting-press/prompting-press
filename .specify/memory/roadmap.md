@@ -430,7 +430,7 @@ Status legend (lifecycle): **undecided** · **needs-info** · **planned** ·
 - **Description:** Documentation, packaging, registry reservation, publish, and
   the Bellwether end-to-end integration validation.
 - **Outcome:** `prompting-press` published on crates.io, PyPI, and npm under
-  Apache-2.0; docs carrying both halves of the tagline (type-safety AND
+  MPL-2.0; docs carrying both halves of the tagline (type-safety AND
   press/provenance); Bellwether using it end-to-end (in-repo prompts, provenance
   → its traces, output models referenced).
 - **Scope (in):** package metadata (description/keywords/repository/license),

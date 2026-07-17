@@ -8,7 +8,7 @@
 
 cargo-about lists EVERY crate in the bundled dependency graph, including this
 workspace's own crates (prompting-press, -core, -py, -node). Those are
-first-party code already covered by the repo root LICENSE + NOTICE (Apache-2.0)
+first-party code already covered by the repo root LICENSE + NOTICE (MPL-2.0)
 — listing them under "Third-Party Licenses" is wrong, and they carry the only
 version-bearing lines in the file, so they make it churn on every release.
 

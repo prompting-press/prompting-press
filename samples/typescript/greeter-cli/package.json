@@ -4,7 +4,7 @@
   "description": "Greeter CLI — TypeScript consumer sample app for Prompting Press (spec 014, WU-C, T015/T016).",
   "private": true,
   "type": "module",
-  "license": "Apache-2.0",
+  "license": "MPL-2.0",
   "engines": {
     "node": ">=20"
   },

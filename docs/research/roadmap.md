@@ -103,7 +103,7 @@ render parity.
 ## Phase 6 — v1 release
 
 30. Docs (the tagline's *both* halves: type-safety AND press/provenance), READMEs per package,
-    quickstart. Reserve `prompting-press` on crates.io / PyPI / npm. Apache-2.0 + NOTICE. Publish.
+    quickstart. Reserve `prompting-press` on crates.io / PyPI / npm. MPL-2.0 + NOTICE. Publish.
 31. Bellwether integration validated end-to-end (prompts in-repo, provenance → its traces, output
     models referenced).
 

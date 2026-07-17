@@ -137,4 +137,4 @@ mise exec -- moon run :codegen      # regenerate language shapes from the schema
 pnpm -C docs/site build             # build the docs site
 ```
 
-Licensed under Apache-2.0.
+Licensed under MPL-2.0.

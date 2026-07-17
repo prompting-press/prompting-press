@@ -56,12 +56,12 @@ yanked = "deny"
 ignore = []
 
 # ---------------------------------------------------------------------------
-# [licenses] — POLICY GATE (Apache-2.0 release compatibility)
+# [licenses] — POLICY GATE (MPL-2.0 release compatibility)
 # ---------------------------------------------------------------------------
 # This is now an ENFORCING gate (wired as ci:check-licenses / the PR gate), not
 # the day-one permissive placeholder. The whole workspace is published under
 # MPL-2.0 (see the root LICENSE + license field in Cargo.toml), so
-# every dependency's license MUST be Apache-2.0-compatible: permissive, or a
+# every dependency's license MUST be MPL-2.0-compatible: permissive, or a
 # multi-license (`OR`) expression with at least one permissive arm cargo-deny can
 # elect. No strong copyleft (GPL/AGPL/LGPL-as-sole-license) is permitted.
 #
@@ -70,7 +70,7 @@ ignore = []
 # `cargo deny check licenses` on the committed Cargo.lock). Adding a new dep that
 # pulls in a license outside this set is a HARD FAILURE by design: triage it and
 # either (a) add the license here with a written rationale if it is
-# Apache-2.0-compatible, or (b) remove/replace the dependency.
+# MPL-2.0-compatible, or (b) remove/replace the dependency.
 #
 # Attribution obligation: MIT/BSD/ISC/Apache-2.0 all require preserving upstream
 # copyright + license notices in BINARY distributions. The Python wheel (maturin)
