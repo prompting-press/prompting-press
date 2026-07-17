@@ -54,4 +54,4 @@ Per-version release notes — aggregated across every package — are in
 
 ## License
 
-[Apache-2.0](https://github.com/prompting-press/prompting-press/blob/main/LICENSE).
+[MPL-2.0](https://github.com/prompting-press/prompting-press/blob/main/LICENSE).

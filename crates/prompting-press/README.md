@@ -53,4 +53,4 @@ Per-version release notes — aggregated across every package — are in
 
 ## License
 
-Apache-2.0.
+MPL-2.0.

@@ -102,25 +102,25 @@ tasks:
       cache: false
 
   # -------------------------------------------------------------------------
-  # License-policy gates (Apache-2.0 release compatibility). One per ecosystem,
+  # License-policy gates (MPL-2.0 release compatibility). One per ecosystem,
   # mirroring the check-advisories trio. All are CHEAP (no build) → PR gate.
   # -------------------------------------------------------------------------
   check-licenses:
-    description: 'License gate (Rust) — cargo deny check licenses asserts every shipped crate + transitive dep is Apache-2.0-compatible (deny.toml [licenses] allow-list). No build, no network.'
+    description: 'License gate (Rust) — cargo deny check licenses asserts every shipped crate + transitive dep is MPL-2.0-compatible (deny.toml [licenses] allow-list). No build, no network.'
     command: 'bash scripts/ci/check-licenses.sh'
     options:
       runFromWorkspaceRoot: true
       cache: false
 
   check-licenses-py:
-    description: 'License gate (Python) — pip-licenses asserts the wheel runtime deps (pydantic chain, uv.lock, --no-dev) are Apache-2.0-compatible. Mirrors ci:check-licenses.'
+    description: 'License gate (Python) — pip-licenses asserts the wheel runtime deps (pydantic chain, uv.lock, --no-dev) are MPL-2.0-compatible. Mirrors ci:check-licenses.'
     command: 'bash scripts/ci/check-licenses-py.sh'
     options:
       runFromWorkspaceRoot: true
       cache: false
 
   check-licenses-node:
-    description: 'License gate (Node) — offline package.json scan asserts every installed npm package is Apache-2.0-compatible. Mirrors ci:check-licenses.'
+    description: 'License gate (Node) — offline package.json scan asserts every installed npm package is MPL-2.0-compatible. Mirrors ci:check-licenses.'
     command: 'bash scripts/ci/check-licenses-node.sh'
     options:
       runFromWorkspaceRoot: true
