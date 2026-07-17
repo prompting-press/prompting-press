@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.0](https://github.com/prompting-press/prompting-press/compare/v0.3.2...v0.4.0) (2026-07-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* relicense from Apache-2.0 to MPL-2.0 ([#317](https://github.com/prompting-press/prompting-press/issues/317))
+
+### Miscellaneous Chores
+
+* relicense from Apache-2.0 to MPL-2.0 ([#317](https://github.com/prompting-press/prompting-press/issues/317)) ([f3c9d04](https://github.com/prompting-press/prompting-press/commit/f3c9d04540f9e3053921c12aa7d28f913acb143d))
+
 ## [0.3.2](https://github.com/prompting-press/prompting-press/compare/v0.3.1...v0.3.2) (2026-07-10)
 
 
