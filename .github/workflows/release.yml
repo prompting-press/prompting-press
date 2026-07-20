@@ -102,7 +102,7 @@ jobs:
       # the lock is refreshed by the SAME cargo that owns it — no mise, no drift.
       - name: Checkout (for lock sync)
         if: ${{ steps.release.outputs.pr }}
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           # App token so the lock-sync commit pushed below is authored by the App
@@ -201,7 +201,7 @@ jobs:
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
 
       - name: Checkout main
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
           # Full history so version.mjs / git see the prior tags, matching ci.yml.
@@ -209,7 +209,7 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
 
       - name: Install mise toolchain
-        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        uses: jdx/mise-action@dad1bfd3df957f44999b559dd69dc1671cb4e9ea # v4.2.1
         with:
           experimental: true
 
@@ -387,7 +387,7 @@ jobs:
       CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # actions/checkout v7.0.1
       # setup-python mirrors ci.yml's conformance job (its legs want a 3.12 on
       # PATH); harmless for the other suites. Kept unconditional so the matrix
       # stays uniform.
@@ -396,7 +396,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install mise toolchain
-        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
+        uses: jdx/mise-action@dad1bfd3df957f44999b559dd69dc1671cb4e9ea  # v4.2.1
         with:
           experimental: true
       - name: Ensure rust components (rustfmt/clippy)
@@ -478,7 +478,7 @@ jobs:
       # (registries are append-only; see finalize-release).
       - name: Checkout (for rollback)
         if: ${{ failure() && steps.assert.outcome == 'failure' }}
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # actions/checkout v7.0.1
       - name: Roll back draft releases + tags (gate failed, nothing published)
         if: ${{ failure() && steps.assert.outcome == 'failure' }}
         env:
@@ -508,7 +508,7 @@ jobs:
       # durable GitHub Release asset is a follow-up). Preserved from PR #232, moved
       # here from the old monolithic publish job when publishing was split per-OS.
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # actions/checkout v7.0.1
       - name: Generate SBOM (Syft / CycloneDX)
         uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610  # v0
         with:
@@ -530,10 +530,10 @@ jobs:
       id-token: write # OIDC → crates.io Trusted Publisher
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # actions/checkout v7.0.1
 
       - name: Install mise toolchain
-        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
+        uses: jdx/mise-action@dad1bfd3df957f44999b559dd69dc1671cb4e9ea  # v4.2.1
         with:
           experimental: true
 
@@ -614,7 +614,7 @@ jobs:
             manylinux: 'off'
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # actions/checkout v7.0.1
 
       # abi3-py312 ⇒ one wheel per platform serves CPython 3.12+; 3.12 is the floor.
       - name: Set up Python
@@ -625,7 +625,7 @@ jobs:
       # mise + cargo are needed on the runner host to generate the attribution file
       # below (maturin-action runs in its own container and cannot see them).
       - name: Install mise toolchain
-        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
+        uses: jdx/mise-action@dad1bfd3df957f44999b559dd69dc1671cb4e9ea  # v4.2.1
         with:
           experimental: true
 
@@ -674,10 +674,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # actions/checkout v7.0.1
 
       - name: Install mise toolchain
-        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
+        uses: jdx/mise-action@dad1bfd3df957f44999b559dd69dc1671cb4e9ea  # v4.2.1
         with:
           experimental: true
 
@@ -748,7 +748,7 @@ jobs:
         with:
           subject-path: 'dist/*'
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # release/v1
+        uses: pypa/gh-action-pypi-publish@ba38be9e461d3875417946c167d0b5f3d385a247  # release/v1
         with:
           packages-dir: dist
           # IDEMPOTENT: skip files already on PyPI instead of erroring, so a recovery
@@ -794,7 +794,7 @@ jobs:
       CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # actions/checkout v7.0.1
 
       # RUSTC_WRAPPER is force-emptied for this step only: the job env points it
       # at sccache, but sccache is installed a few steps later — and on runners
@@ -802,7 +802,7 @@ jobs:
       # mise falls back to `cargo install`, which would invoke the not-yet-present
       # wrapper and fail the whole job.
       - name: Install mise toolchain
-        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
+        uses: jdx/mise-action@dad1bfd3df957f44999b559dd69dc1671cb4e9ea  # v4.2.1
         with:
           experimental: true
         env:
@@ -835,7 +835,7 @@ jobs:
           version: 0.14.1
       - name: Install cargo-zigbuild (musl only)
         if: ${{ contains(matrix.settings.target, 'musl') }}
-        uses: taiki-e/install-action@50414676f9f5d50a65992c6dd2ed02641263226c  # v2
+        uses: taiki-e/install-action@a6b2e2dcd845ddd7f509ce4f3ed3d922b80cc5d9  # v2
         with:
           tool: cargo-zigbuild
 
@@ -889,10 +889,10 @@ jobs:
       id-token: write # OIDC → npm Trusted Publisher (npm CLI >= 11.5.1)
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # actions/checkout v7.0.1
 
       - name: Install mise toolchain
-        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
+        uses: jdx/mise-action@dad1bfd3df957f44999b559dd69dc1671cb4e9ea  # v4.2.1
         with:
           experimental: true
 
@@ -990,7 +990,7 @@ jobs:
       contents: write # edit (publish) the draft GitHub Releases
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # actions/checkout v7.0.1
 
       - name: Finalize (flip drafts public if wired registries published)
         env:
