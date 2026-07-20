@@ -1,0 +1,227 @@
+---
+title: "Deriving a prompt"
+description: "Use derive() to create a new Prompt with overlay fields merged or replaced — re-validated, original untouched. Two strategies: Replace (default, shallow) and Merge (variables/variants/metadata union)."
+---
+
+import { Aside, Code, Tabs, TabItem } from '@astrojs/starlight/components';
+import setupRust from '../../../../samples/rust/examples/guides_derive_setup.rs?raw';
+import setupPython from '../../../../samples/python/examples/guides_derive_setup.py?raw';
+import setupTs from '../../../../samples/typescript/examples/guides_derive_setup.ts?raw';
+import addVariantRust from '../../../../samples/rust/examples/guides_derive_add_variant.rs?raw';
+import addVariantPython from '../../../../samples/python/examples/guides_derive_add_variant.py?raw';
+import addVariantTs from '../../../../samples/typescript/examples/guides_derive_add_variant.ts?raw';
+import replaceBodyRust from '../../../../samples/rust/examples/guides_derive_replace_body.rs?raw';
+import replaceBodyPython from '../../../../samples/python/examples/guides_derive_replace_body.py?raw';
+import replaceBodyTs from '../../../../samples/typescript/examples/guides_derive_replace_body.ts?raw';
+import revalidationErrorRust from '../../../../samples/rust/examples/guides_derive_revalidation_error.rs?raw';
+import revalidationErrorPython from '../../../../samples/python/examples/guides_derive_revalidation_error.py?raw';
+import revalidationErrorTs from '../../../../samples/typescript/examples/guides_derive_revalidation_error.ts?raw';
+import renderVariantRust from '../../../../samples/rust/examples/guides_derive_render_variant.rs?raw';
+import renderVariantPython from '../../../../samples/python/examples/guides_derive_render_variant.py?raw';
+import renderVariantTs from '../../../../samples/typescript/examples/guides_derive_render_variant.ts?raw';
+import mergeRust from '../../../../samples/rust/examples/guides_derive_merge.rs?raw';
+import mergePython from '../../../../samples/python/examples/guides_derive_merge.py?raw';
+import mergeTs from '../../../../samples/typescript/examples/guides_derive_merge.ts?raw';
+
+`Prompt` is immutable — there are no setters. **`derive`** is the single, general-purpose way to
+produce a *changed* prompt: it combines an overlay with the current definition using a
+**merge strategy**, re-validates the **merged whole** (agreement, parse, reserved-variant-name), and
+returns a **new `Prompt`** — the original is untouched. The method is spelled `derive` in all three
+languages.
+
+It is general — use it to replace the body, rename, swap the variables map, adjust metadata, **add
+a variant at runtime**, or **union variables from a base into a child**. (To *declare* alternative
+bodies up front in the prompt document, that's simpler — see **[Variants](/guides/variants/)**. This
+page is for deriving a changed copy of an already-constructed `Prompt`.)
+
+Two complementary surfaces work together:
+
+- **Read** the current fields with the **accessors** — `.variants()` (Rust) / `.variants` (Python &
+  TypeScript properties), `.body()`/`.name()`, etc. These never mutate; they return what the prompt
+  currently holds.
+- **Derive** a changed copy with the **sole mutator** `derive`. `.variants()` and `derive` are not
+  alternatives — the accessor cannot change anything, and `derive` is the only thing that can; the
+  "add a variant" example below uses both together (read with `.variants()`, write with `derive`).
+
+## What can be overlaid
+
+Any top-level field of the prompt definition:
+
+| Field | Overlay type |
+|-------|-------------|
+| `name` | string |
+| `role` | `"system"` \| `"user"` \| `"assistant"` |
+| `body` | string (template source) |
+| `variables` | full variables map (replaces the entire map) |
+| `variants` | full variants map (replaces the entire map) |
+| `output_model` | `string \| null` (TS/Py) / `Option<String>` (Rust) |
+| `metadata` | opaque object |
+
+Fields absent from the overlay are kept from the original. Re-validation runs over the **merged
+whole** — so an overlay that introduces an agreement violation (a new body that references an
+undeclared variable) is rejected.
+
+## Merge strategies
+
+`derive` supports two strategies, selected per-call (default is `Replace`):
+
+| Strategy | Map fields (`variables`, `variants`, `metadata`) | Scalar fields (`name`, `role`, `body`, `output_model`) |
+|----------|--------------------------------------------------|-------------------------------------------------------|
+| `Replace` (default) | Overlay's map **replaces** the base's map wholesale | Overlay's value replaces when present |
+| `Merge` | Top-level keys **union** (child-wins on collision, whole entry — no recursion) | Overlay's value replaces when present |
+
+**Replace** is the pre-0.3 behavior, kept as the default — no existing call site changes.
+
+**Merge** is the new strategy. Use it when you want a child prompt that inherits the base's
+declared variables and adds its own — without hand-spreading the base's variables into every overlay.
+In TypeScript and Python the strategy is `derive`'s options argument (`{ strategy }` / `strategy=`);
+in Rust it rides in `DeriveOptions` on `derive_with`:
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+<Code code={mergeRust} lang="rust" title="guides_derive_merge.rs" />
+</TabItem>
+<TabItem label="Python">
+<Code code={mergePython} lang="python" title="guides_derive_merge.py" />
+</TabItem>
+<TabItem label="TypeScript">
+<Code code={mergeTs} lang="ts" title="guides_derive_merge.ts" />
+</TabItem>
+</Tabs>
+
+### Soundness boundary
+
+The agreement check is **name-only** (referenced variables ⊆ declared variables). This means:
+
+- A `Merge` that effectively **removes** a variable a base body or variant still references fails
+  construction (agreement check catches it).
+- A `Merge` that **replaces** a variable's declaration (e.g. changes `type` or `trusted`) is
+  **accepted** — that is the validator's responsibility, not the kernel's.
+
+### `deep` and `none` are excluded
+
+Only `Replace` and `Merge` are supported. There is no recursive / deep merge and no no-op mode.
+These axes are reserved for a future consumer that earns them; they are not anticipated.
+
+### `metadata` (including guard keys) under `Merge`
+
+Metadata keys union at top-level under `Merge`. If the overlay supplies a `guard` key, the overlay's
+whole `guard` entry replaces the base's (child-wins-whole-entry). The library does not interpret
+metadata contents — the union is opaque.
+
+## `variants` is replaced wholesale under `Replace` — read, then spread (or use `Merge`)
+
+Under the default `Replace` strategy, an overlay's `variants` map **replaces the entire existing
+map**. When the prompt already has variants and the intent is to *add* one while keeping the rest,
+either:
+
+- **Use `MergeStrategy.Merge` / `MergeStrategy::Merge`** — the union is automatic, and
+- **Read the current map with `.variants()` and spread it into the overlay** — the manual
+  pre-0.3 idiom, still valid under `Replace`.
+
+`.variants()` is a **read accessor** (it returns the current map; it never mutates). `derive` is the
+**only mutator**. The pattern below uses both together: read with `.variants()`, write with `derive`.
+
+The examples on this page start from an `assistant` prompt (a `company` + `max_words` body) and a matching
+`AssistantVars` — the same pair from **[Getting started](/getting-started/rust/)**:
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+<Code code={setupRust} lang="rust" title="guides_derive_setup.rs" />
+</TabItem>
+<TabItem label="Python">
+<Code code={setupPython} lang="python" title="guides_derive_setup.py" />
+</TabItem>
+<TabItem label="TypeScript">
+<Code code={setupTs} lang="ts" title="guides_derive_setup.ts" />
+</TabItem>
+</Tabs>
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+<Code code={addVariantRust} lang="rust" title="guides_derive_add_variant.rs" />
+</TabItem>
+<TabItem label="Python">
+<Code code={addVariantPython} lang="python" title="guides_derive_add_variant.py" />
+
+`derive(overlay, *, validators=None)` — `overlay` is a plain dict. `assistant.variants` is the read-only
+accessor for the current map.
+</TabItem>
+<TabItem label="TypeScript">
+<Code code={addVariantTs} lang="ts" title="guides_derive_add_variant.ts" />
+
+`derive(overlay, options?)` — `overlay` is a partial `PromptDefinition` object; `options` is
+`{ validators?, strategy? }`. `assistant.variants` is the read-only accessor for the current map.
+</TabItem>
+</Tabs>
+
+<Aside type="caution" title="Don't drop existing variants by accident">
+Because `variants` is replaced, not merged, passing `{ formal: {...} }` **without** spreading
+`assistant.variants` first would discard every variant the prompt already had. Read-then-spread is the
+safe idiom whenever the prompt may already carry variants.
+</Aside>
+
+## Replacing the body
+
+Replacing only the root body (the default arm):
+
+<Tabs>
+<TabItem label="Rust">
+<Code code={replaceBodyRust} lang="rust" title="guides_derive_replace_body.rs" />
+</TabItem>
+<TabItem label="Python">
+<Code code={replaceBodyPython} lang="python" title="guides_derive_replace_body.py" />
+</TabItem>
+<TabItem label="TypeScript">
+<Code code={replaceBodyTs} lang="ts" title="guides_derive_replace_body.ts" />
+</TabItem>
+</Tabs>
+
+## Re-validation on overlay
+
+If the merged definition violates any construction invariant, `derive` returns an error
+(Rust `Result::Err`) or raises/throws. Example — overlaying a body that references an undeclared
+variable:
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+<Code code={revalidationErrorRust} lang="rust" title="guides_derive_revalidation_error.rs" />
+</TabItem>
+<TabItem label="Python">
+<Code code={revalidationErrorPython} lang="python" title="guides_derive_revalidation_error.py" />
+</TabItem>
+<TabItem label="TypeScript">
+<Code code={revalidationErrorTs} lang="ts" title="guides_derive_revalidation_error.ts" />
+</TabItem>
+</Tabs>
+
+## Validators carry forward (Python / TypeScript)
+
+In Python and TypeScript, the `validators` supplied at construction carry forward to the derived
+`Prompt` by default. Pass `validators=NewModel` (Python) or `derive(overlay, { validators: newSchema })`
+(TypeScript) to override. Coverage is re-checked against the **merged** variable set — not the base's.
+
+<Aside type="note">
+In **Rust**, the validator type `V` is named at the `render<V>()` call site — it is a
+compile-time generic, so there is nothing to carry forward. `PromptOverlay` contains only data
+fields (no runtime validator object).
+</Aside>
+
+## Rendering a named variant
+
+After adding a variant, select it by name at render time:
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+<Code code={renderVariantRust} lang="rust" title="guides_derive_render_variant.rs" />
+</TabItem>
+<TabItem label="Python">
+<Code code={renderVariantPython} lang="python" title="guides_derive_render_variant.py" />
+</TabItem>
+<TabItem label="TypeScript">
+<Code code={renderVariantTs} lang="ts" title="guides_derive_render_variant.ts" />
+</TabItem>
+</Tabs>
+
+Variant selection is **caller-owned** — the library validates the name and renders it. It does not
+own experiment-assignment logic or choose variants automatically.
