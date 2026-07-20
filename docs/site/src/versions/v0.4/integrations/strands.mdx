@@ -1,0 +1,53 @@
+---
+title: "Strands"
+description: "Split a Prompting Press composition into a Strands system prompt plus content-block messages — Python and TypeScript."
+---
+
+import { Tabs, TabItem, Code, Aside } from '@astrojs/starlight/components';
+import pyPartition from '../../../../samples/python/examples/integrations_strands_partition.py?raw';
+import tsPartition from '../../../../samples/typescript/examples/integrations_strands_partition.ts?raw';
+
+Strands models a conversation differently from a flat message list. Its message `role` is
+only ever `user` or `assistant` — there is **no system role in the message list**. The
+system prompt is a separate argument to the agent. Message content is also a list of
+content blocks rather than a bare string, so a text turn is `{ text: "..." }`.
+
+So the bridge **partitions** a Prompting Press composition into two parts:
+
+- **System prompt** — every `system`-role text, joined in order with a blank line, becomes
+  the single `system_prompt` / `systemPrompt` argument (or nothing, if there is no system
+  message).
+- **Messages** — every other turn maps to `{ role, content: [{ text }] }`.
+
+<Aside type="caution" title="System position is flattened">
+Strands has one system prompt, not a system message you can place mid-conversation. Every
+`system`-role text is hoisted into that single prompt regardless of where it sat in your
+composition. If your design depends on a system instruction appearing *between* turns,
+that ordering can't be carried across — it is a Strands modelling choice, not something
+Prompting Press can preserve.
+</Aside>
+
+## Split a composition for Strands
+
+<Tabs syncKey="lang">
+<TabItem label="Python">
+<Code code={pyPartition} lang="python" title="integrations_strands_partition.py" />
+
+`to_strands` returns `(system_prompt, convo)`. Pass them as the two agent arguments:
+`Agent(system_prompt=system_prompt, messages=convo)`. The example uses two system messages
+to show the join; a real composition often has just one (or none).
+</TabItem>
+<TabItem label="TypeScript">
+<Code code={tsPartition} lang="typescript" title="integrations_strands_partition.ts" />
+
+`toStrands` returns `{ system, convo }`. Construct the agent with
+`new Agent({ systemPrompt: system, messages: convo })`.
+</TabItem>
+</Tabs>
+
+## What's not mapped
+
+The recipe maps plain text only. Strands' provider-specific content blocks — guard content,
+tool-use and tool-result blocks, cache points, and the like — are request-assembly concerns
+that belong to your call layer, not to a rendered prompt. Prompting Press produces text; if
+you need those blocks, add them in your own Strands code around the mapped messages.

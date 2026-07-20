@@ -1,0 +1,170 @@
+---
+title: "Loading prompts"
+description: "Use PromptLoader to load raw prompt text by key — swappable, testable, I/O-free kernel."
+---
+
+import { Aside, Code, Tabs, TabItem } from '@astrojs/starlight/components';
+import memoryRust from '../../../../samples/rust/examples/guides_loader_memory.rs?raw';
+import memoryPython from '../../../../samples/python/examples/guides_loader_memory.py?raw';
+import memoryTs from '../../../../samples/typescript/examples/guides_loader_memory.ts?raw';
+import filesystemRust from '../../../../samples/rust/examples/guides_loader_filesystem.rs?raw';
+import filesystemPython from '../../../../samples/python/examples/guides_loader_filesystem.py?raw';
+import filesystemTs from '../../../../samples/typescript/examples/guides_loader_filesystem.ts?raw';
+import customRust from '../../../../samples/rust/examples/guides_loader_custom.rs?raw';
+import customPython from '../../../../samples/python/examples/guides_loader_custom.py?raw';
+import customTs from '../../../../samples/typescript/examples/guides_loader_custom.ts?raw';
+import missRust from '../../../../samples/rust/examples/guides_loader_miss.rs?raw';
+import missPython from '../../../../samples/python/examples/guides_loader_miss.py?raw';
+import missTs from '../../../../samples/typescript/examples/guides_loader_miss.ts?raw';
+import formatsRust from '../../../../samples/rust/examples/guides_loader_formats.rs?raw';
+import formatsPython from '../../../../samples/python/examples/guides_loader_formats.py?raw';
+import formatsTs from '../../../../samples/typescript/examples/guides_loader_formats.ts?raw';
+
+A `PromptLoader` is a **pluggable source of raw prompt text** looked up by a logical key. Its single
+operation `load(key)` returns the raw text of a prompt definition — never a parsed `Prompt`. Loading
+and construction are always **separate, composable steps**:
+
+```
+raw = loader.load("greet")   ← I/O leaf (caller-invoked)
+prompt = Prompt.from_yaml(raw) ← construction (I/O-free)
+```
+
+The engine kernel stays I/O-free at all times; only the loader the **caller passes in** performs I/O.
+
+<Aside type="note" title="Opt-in">
+A loader is **not required**. If you are loading a single file, reading it yourself and passing the
+text to `Prompt.from_yaml` / `fromYaml` works fine and needs no loader. A loader adds value when
+you want a **central, swappable source** — for example, to replace filesystem reads with an
+in-memory fixture in tests without changing call sites.
+</Aside>
+
+## Built-in loaders
+
+### MemoryLoader
+
+`MemoryLoader` holds a key → text mapping in memory. Its primary use case is
+**dependency injection in tests**: production code uses a `FileSystemLoader` or a custom loader;
+tests substitute a `MemoryLoader` with hard-coded prompt text. No filesystem access is performed.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+<Code code={memoryRust} lang="rust" title="guides_loader_memory.rs" />
+</TabItem>
+<TabItem label="Python">
+<Code code={memoryPython} lang="python" title="guides_loader_memory.py" />
+</TabItem>
+<TabItem label="TypeScript">
+<Code code={memoryTs} lang="ts" title="guides_loader_memory.ts" />
+</TabItem>
+</Tabs>
+
+### FileSystemLoader
+
+`FileSystemLoader` maps a logical key to `{base}/{key}{suffix}` on disk. The default suffix is
+`.yaml`; pass a custom suffix or `max_bytes` cap via the full constructor. The base directory is
+canonicalized at construction time (Rust/Python) or at each `load()` call (TypeScript).
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+<Code code={filesystemRust} lang="rust" title="guides_loader_filesystem.rs" />
+</TabItem>
+<TabItem label="Python">
+<Code code={filesystemPython} lang="python" title="guides_loader_filesystem.py" />
+</TabItem>
+<TabItem label="TypeScript">
+<Code code={filesystemTs} lang="ts" title="guides_loader_filesystem.ts" />
+</TabItem>
+</Tabs>
+
+<Aside type="caution" title="Traversal guard">
+`FileSystemLoader` rejects keys with `..` components, absolute paths, NUL bytes, backslashes,
+empty strings, and symlinks that escape the base directory — all returning `load_not_found` (never
+leaking OS-level path detail). A file exceeding `max_bytes` (default 1 MiB) returns `load_io`.
+</Aside>
+
+### Loading JSON, TOML, or any format
+
+A loader is **format-agnostic**: it returns raw text and never parses. You choose the format at the
+*parse* step — `from_yaml` / `from_json` / `from_toml` (Rust & Python) or `fromYaml` / `fromJson` /
+`fromToml` (TypeScript) — independently of how the loader found the text. So JSON and TOML work
+exactly like YAML; only two things change: the `FileSystemLoader` suffix and which `from_*` you call.
+`MemoryLoader` needs no suffix at all (it is a direct key→text map); the format is decided solely by
+which `from_*` you parse with.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+<Code code={formatsRust} lang="rust" title="guides_loader_formats.rs" />
+</TabItem>
+<TabItem label="Python">
+<Code code={formatsPython} lang="python" title="guides_loader_formats.py" />
+</TabItem>
+<TabItem label="TypeScript">
+<Code code={formatsTs} lang="ts" title="guides_loader_formats.ts" />
+</TabItem>
+</Tabs>
+
+<Aside type="tip" title="Extension in the key">
+The suffix is a plain string appended to the key, so the two conventions are interchangeable:
+`FileSystemLoader::with_base(dir)` (default `.yaml` suffix) + `load("greet")` reads `greet.yaml`,
+while an **empty suffix** (`FileSystemLoader::new(dir, "", cap)`) + `load("greet.yaml")` reads the
+same file with the extension carried in the key. Pick whichever reads better; a directory that
+mixes formats simply uses one loader per suffix (or an empty suffix with extensions in the keys).
+</Aside>
+
+## Custom loaders
+
+Any callable or struct that maps a key to raw text works as a loader. In Rust, a
+`Fn(&str) -> Result<String, PromptLoadError>` closure is a loader directly, with no struct
+required. In Python, any callable `(key: str) -> str` satisfies the protocol. In TypeScript,
+implement the `PromptLoader` interface (`load(key): Promise<string>`).
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+<Code code={customRust} lang="rust" title="guides_loader_custom.rs" />
+</TabItem>
+<TabItem label="Python">
+<Code code={customPython} lang="python" title="guides_loader_custom.py" />
+</TabItem>
+<TabItem label="TypeScript">
+<Code code={customTs} lang="ts" title="guides_loader_custom.ts" />
+</TabItem>
+</Tabs>
+
+## Error taxonomy
+
+`PromptLoadError` is **distinct from `LoadError`** (the parse/shape error). `except PromptLoadError`
+/ `catch (e instanceof PromptLoadError)` does NOT catch a malformed-YAML `LoadError`. The two error
+codes are:
+
+| Code | When raised |
+|------|-------------|
+| `load_not_found` | Key absent from the backing store; also used for traversal-rejected keys. |
+| `load_io` | I/O failure, or file exceeds `max_bytes`. |
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+<Code code={missRust} lang="rust" title="guides_loader_miss.rs" />
+</TabItem>
+<TabItem label="Python">
+<Code code={missPython} lang="python" title="guides_loader_miss.py" />
+</TabItem>
+<TabItem label="TypeScript">
+<Code code={missTs} lang="ts" title="guides_loader_miss.ts" />
+</TabItem>
+</Tabs>
+
+## API summary
+
+| | Rust | Python | TypeScript |
+|---|---|---|---|
+| In-memory loader | `MemoryLoader::new(HashMap)` | `MemoryLoader(dict)` | `new MemoryLoader(record\|map)` |
+| Filesystem loader | `FileSystemLoader::with_base(path)?` | `FileSystemLoader(base)` | `new FileSystemLoader(base)` |
+| Custom loader | closure `\|key\| -> Result<_, PromptLoadError>` | callable `(key) -> str` | class with `async load(key): Promise<string>` |
+| Error type | `PromptLoadError` | `PromptLoadError` | `PromptLoadError` |
+| `load()` sync? | sync | sync | async (`Promise<string>`) |
+
+<Aside type="note" title="TypeScript is async; Rust is sync">
+The TypeScript `PromptLoader.load()` returns `Promise<string>` — matching the Node.js async I/O
+idiom. The Rust trait is synchronous — matching the Rust library default. This is intentional
+per-language idiom, not a defect.
+</Aside>
