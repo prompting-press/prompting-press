@@ -70,7 +70,7 @@ Changelog = "https://github.com/prompting-press/prompting-press/blob/main/CHANGE
 # To upgrade: edit the specifier here, then run `uv lock --project packages/python`.
 # CI install: `uv sync --project packages/python --group codegen --no-install-project --frozen`
 # (then run packages/python/scripts/codegen.sh).
-codegen = ["datamodel-code-generator==0.68.1", "ruff==0.15.20"]
+codegen = ["datamodel-code-generator==0.69.0", "ruff==0.15.22"]
 
 # Test runner + property-based/adversarial fuzzing framework (test-only; these
 # MUST NOT enter the published wheel's runtime `[project.dependencies]`).
@@ -81,7 +81,7 @@ codegen = ["datamodel-code-generator==0.68.1", "ruff==0.15.20"]
 # pytest packages/python/tests`. (scripts/ci/test-python.sh predates this group
 # and still installs pytest into its throwaway venv imperatively.)
 # To lock after editing: `uv lock --project packages/python`.
-test = ["hypothesis==6.156.3", "pytest==9.1.1"]
+test = ["hypothesis==6.157.1", "pytest==9.1.1"]
 
 [tool.maturin]
 # The binding crate lives OUTSIDE this package dir, at the repo's
