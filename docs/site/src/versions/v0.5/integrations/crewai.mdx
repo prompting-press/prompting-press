@@ -1,0 +1,31 @@
+---
+title: "CrewAI"
+description: "Assign Prompting Press rendered strings to a CrewAI Agent's and Task's fields — Python."
+---
+
+import { Code, Aside } from '@astrojs/starlight/components';
+import pyFields from '../../../../samples/python-crewai/examples/integrations_crewai_fields.py?raw';
+
+CrewAI is field-based, not message-based. An `Agent` is described by `role`, `goal`, and
+`backstory` strings; a `Task` by `description` and `expected_output`. There is no message
+array and no system/user split to reconcile — you just supply final strings.
+
+So the bridge is direct assignment: render each prompt with Prompting Press and pass the
+**rendered** string into the matching field. The rendered output is the `render(...).text`
+field — not `Prompt.body`, which is the raw, un-substituted template.
+
+<Aside type="caution" title="Render once — don't double-fill">
+CrewAI runs its own `{placeholder}` interpolation over these fields when you call
+`crew.kickoff(inputs=...)`. If Prompting Press already substituted your variables, those
+placeholders no longer exist, so passing the same variables again to `kickoff` is at best
+redundant and at worst confusing. Render with Prompting Press, hand CrewAI final strings,
+and don't re-pass those variables to `kickoff`.
+</Aside>
+
+## Assign rendered strings to CrewAI fields
+
+<Code code={pyFields} lang="python" title="integrations_crewai_fields.py" />
+
+Each `render(...).text` result is assigned straight to a field. The example also asserts the
+`.body`-vs-`.text` distinction, since reaching for `.body` by mistake would ship the raw
+`{{ }}` template into your agent.
