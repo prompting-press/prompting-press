@@ -796,10 +796,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # actions/checkout v7.0.0
 
+      # RUSTC_WRAPPER is force-emptied for this step only: the job env points it
+      # at sccache, but sccache is installed a few steps later — and on runners
+      # with no prebuilt binary for a mise cargo-backend tool (arm64: cargo-typify)
+      # mise falls back to `cargo install`, which would invoke the not-yet-present
+      # wrapper and fail the whole job.
       - name: Install mise toolchain
         uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d  # v4.2.0
         with:
           experimental: true
+        env:
+          RUSTC_WRAPPER: ""
 
       - name: 'Cache pnpm store'
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4

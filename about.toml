@@ -18,6 +18,10 @@ accepted = [
   "MIT",
   "ISC",
   "Unicode-3.0",
+  # Last on purpose: our own crates are sole-licensed MPL-2.0, but keeping it
+  # after the permissive ids means any third-party `permissive OR MPL-2.0` crate
+  # still elects its permissive arm for attribution.
+  "MPL-2.0",
 ]
 
 # Dev-only crates (proptest, arbitrary, …) are not linked into the shipped
