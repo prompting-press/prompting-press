@@ -6,7 +6,6 @@ dependencies:
   apm:
   - srobroek/agentic-packages/packages/core
   - srobroek/agentic-packages/packages/mcp-package-version
-  - srobroek/agentic-packages/packages/mcp-repomix
   - srobroek/agentic-packages/packages/agent-coder
   - srobroek/agentic-packages/packages/agent-pr-reviewer
   - srobroek/agentic-packages/packages/agent-adversarial-challenger
