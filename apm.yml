@@ -10,8 +10,6 @@ dependencies:
   - srobroek/agentic-packages/packages/agent-pr-reviewer
   - srobroek/agentic-packages/packages/agent-adversarial-challenger
   - srobroek/agentic-packages/packages/speckit
-  - srobroek/agentic-packages/packages/steering-speckit
-  - srobroek/agentic-packages/packages/speckit-dag-hooks
   - srobroek/agentic-packages/packages/language-python
   - srobroek/agentic-packages/packages/language-typescript
   - srobroek/agentic-packages/packages/language-go
