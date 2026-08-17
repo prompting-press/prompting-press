@@ -2,8 +2,14 @@
 # quadratic CPU consumption. Nothing here depends on js-yaml directly, so the
 # vulnerable 4.2.0 arrives transitively and only an override can lift it.
 #
+# GHSA-5p4m-2wfm-xmqj / CVE-2026-59870 then moved the floor to 4.3.1 (quadratic
+# CPU in `!!omap` resolution, not backported). `^4.3.0` still admits 4.3.0, so
+# the range is pinned to the patched floor rather than widened: two transitive
+# paths (`@napi-rs/cli`, `json-schema-to-typescript`) resolved to 4.3.0 and
+# failed the advisory gate in the merge queue.
+#
 # Declared here rather than in package.json: pnpm 10 ignores `pnpm.overrides`
 # there and says so in a warning, so that spelling would rot silently at the
 # next lockfile regeneration.
 overrides:
-  js-yaml: ^4.3.0
+  js-yaml: ^4.3.1
