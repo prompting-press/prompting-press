@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.1](https://github.com/prompting-press/prompting-press/compare/v0.5.0...v0.5.1) (2026-08-17)
+
+
+### Bug Fixes
+
+* **deps:** lift js-yaml past the quadratic-CPU advisory ([#333](https://github.com/prompting-press/prompting-press/issues/333)) ([0a4771d](https://github.com/prompting-press/prompting-press/commit/0a4771d08733d7ae6f2759f8b98e6d58f93909cf))
+* **deps:** pin js-yaml to the 4.3.1 advisory floor ([#340](https://github.com/prompting-press/prompting-press/issues/340)) ([35b4980](https://github.com/prompting-press/prompting-press/commit/35b4980bf981cb4d914c882575fa84258425a777))
+
 ## [0.5.0](https://github.com/prompting-press/prompting-press/compare/v0.4.0...v0.5.0) (2026-07-20)
 
 
