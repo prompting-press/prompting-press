@@ -70,7 +70,7 @@ jobs:
       # lifetime/approval org policies. (Publish jobs use OIDC, not this token.)
       - name: Generate GitHub App token
         id: app-token
-        uses: actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b  # v2.0.6
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v2.0.6
         with:
           app-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
@@ -195,7 +195,7 @@ jobs:
       # docs-snapshot deploy). Same reasoning as the release-please job.
       - name: Generate GitHub App token
         id: app-token
-        uses: actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b  # v2.0.6
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v2.0.6
         with:
           app-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
