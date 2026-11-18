@@ -53,7 +53,12 @@ yanked = "deny"
 # Advisories to suppress — add an entry here only after a documented security review.
 # Example:
 #   ignore = [{ id = "RUSTSEC-2023-XXXX", reason = "not reachable via our usage" }]
-ignore = []
+ignore = [
+  # unsafe-libyaml is unmaintained (no vulnerability reported). It arrives only through
+  # serde_yaml_ng 0.10, the YAML parser in the prompting-press crate. Remove once
+  # serde_yaml_ng moves to a maintained libyaml backend.
+  { id = "RUSTSEC-2024-0449", reason = "unsafe-libyaml unmaintained; transitive via serde_yaml_ng 0.10; no vulnerability reported" },
+]
 
 # ---------------------------------------------------------------------------
 # [licenses] — POLICY GATE (MPL-2.0 release compatibility)
