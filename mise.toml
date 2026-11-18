@@ -40,7 +40,7 @@ jq = "1.8.1"
 # is bare (e.g. "0.19.9", no leading "v") matching the EmbarkStudios release convention.
 # The `github:` backend (vs the deprecated `ubi:`) also verifies SLSA provenance and
 # GitHub artifact attestations.
-"github:EmbarkStudios/cargo-deny" = { version = "0.19.9", exe = "cargo-deny" }   # Advisory scan (ci:check-advisories) + license gate (ci:check-licenses); reads deny.toml
+"github:EmbarkStudios/cargo-deny" = "0.19.9"   # Advisory scan (ci:check-advisories) + license gate (ci:check-licenses); reads deny.toml
 # License-attribution generator: renders the bundled THIRD-PARTY-LICENSES.md files
 # for the Python wheel + npm addon (Rust graph is statically linked). Invoked by
 # scripts/ci/gen-third-party-licenses.sh at package-build time in CI (issue #16).
@@ -55,7 +55,7 @@ jq = "1.8.1"
 # `github:` sidesteps all of it: it downloads the prebuilt release tarball (which
 # includes the CLI) and mise puts `cargo-about` on PATH like any pinned tool.
 # Pinned 0.9.0 = latest version WITH a GitHub release (github: needs a release asset).
-"github:EmbarkStudios/cargo-about" = { version = "0.9.0", exe = "cargo-about" }
+"github:EmbarkStudios/cargo-about" = "0.9.0"
 
 # --- Dead-code / unused-dependency lints ---
 # cargo-machete flags unused Rust dependencies (deps declared in a Cargo.toml but
@@ -68,7 +68,7 @@ jq = "1.8.1"
 # bnjbvr/cargo-machete publishes prebuilt tarballs for x86_64-unknown-linux-musl,
 # aarch64-apple-darwin, x86_64-apple-darwin, and x86_64-pc-windows-msvc on every
 # release. Tag format is "v0.9.1"; github: matches with or without the "v" prefix.
-"github:bnjbvr/cargo-machete" = { version = "0.9.1", exe = "cargo-machete" }
+"github:bnjbvr/cargo-machete" = "0.9.1"
 "aqua:koalaman/shellcheck" = "0.11.0"
 # NOTE (pip-audit / pip-licenses): the Python advisory + license gates pin their
 # tools inline via `uv run --with pip-audit==2.9.0` / `--with pip-licenses==5.5.5`
